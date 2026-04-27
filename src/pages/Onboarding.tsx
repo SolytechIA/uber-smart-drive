@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +33,73 @@ export default function Onboarding() {
   const [costs, setCosts] = useState<CostsData>(initialCosts);
   const [goals, setGoals] = useState<GoalsData>(initialGoals);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [hydrating, setHydrating] = useState(true);
+
+  // Carrega dados já salvos e retoma na etapa correta
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: v }, { data: g }] = await Promise.all([
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      let resumeStep = 1;
+      if (v) {
+        setVehicle({
+          marca: v.marca ?? "",
+          modelo: v.modelo ?? "",
+          ano: v.ano ?? null,
+          placa: v.placa ?? "",
+          tipo_posse: (v.tipo_posse as VehicleData["tipo_posse"]) ?? "",
+          valor_parcela_ou_diaria: v.valor_parcela_ou_diaria ?? null,
+          combustivel: (v.combustivel as VehicleData["combustivel"]) ?? "",
+          consumo_km_litro: v.consumo_km_litro ?? null,
+          preco_combustivel: v.preco_combustivel ?? null,
+          capacidade_tanque: v.capacidade_tanque ?? null,
+          consumo_km_kwh: v.consumo_km_kwh ?? null,
+          preco_kwh: v.preco_kwh ?? null,
+        });
+        setCosts((c) => ({
+          ...c,
+          custo_ipva_mensal: v.custo_ipva_mensal ?? null,
+          ipva_anual_input: v.custo_ipva_mensal ? Number(v.custo_ipva_mensal) * 12 : null,
+          custo_seguro_mensal: v.custo_seguro_mensal ?? null,
+          custo_manutencao_mensal: v.custo_manutencao_mensal ?? null,
+          custo_lavagem_mensal: v.custo_lavagem_mensal ?? null,
+          valor_plano_celular: v.valor_plano_celular ?? null,
+          percentual_celular_trabalho: v.percentual_celular_trabalho ?? 100,
+          taxa_uber_percent: v.taxa_uber_percent ?? 25,
+          outros_custos_label: v.outros_custos_label ?? "",
+          outros_custos_valor: v.outros_custos_valor ?? null,
+          dias_trabalhados_mes: v.dias_trabalhados_mes ?? 22,
+        }));
+        resumeStep = 2;
+        // se já tem custo_ipva_mensal ou seguro, considera etapa 2 concluída
+        if (v.custo_ipva_mensal != null || v.custo_seguro_mensal != null) {
+          resumeStep = 3;
+        }
+      }
+      if (g) {
+        setGoals({
+          meta_diaria: g.meta_diaria ?? null,
+          meta_semanal: g.meta_semanal ?? null,
+          meta_mensal: g.meta_mensal ?? null,
+          horas_meta_dia: g.horas_meta_dia ?? 8,
+          km_max_deslocamento: g.km_max_deslocamento ?? 3,
+          valor_minimo_corrida: g.valor_minimo_corrida ?? 8,
+          r_por_km_minimo: g.r_por_km_minimo ?? 1.8,
+          km_vazio_max_percent: g.km_vazio_max_percent ?? 40,
+        });
+      }
+      setStep(resumeStep);
+      setHydrating(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const validateStep = (s: number): boolean => {
     const e: Record<string, string> = {};
