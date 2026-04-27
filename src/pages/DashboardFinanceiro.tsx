@@ -506,10 +506,12 @@ interface CompRow {
   a: number;
   b: number;
   format: "brl" | "num" | "rkm" | "rh";
+  aHasData: boolean;
+  bHasData: boolean;
 }
 
 function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
-  const now = new Date();
+  const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
@@ -518,7 +520,7 @@ function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRo
 }
 
 function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
-  const now = new Date();
+  const now = nowInTZ();
   const aFrom = startOfMonth(now);
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
@@ -527,12 +529,14 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
 }
 
 function makeComp(a: ReturnType<typeof calcPeriodMetrics>, b: ReturnType<typeof calcPeriodMetrics>): CompRow[] {
+  const aHas = a.numCorridas > 0;
+  const bHas = b.numCorridas > 0;
   return [
-    { metric: "Ganho real", a: a.ganhoReal, b: b.ganhoReal, format: "brl" },
-    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num" },
-    { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num" },
-    { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh" },
-    { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm" },
+    { metric: "Ganho real", a: a.ganhoBruto, b: b.ganhoBruto, format: "brl", aHasData: aHas, bHasData: bHas },
+    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
+    { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num", aHasData: aHas, bHasData: bHas },
+    { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh", aHasData: aHas, bHasData: bHas },
+    { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm", aHasData: aHas, bHasData: bHas },
   ];
 }
 
@@ -549,16 +553,20 @@ function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string;
       </TableHeader>
       <TableBody>
         {rows.map((r) => {
-          const semBase = !r.b || r.b === 0;
+          const semBase = !r.bHasData;
           const diff = r.a - r.b;
-          const pct = !semBase ? (diff / Math.abs(r.b)) * 100 : 0;
+          const pct = !semBase && r.b !== 0 ? (diff / Math.abs(r.b)) * 100 : 0;
           const up = diff > 0;
           const flat = diff === 0;
           return (
             <TableRow key={r.metric}>
               <TableCell className="font-medium">{r.metric}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatVal(r.a, r.format)}</TableCell>
-              <TableCell className="text-right tabular-nums text-muted-foreground">{formatVal(r.b, r.format)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {r.aHasData ? formatVal(r.a, r.format) : <span className="text-muted-foreground">—</span>}
+              </TableCell>
+              <TableCell className="text-right tabular-nums text-muted-foreground">
+                {r.bHasData ? formatVal(r.b, r.format) : "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {semBase ? (
                   <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
