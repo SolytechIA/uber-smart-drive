@@ -90,7 +90,16 @@ const numToStr = (n: number | null | undefined) => {
   return String(n).replace(".", ",");
 };
 
-const fromEditing = (e: EditingRide): FormState => {
+/** Converte uma data (yyyy-MM-dd) e hora (HH:mm) interpretada em SP para um Date UTC. */
+const spWallToUTC = (dateYmd: string, timeHm: string): Date => {
+  // Usamos uma data de referência em UTC para descobrir o offset de SP naquele momento
+  const refUTC = new Date(`${dateYmd}T${timeHm}:00Z`);
+  const sp = new Date(refUTC.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const offsetMin = (sp.getTime() - refUTC.getTime()) / 60000; // negativo (-180 normalmente)
+  return new Date(refUTC.getTime() - offsetMin * 60000);
+};
+
+
   const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : new Date();
   return {
     data_corrida: dia,
