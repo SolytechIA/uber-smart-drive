@@ -114,10 +114,19 @@ export function calcCustoCombustivel(kmTotal: number, v: Vehicle | null): number
   return (kmTotal / consumo) * preco;
 }
 
-/** Filtra rides dentro do range usando data_corrida (ou horario_inicio como fallback). */
+/** Filtra rides dentro do range usando data_corrida (ou horario_inicio em SP como fallback). */
 export function filterRidesInRange(rides: Ride[], from: Date, to: Date): Ride[] {
   return rides.filter((r) => {
-    const ref = r.data_corrida ? new Date(r.data_corrida + "T12:00:00") : r.horario_inicio ? new Date(r.horario_inicio) : null;
+    let ref: Date | null = null;
+    if (r.data_corrida) {
+      // data_corrida é "YYYY-MM-DD" (sem TZ) — tratamos como meio-dia local
+      ref = new Date(r.data_corrida + "T12:00:00");
+    } else if (r.horario_inicio) {
+      // horario_inicio é UTC; convertemos para wallclock de SP
+      const utc = new Date(r.horario_inicio);
+      const sp = new Date(utc.toLocaleString("en-US", { timeZone: TZ }));
+      ref = sp;
+    }
     if (!ref) return false;
     return ref >= from && ref <= to;
   });
