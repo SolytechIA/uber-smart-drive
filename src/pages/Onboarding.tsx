@@ -245,7 +245,11 @@ export default function Onboarding() {
       </header>
 
       <main className="relative z-10 mx-auto max-w-4xl px-4 py-8 sm:py-12">
-        {done ? (
+        {hydrating ? (
+          <div className="flex items-center justify-center py-24 text-muted-foreground">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Carregando seus dados…
+          </div>
+        ) : done ? (
           <SuccessScreen />
         ) : (
           <>
