@@ -114,7 +114,12 @@ export interface PeriodMetrics {
   numCorridas: number;
   diasNoPeriodo: number;
   custoFixoDiario: number;
+  custoCombustivelDiario: number;
   pontoEquilibrioDiario: number;
+  /** Faturamento bruto / horas efetivas ao volante (duracao_minutos das corridas). */
+  ganhoBrutoPorHora: number;
+  /** Faturamento bruto / soma(km_passageiro + km_deslocamento). */
+  ganhoBrutoPorKm: number;
 }
 
 export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: Date, to: Date): PeriodMetrics {
@@ -126,7 +131,11 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
 
   const kmPassageiro = inRange.reduce((s, r) => s + Number(r.km_passageiro || 0), 0);
   const kmDeslocamento = inRange.reduce((s, r) => s + Number(r.km_deslocamento || 0), 0);
-  const kmTotal = inRange.reduce((s, r) => s + Number(r.km_total || (Number(r.km_passageiro || 0) + Number(r.km_deslocamento || 0))), 0);
+  // Sempre usa passageiro + deslocamento (km vazio entra no denominador)
+  const kmTotal = inRange.reduce(
+    (s, r) => s + (Number(r.km_passageiro || 0) + Number(r.km_deslocamento || 0)),
+    0
+  );
 
   const horasTrabalhadas = inRange.reduce((s, r) => s + Number(r.duracao_minutos || 0) / 60, 0);
 
@@ -141,8 +150,16 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
   const custoTotal = custoCombustivel + custoFixoProporcional;
   const ganhoReal = ganhoLiquido - custoTotal;
 
-  const custoCombustivelDiaEstim = diasTrabMes > 0 ? (custoCombustivel / diasNoPeriodo) : custoCombustivel;
-  const pontoEquilibrioDiario = custoFixoDiario + custoCombustivelDiaEstim;
+  // Custo de combustível diário: km médio/dia (baseado em dias trabalhados configurados)
+  // × custo por km de combustível. Estima quanto se gasta por dia trabalhado.
+  const custoPorKmCombustivel = kmTotal > 0 ? custoCombustivel / kmTotal : 0;
+  const kmMedioDia = diasNoPeriodo > 0 ? kmTotal / diasNoPeriodo : 0;
+  const custoCombustivelDiario = kmMedioDia * custoPorKmCombustivel;
+  const pontoEquilibrioDiario = custoFixoDiario + custoCombustivelDiario;
+
+  // Métricas de produtividade bruta (não dependem de custos/metas)
+  const ganhoBrutoPorHora = horasTrabalhadas > 0 ? ganhoBruto / horasTrabalhadas : 0;
+  const ganhoBrutoPorKm = kmTotal > 0 ? ganhoBruto / kmTotal : 0;
 
   return {
     ganhoBruto,
@@ -159,7 +176,10 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
     numCorridas: inRange.length,
     diasNoPeriodo,
     custoFixoDiario,
+    custoCombustivelDiario,
     pontoEquilibrioDiario,
+    ganhoBrutoPorHora,
+    ganhoBrutoPorKm,
   };
 }
 

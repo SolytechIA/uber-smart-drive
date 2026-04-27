@@ -100,8 +100,9 @@ export default function DashboardFinanceiro() {
   // Indicadores por km/hora
   const custoTotalKm = metrics.kmTotal > 0 ? metrics.custoTotal / metrics.kmTotal : 0;
   const custoCombKm = metrics.kmTotal > 0 ? metrics.custoCombustivel / metrics.kmTotal : 0;
-  const ganhoRealKm = metrics.kmTotal > 0 ? metrics.ganhoReal / metrics.kmTotal : 0;
-  const ganhoRealHora = metrics.horasTrabalhadas > 0 ? metrics.ganhoReal / metrics.horasTrabalhadas : 0;
+  // Faturamento bruto por km e hora (não desconta custos/metas)
+  const ganhoPorKm = metrics.ganhoBrutoPorKm;
+  const ganhoPorHora = metrics.ganhoBrutoPorHora;
   const lucroAcimaEquilibrio = metrics.ganhoReal - metrics.pontoEquilibrioDiario * metrics.diasNoPeriodo;
 
   // Meta do período
@@ -260,8 +261,8 @@ export default function DashboardFinanceiro() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <MiniCard title="Custo total por km" value={`R$ ${fmtNumber(custoTotalKm)}/km`} />
                 <MiniCard title="Custo combustível por km" value={`R$ ${fmtNumber(custoCombKm)}/km`} hint="Use para avaliar corridas" />
-                <MiniCard title="Ganho real por km" value={`R$ ${fmtNumber(ganhoRealKm)}/km`} positive={ganhoRealKm >= 0} />
-                <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoRealHora)}/h`} positive={ganhoRealHora >= 0} />
+                <MiniCard title="Ganho real por km" value={`R$ ${fmtNumber(ganhoPorKm)}/km`} positive={ganhoPorKm >= 0} hint="Bruto ÷ km totais (com vazio)" />
+                <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
                 <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
                 <MiniCard
                   title="Lucro real acima do equilíbrio"
@@ -510,16 +511,12 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
 }
 
 function makeComp(a: ReturnType<typeof calcPeriodMetrics>, b: ReturnType<typeof calcPeriodMetrics>): CompRow[] {
-  const rkmA = a.kmTotal > 0 ? a.ganhoReal / a.kmTotal : 0;
-  const rkmB = b.kmTotal > 0 ? b.ganhoReal / b.kmTotal : 0;
-  const rhA = a.horasTrabalhadas > 0 ? a.ganhoReal / a.horasTrabalhadas : 0;
-  const rhB = b.horasTrabalhadas > 0 ? b.ganhoReal / b.horasTrabalhadas : 0;
   return [
     { metric: "Ganho real", a: a.ganhoReal, b: b.ganhoReal, format: "brl" },
     { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num" },
     { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num" },
-    { metric: "R$ / hora", a: rhA, b: rhB, format: "rh" },
-    { metric: "R$ / km", a: rkmA, b: rkmB, format: "rkm" },
+    { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh" },
+    { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm" },
   ];
 }
 
@@ -536,8 +533,9 @@ function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string;
       </TableHeader>
       <TableBody>
         {rows.map((r) => {
+          const semBase = !r.b || r.b === 0;
           const diff = r.a - r.b;
-          const pct = r.b !== 0 ? (diff / Math.abs(r.b)) * 100 : r.a !== 0 ? 100 : 0;
+          const pct = !semBase ? (diff / Math.abs(r.b)) * 100 : 0;
           const up = diff > 0;
           const flat = diff === 0;
           return (
@@ -546,15 +544,23 @@ function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string;
               <TableCell className="text-right tabular-nums">{formatVal(r.a, r.format)}</TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">{formatVal(r.b, r.format)}</TableCell>
               <TableCell className="text-right">
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 tabular-nums font-semibold text-sm",
-                    flat ? "text-muted-foreground" : up ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                  )}
-                >
-                  {flat ? <Minus className="h-3 w-3" /> : up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                  {pct.toFixed(1)}%
-                </span>
+                {semBase ? (
+                  <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
+                    <Minus className="h-3 w-3" />
+                    <span className="tabular-nums">—</span>
+                    <span className="hidden sm:inline text-xs">Sem dados anteriores</span>
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 tabular-nums font-semibold text-sm",
+                      flat ? "text-muted-foreground" : up ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                    )}
+                  >
+                    {flat ? <Minus className="h-3 w-3" /> : up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                    {pct.toFixed(1)}%
+                  </span>
+                )}
               </TableCell>
             </TableRow>
           );
