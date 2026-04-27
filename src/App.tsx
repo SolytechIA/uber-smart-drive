@@ -51,6 +51,14 @@ const App = () => (
               }
             />
             <Route
+              path="/dashboard/financeiro"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <DashboardFinanceiro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/configuracoes"
               element={
                 <ProtectedRoute requireVehicle>
