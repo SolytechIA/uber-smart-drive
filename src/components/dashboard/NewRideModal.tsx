@@ -73,10 +73,16 @@ const makeInitial = (): FormState => ({
 
 const toTimeStr = (iso: string | null) => {
   if (!iso) return "";
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  // Converte instante UTC para horário de SP (HH:mm)
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const h = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const m = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${h}:${m}`;
 };
 
 const numToStr = (n: number | null | undefined) => {
