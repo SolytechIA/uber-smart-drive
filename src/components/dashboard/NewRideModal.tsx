@@ -20,11 +20,27 @@ import {
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
 
+export interface EditingRide {
+  id: string;
+  data_corrida: string | null;
+  horario_inicio: string | null;
+  horario_fim: string | null;
+  valor_bruto: number | null;
+  km_passageiro: number | null;
+  km_deslocamento: number | null;
+  rua_origem: string | null;
+  bairro_origem: string | null;
+  rua_destino: string | null;
+  bairro_destino: string | null;
+  observacao: string | null;
+}
+
 interface NewRideModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
   params: ClassifyParams;
+  editing?: EditingRide | null;
 }
 
 interface FormState {
@@ -55,18 +71,50 @@ const makeInitial = (): FormState => ({
   observacao: "",
 });
 
-export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideModalProps) {
+const toTimeStr = (iso: string | null) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+};
+
+const numToStr = (n: number | null | undefined) => {
+  if (n === null || n === undefined) return "";
+  return String(n).replace(".", ",");
+};
+
+const fromEditing = (e: EditingRide): FormState => {
+  const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : new Date();
+  return {
+    data_corrida: dia,
+    horario_inicio: toTimeStr(e.horario_inicio),
+    horario_fim: toTimeStr(e.horario_fim),
+    valor_bruto: numToStr(e.valor_bruto),
+    km_passageiro: numToStr(e.km_passageiro),
+    km_deslocamento: numToStr(e.km_deslocamento),
+    rua_origem: e.rua_origem || "",
+    bairro_origem: e.bairro_origem || "",
+    rua_destino: e.rua_destino || "",
+    bairro_destino: e.bairro_destino || "",
+    observacao: e.observacao || "",
+  };
+};
+
+export function NewRideModal({ open, onOpenChange, onSaved, params, editing }: NewRideModalProps) {
   const { user } = useAuth();
   const [form, setForm] = useState<FormState>(makeInitial);
   const [saving, setSaving] = useState(false);
   const [resultado, setResultado] = useState<Classificacao | null>(null);
 
+  const isEdit = !!editing;
+
   useEffect(() => {
-    if (!open) {
-      setForm(makeInitial());
+    if (open) {
+      setForm(editing ? fromEditing(editing) : makeInitial());
       setResultado(null);
     }
-  }, [open]);
+  }, [open, editing]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -101,9 +149,6 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
 
     setSaving(true);
     const payload = {
-      user_id: user.id,
-      plataforma: "Uber",
-      fonte: "manual",
       data_corrida: dia,
       horario_inicio: inicio.toISOString(),
       horario_fim: fim.toISOString(),
@@ -122,14 +167,33 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
       observacao: form.observacao.trim() || null,
       classificacao,
     };
-    const { error } = await supabase.from("rides").insert(payload);
+
+    let error;
+    if (isEdit && editing) {
+      ({ error } = await supabase.from("rides").update(payload).eq("id", editing.id));
+    } else {
+      ({ error } = await supabase.from("rides").insert({
+        ...payload,
+        user_id: user.id,
+        plataforma: "Uber",
+        fonte: "manual",
+      }));
+    }
     setSaving(false);
 
     if (error) {
-      console.error("[NewRideModal] insert error:", error, "payload:", payload);
+      console.error("[NewRideModal] save error:", error, "payload:", payload);
       toast.error(`Erro ao salvar: ${error.message}`);
       return;
     }
+
+    if (isEdit) {
+      toast.success("Corrida atualizada com sucesso!");
+      onSaved();
+      onOpenChange(false);
+      return;
+    }
+
     setResultado(classificacao);
     setTimeout(() => {
       onSaved();
@@ -141,9 +205,13 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Registrar Corrida Manualmente</DialogTitle>
+          <DialogTitle className="font-display text-xl">
+            {isEdit ? "Editar Corrida" : "Registrar Corrida Manualmente"}
+          </DialogTitle>
           <DialogDescription>
-            Informe os dados da corrida para registrar e classificar automaticamente.
+            {isEdit
+              ? "Atualize os dados da corrida. A classificação será recalculada automaticamente."
+              : "Informe os dados da corrida para registrar e classificar automaticamente."}
           </DialogDescription>
         </DialogHeader>
 
@@ -247,7 +315,7 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
               </Button>
               <Button type="submit" variant="gradient" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar corrida
+                {isEdit ? "Salvar alterações" : "Salvar corrida"}
               </Button>
             </DialogFooter>
           </form>
