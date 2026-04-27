@@ -13,6 +13,7 @@ import RedefinirSenha from "./pages/RedefinirSenha";
 import Onboarding from "./pages/Onboarding";
 import DashboardOperacional from "./pages/DashboardOperacional";
 import Configuracoes from "./pages/Configuracoes";
+import ConectarUber from "./pages/ConectarUber";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +54,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireVehicle>
                   <Configuracoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracoes/conectar-uber"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <ConectarUber />
                 </ProtectedRoute>
               }
             />
