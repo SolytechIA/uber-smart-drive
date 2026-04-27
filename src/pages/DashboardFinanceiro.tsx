@@ -102,21 +102,13 @@ export default function DashboardFinanceiro() {
   // Indicadores por km/hora
   const custoTotalKm = metrics.kmTotal > 0 ? metrics.custoTotal / metrics.kmTotal : 0;
   const custoCombKm = metrics.kmTotal > 0 ? metrics.custoCombustivel / metrics.kmTotal : 0;
-  // Faturamento bruto por km e hora (não desconta custos/metas)
-  const ganhoPorKm = metrics.ganhoBrutoPorKm;
+  const kmTotalPeriodo = metrics.kmTotal;
+  const receitaBrutaPeriodo = metrics.ganhoBruto;
+  const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
+  const ganhoPorKm = ganhoRealKm;
   const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  const lucroAcimaEquilibrio = metrics.ganhoReal - metrics.pontoEquilibrioDiario * metrics.diasNoPeriodo;
-
-  // Meta do período
-  const metaDoPeriodo =
-    periodo === "hoje"
-      ? metas.diaria
-      : periodo === "semana"
-      ? metas.semanal
-      : periodo === "mes"
-      ? metas.mensal
-      : metaPeriodo(metas.diaria, metrics.diasNoPeriodo);
-  const percentualMeta = metaDoPeriodo > 0 ? Math.min(100, (metrics.ganhoReal / metaDoPeriodo) * 100) : 0;
+  // Resultado do dia: receita bruta - ponto de equilíbrio diário
+  const resultadoDia = receitaBrutaPeriodo - metrics.pontoEquilibrioDiario;
 
   // Comparativos
   const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle), [rides, vehicle]);
@@ -129,7 +121,7 @@ export default function DashboardFinanceiro() {
     { name: "Comissão Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
   ].filter((d) => d.value > 0);
 
-  // Cards de meta detalhados (sempre exibe diária, semanal, mensal)
+  // Métricas para cards de meta (sempre exibe diária, semanal, mensal)
   const metricsHoje = useMemo(() => {
     const r = getPeriodRange("hoje");
     return calcPeriodMetrics(rides, vehicle, r.from, r.to);
@@ -143,7 +135,28 @@ export default function DashboardFinanceiro() {
     return calcPeriodMetrics(rides, vehicle, r.from, r.to);
   }, [rides, vehicle]);
 
+  // Meta do período (compara receita bruta com a meta configurada)
+  const metaDoPeriodo =
+    periodo === "hoje"
+      ? metas.diaria
+      : periodo === "semana"
+      ? metas.semanal
+      : periodo === "mes"
+      ? metas.mensal
+      : metaPeriodo(metas.diaria, metrics.diasNoPeriodo);
+  const percentualMeta = metaDoPeriodo > 0 ? Math.min(100, (metrics.ganhoBruto / metaDoPeriodo) * 100) : 0;
 
+  const horasMetaDia = Number(goals?.horas_meta_dia || 8);
+  const projDia = projecaoFimDia(metricsHoje.ganhoBruto, metricsHoje.horasTrabalhadas, horasMetaDia, metricsHoje.numCorridas);
+  const projSem = projecaoSemanal(metricsSemana.ganhoBruto, metricsSemana.numCorridas);
+  const diasRestSem = diasRestantesSemana();
+  const hojeTZ = nowInTZ();
+  const projMes = projecaoMensal(
+    metricsMes.ganhoBruto,
+    hojeTZ.getDate(),
+    new Date(hojeTZ.getFullYear(), hojeTZ.getMonth() + 1, 0).getDate(),
+    metricsMes.numCorridas
+  );
   return (
     <AppLayout>
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
