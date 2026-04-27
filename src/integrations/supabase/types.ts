@@ -84,6 +84,8 @@ export type Database = {
           observacao: string | null
           plataforma: string
           r_por_km_real: number | null
+          rua_destino: string | null
+          rua_origem: string | null
           uber_ride_uuid: string | null
           user_id: string
           valor_bruto: number | null
@@ -108,6 +110,8 @@ export type Database = {
           observacao?: string | null
           plataforma?: string
           r_por_km_real?: number | null
+          rua_destino?: string | null
+          rua_origem?: string | null
           uber_ride_uuid?: string | null
           user_id: string
           valor_bruto?: number | null
@@ -132,6 +136,8 @@ export type Database = {
           observacao?: string | null
           plataforma?: string
           r_por_km_real?: number | null
+          rua_destino?: string | null
+          rua_origem?: string | null
           uber_ride_uuid?: string | null
           user_id?: string
           valor_bruto?: number | null
