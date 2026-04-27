@@ -58,7 +58,7 @@ export type Database = {
           {
             foreignKeyName: "goals_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -328,7 +328,7 @@ export type Database = {
           {
             foreignKeyName: "vehicles_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
