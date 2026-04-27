@@ -276,9 +276,10 @@ export default function DashboardFinanceiro() {
                 <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
                 <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
                 <MiniCard
-                  title="Lucro real acima do equilíbrio"
-                  value={fmtBRL(lucroAcimaEquilibrio)}
-                  positive={lucroAcimaEquilibrio >= 0}
+                  title="Resultado do dia"
+                  value={fmtBRL(resultadoDia)}
+                  positive={resultadoDia >= 0}
+                  hint={resultadoDia >= 0 ? "✓ Acima do equilíbrio" : `Faltam ${fmtBRL(Math.abs(resultadoDia))} para cobrir custos`}
                 />
               </div>
             </div>
