@@ -2,6 +2,30 @@ import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
 
 export type Periodo = "hoje" | "semana" | "mes" | "personalizado";
 
+export const TZ = "America/Sao_Paulo";
+
+/** Retorna a data "agora" como se estivesse em America/Sao_Paulo (componentes Y/M/D/H/m/s
+ * representam o horário local de SP, mesmo que o objeto Date em si seja UTC). */
+export function nowInTZ(): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value || 0);
+  const h = get("hour"); // 24h
+  return new Date(get("year"), get("month") - 1, get("day"), h === 24 ? 0 : h, get("minute"), get("second"));
+}
+
+/** Formata um instant ISO/Date no fuso de SP, ex: "HH:mm" ou "dd/MM HH:mm". */
+export function fmtInTZ(value: string | Date | null | undefined, opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" }): string {
+  if (!value) return "—";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, ...opts }).format(d);
+}
+
 export interface Vehicle {
   combustivel?: string | null;
   consumo_km_litro?: number | null;
@@ -44,7 +68,7 @@ export interface Ride {
 }
 
 export function getPeriodRange(periodo: Periodo, custom?: { from: Date; to: Date }): { from: Date; to: Date } {
-  const now = new Date();
+  const now = nowInTZ();
   switch (periodo) {
     case "hoje":
       return { from: startOfDay(now), to: endOfDay(now) };
@@ -90,10 +114,19 @@ export function calcCustoCombustivel(kmTotal: number, v: Vehicle | null): number
   return (kmTotal / consumo) * preco;
 }
 
-/** Filtra rides dentro do range usando data_corrida (ou horario_inicio como fallback). */
+/** Filtra rides dentro do range usando data_corrida (ou horario_inicio em SP como fallback). */
 export function filterRidesInRange(rides: Ride[], from: Date, to: Date): Ride[] {
   return rides.filter((r) => {
-    const ref = r.data_corrida ? new Date(r.data_corrida + "T12:00:00") : r.horario_inicio ? new Date(r.horario_inicio) : null;
+    let ref: Date | null = null;
+    if (r.data_corrida) {
+      // data_corrida é "YYYY-MM-DD" (sem TZ) — tratamos como meio-dia local
+      ref = new Date(r.data_corrida + "T12:00:00");
+    } else if (r.horario_inicio) {
+      // horario_inicio é UTC; convertemos para wallclock de SP
+      const utc = new Date(r.horario_inicio);
+      const sp = new Date(utc.toLocaleString("en-US", { timeZone: TZ }));
+      ref = sp;
+    }
     if (!ref) return false;
     return ref >= from && ref <= to;
   });
@@ -253,23 +286,40 @@ export function metaPeriodo(metaDiaria: number, diasNoPeriodo: number): number {
   return metaDiaria * diasNoPeriodo;
 }
 
-export function projecaoFimDia(ganhoAtual: number, horasTrabalhadasHoje: number): number {
-  // Projeta linear até 10h padrão se ainda não atingiu
-  if (horasTrabalhadasHoje <= 0) return ganhoAtual;
-  const horasAlvo = 10;
-  if (horasTrabalhadasHoje >= horasAlvo) return ganhoAtual;
-  return (ganhoAtual / horasTrabalhadasHoje) * horasAlvo;
+/** Projeção de fim de dia. Retorna null se não houver horas/corridas registradas. */
+export function projecaoFimDia(receitaHoje: number, horasTrabalhadasHoje: number, horasMetaDia: number, numCorridasHoje: number): number | null {
+  if (numCorridasHoje <= 0 || horasTrabalhadasHoje <= 0 || horasMetaDia <= 0) return null;
+  if (horasTrabalhadasHoje >= horasMetaDia) return receitaHoje;
+  return (receitaHoje / horasTrabalhadasHoje) * horasMetaDia;
 }
 
 export function diasRestantesSemana(): number {
-  const now = new Date();
+  const now = nowInTZ();
   const fim = endOfWeek(now, { weekStartsOn: 1 });
   return Math.max(0, differenceInCalendarDays(fim, now));
 }
 
-export function projecaoMensal(ganhoMesAtual: number, diaAtualDoMes: number, diasNoMes: number): number {
-  if (diaAtualDoMes <= 0) return 0;
-  return (ganhoMesAtual / diaAtualDoMes) * diasNoMes;
+export function diasJaPassadosSemana(): number {
+  const now = nowInTZ();
+  const ini = startOfWeek(now, { weekStartsOn: 1 });
+  return Math.max(1, differenceInCalendarDays(now, ini) + 1);
+}
+
+/** Projeção semanal: receita atual + (média diária × dias restantes). null se não houver dados. */
+export function projecaoSemanal(receitaSemanaAtual: number, numCorridasSemana: number): number | null {
+  if (numCorridasSemana <= 0) return null;
+  const passados = diasJaPassadosSemana();
+  const restantes = diasRestantesSemana();
+  const mediaDia = receitaSemanaAtual / passados;
+  return receitaSemanaAtual + mediaDia * restantes;
+}
+
+/** Projeção mensal baseada em receita atual / dias passados × total dias do mês. */
+export function projecaoMensal(receitaMesAtual: number, diaAtualDoMes: number, diasNoMes: number, numCorridasMes: number): number | null {
+  if (numCorridasMes <= 0 || diaAtualDoMes <= 0) return null;
+  const mediaDia = receitaMesAtual / diaAtualDoMes;
+  const diasRestantes = Math.max(0, diasNoMes - diaAtualDoMes);
+  return receitaMesAtual + mediaDia * diasRestantes;
 }
 
 export { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay };

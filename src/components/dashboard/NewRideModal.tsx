@@ -73,15 +73,30 @@ const makeInitial = (): FormState => ({
 
 const toTimeStr = (iso: string | null) => {
   if (!iso) return "";
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  // Converte instante UTC para horário de SP (HH:mm)
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const h = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const m = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${h}:${m}`;
 };
 
 const numToStr = (n: number | null | undefined) => {
   if (n === null || n === undefined) return "";
   return String(n).replace(".", ",");
+};
+
+/** Converte uma data (yyyy-MM-dd) e hora (HH:mm) interpretada em SP para um Date UTC. */
+const spWallToUTC = (dateYmd: string, timeHm: string): Date => {
+  // Usamos uma data de referência em UTC para descobrir o offset de SP naquele momento
+  const refUTC = new Date(`${dateYmd}T${timeHm}:00Z`);
+  const sp = new Date(refUTC.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const offsetMin = (sp.getTime() - refUTC.getTime()) / 60000; // negativo (-180 normalmente)
+  return new Date(refUTC.getTime() - offsetMin * 60000);
 };
 
 const fromEditing = (e: EditingRide): FormState => {
@@ -135,8 +150,9 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing }: N
     }
 
     const dia = format(form.data_corrida, "yyyy-MM-dd");
-    const inicio = new Date(`${dia}T${form.horario_inicio}:00`);
-    let fim = new Date(`${dia}T${form.horario_fim}:00`);
+    // Interpreta HH:mm como horário de SP e converte para instante UTC
+    const inicio = spWallToUTC(dia, form.horario_inicio);
+    let fim = spWallToUTC(dia, form.horario_fim);
     if (fim < inicio) fim = new Date(fim.getTime() + 24 * 60 * 60 * 1000);
     const duracao = Math.round((fim.getTime() - inicio.getTime()) / 60000);
     const kmTotal = kmPax + kmDesl;

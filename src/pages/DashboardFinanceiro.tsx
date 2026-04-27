@@ -48,9 +48,11 @@ import {
   fmtNumber,
   getPeriodRange,
   metaPeriodo,
+  nowInTZ,
   Periodo,
   projecaoFimDia,
   projecaoMensal,
+  projecaoSemanal,
   resolveGoals,
   Ride,
   Vehicle,
@@ -100,21 +102,13 @@ export default function DashboardFinanceiro() {
   // Indicadores por km/hora
   const custoTotalKm = metrics.kmTotal > 0 ? metrics.custoTotal / metrics.kmTotal : 0;
   const custoCombKm = metrics.kmTotal > 0 ? metrics.custoCombustivel / metrics.kmTotal : 0;
-  // Faturamento bruto por km e hora (não desconta custos/metas)
-  const ganhoPorKm = metrics.ganhoBrutoPorKm;
+  const kmTotalPeriodo = metrics.kmTotal;
+  const receitaBrutaPeriodo = metrics.ganhoBruto;
+  const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
+  const ganhoPorKm = ganhoRealKm;
   const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  const lucroAcimaEquilibrio = metrics.ganhoReal - metrics.pontoEquilibrioDiario * metrics.diasNoPeriodo;
-
-  // Meta do período
-  const metaDoPeriodo =
-    periodo === "hoje"
-      ? metas.diaria
-      : periodo === "semana"
-      ? metas.semanal
-      : periodo === "mes"
-      ? metas.mensal
-      : metaPeriodo(metas.diaria, metrics.diasNoPeriodo);
-  const percentualMeta = metaDoPeriodo > 0 ? Math.min(100, (metrics.ganhoReal / metaDoPeriodo) * 100) : 0;
+  // Resultado do dia: receita bruta - ponto de equilíbrio diário
+  const resultadoDia = receitaBrutaPeriodo - metrics.pontoEquilibrioDiario;
 
   // Comparativos
   const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle), [rides, vehicle]);
@@ -127,7 +121,7 @@ export default function DashboardFinanceiro() {
     { name: "Comissão Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
   ].filter((d) => d.value > 0);
 
-  // Cards de meta detalhados (sempre exibe diária, semanal, mensal)
+  // Métricas para cards de meta (sempre exibe diária, semanal, mensal)
   const metricsHoje = useMemo(() => {
     const r = getPeriodRange("hoje");
     return calcPeriodMetrics(rides, vehicle, r.from, r.to);
@@ -141,11 +135,28 @@ export default function DashboardFinanceiro() {
     return calcPeriodMetrics(rides, vehicle, r.from, r.to);
   }, [rides, vehicle]);
 
-  const projDia = projecaoFimDia(metricsHoje.ganhoReal, metricsHoje.horasTrabalhadas);
-  const diasRestSem = diasRestantesSemana();
-  const hoje = new Date();
-  const projMes = projecaoMensal(metricsMes.ganhoReal, getDate(hoje), getDaysInMonth(hoje));
+  // Meta do período (compara receita bruta com a meta configurada)
+  const metaDoPeriodo =
+    periodo === "hoje"
+      ? metas.diaria
+      : periodo === "semana"
+      ? metas.semanal
+      : periodo === "mes"
+      ? metas.mensal
+      : metaPeriodo(metas.diaria, metrics.diasNoPeriodo);
+  const percentualMeta = metaDoPeriodo > 0 ? Math.min(100, (metrics.ganhoBruto / metaDoPeriodo) * 100) : 0;
 
+  const horasMetaDia = Number(goals?.horas_meta_dia || 8);
+  const projDia = projecaoFimDia(metricsHoje.ganhoBruto, metricsHoje.horasTrabalhadas, horasMetaDia, metricsHoje.numCorridas);
+  const projSem = projecaoSemanal(metricsSemana.ganhoBruto, metricsSemana.numCorridas);
+  const diasRestSem = diasRestantesSemana();
+  const hojeTZ = nowInTZ();
+  const projMes = projecaoMensal(
+    metricsMes.ganhoBruto,
+    hojeTZ.getDate(),
+    new Date(hojeTZ.getFullYear(), hojeTZ.getMonth() + 1, 0).getDate(),
+    metricsMes.numCorridas
+  );
   return (
     <AppLayout>
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -265,9 +276,10 @@ export default function DashboardFinanceiro() {
                 <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
                 <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
                 <MiniCard
-                  title="Lucro real acima do equilíbrio"
-                  value={fmtBRL(lucroAcimaEquilibrio)}
-                  positive={lucroAcimaEquilibrio >= 0}
+                  title="Resultado do dia"
+                  value={fmtBRL(resultadoDia)}
+                  positive={resultadoDia >= 0}
+                  hint={resultadoDia >= 0 ? "✓ Acima do equilíbrio" : `Faltam ${fmtBRL(Math.abs(resultadoDia))} para cobrir custos`}
                 />
               </div>
             </div>
@@ -387,21 +399,25 @@ export default function DashboardFinanceiro() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MetaCard
                   titulo="Meta diária"
-                  atual={metricsHoje.ganhoReal}
+                  atual={metricsHoje.ganhoBruto}
                   meta={metas.diaria}
-                  rodape={`Projeção fim do dia: ${fmtBRL(projDia)}`}
+                  rodape={projDia != null ? `Projeção fim do dia: ${fmtBRL(projDia)}` : "Projeção fim do dia: —"}
                 />
                 <MetaCard
                   titulo="Meta semanal"
-                  atual={metricsSemana.ganhoReal}
+                  atual={metricsSemana.ganhoBruto}
                   meta={metas.semanal}
-                  rodape={`${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`}
+                  rodape={
+                    projSem != null
+                      ? `Projeção semana: ${fmtBRL(projSem)} • ${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
+                      : `${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
+                  }
                 />
                 <MetaCard
                   titulo="Meta mensal"
-                  atual={metricsMes.ganhoReal}
+                  atual={metricsMes.ganhoBruto}
                   meta={metas.mensal}
-                  rodape={`Projeção fechamento: ${fmtBRL(projMes)}`}
+                  rodape={projMes != null ? `Projeção fechamento: ${fmtBRL(projMes)}` : "Projeção fechamento: —"}
                 />
               </div>
             </div>
@@ -490,10 +506,12 @@ interface CompRow {
   a: number;
   b: number;
   format: "brl" | "num" | "rkm" | "rh";
+  aHasData: boolean;
+  bHasData: boolean;
 }
 
 function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
-  const now = new Date();
+  const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
@@ -502,7 +520,7 @@ function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRo
 }
 
 function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
-  const now = new Date();
+  const now = nowInTZ();
   const aFrom = startOfMonth(now);
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
@@ -511,12 +529,14 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
 }
 
 function makeComp(a: ReturnType<typeof calcPeriodMetrics>, b: ReturnType<typeof calcPeriodMetrics>): CompRow[] {
+  const aHas = a.numCorridas > 0;
+  const bHas = b.numCorridas > 0;
   return [
-    { metric: "Ganho real", a: a.ganhoReal, b: b.ganhoReal, format: "brl" },
-    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num" },
-    { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num" },
-    { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh" },
-    { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm" },
+    { metric: "Ganho real", a: a.ganhoBruto, b: b.ganhoBruto, format: "brl", aHasData: aHas, bHasData: bHas },
+    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
+    { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num", aHasData: aHas, bHasData: bHas },
+    { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh", aHasData: aHas, bHasData: bHas },
+    { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm", aHasData: aHas, bHasData: bHas },
   ];
 }
 
@@ -533,16 +553,20 @@ function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string;
       </TableHeader>
       <TableBody>
         {rows.map((r) => {
-          const semBase = !r.b || r.b === 0;
+          const semBase = !r.bHasData;
           const diff = r.a - r.b;
-          const pct = !semBase ? (diff / Math.abs(r.b)) * 100 : 0;
+          const pct = !semBase && r.b !== 0 ? (diff / Math.abs(r.b)) * 100 : 0;
           const up = diff > 0;
           const flat = diff === 0;
           return (
             <TableRow key={r.metric}>
               <TableCell className="font-medium">{r.metric}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatVal(r.a, r.format)}</TableCell>
-              <TableCell className="text-right tabular-nums text-muted-foreground">{formatVal(r.b, r.format)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {r.aHasData ? formatVal(r.a, r.format) : <span className="text-muted-foreground">—</span>}
+              </TableCell>
+              <TableCell className="text-right tabular-nums text-muted-foreground">
+                {r.bHasData ? formatVal(r.b, r.format) : "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {semBase ? (
                   <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
