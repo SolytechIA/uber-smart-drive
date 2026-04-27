@@ -399,21 +399,25 @@ export default function DashboardFinanceiro() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MetaCard
                   titulo="Meta diária"
-                  atual={metricsHoje.ganhoReal}
+                  atual={metricsHoje.ganhoBruto}
                   meta={metas.diaria}
-                  rodape={`Projeção fim do dia: ${fmtBRL(projDia)}`}
+                  rodape={projDia != null ? `Projeção fim do dia: ${fmtBRL(projDia)}` : "Projeção fim do dia: —"}
                 />
                 <MetaCard
                   titulo="Meta semanal"
-                  atual={metricsSemana.ganhoReal}
+                  atual={metricsSemana.ganhoBruto}
                   meta={metas.semanal}
-                  rodape={`${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`}
+                  rodape={
+                    projSem != null
+                      ? `Projeção semana: ${fmtBRL(projSem)} • ${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
+                      : `${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
+                  }
                 />
                 <MetaCard
                   titulo="Meta mensal"
-                  atual={metricsMes.ganhoReal}
+                  atual={metricsMes.ganhoBruto}
                   meta={metas.mensal}
-                  rodape={`Projeção fechamento: ${fmtBRL(projMes)}`}
+                  rodape={projMes != null ? `Projeção fechamento: ${fmtBRL(projMes)}` : "Projeção fechamento: —"}
                 />
               </div>
             </div>
