@@ -12,6 +12,7 @@ import RecuperarSenha from "./pages/RecuperarSenha";
 import RedefinirSenha from "./pages/RedefinirSenha";
 import Onboarding from "./pages/Onboarding";
 import DashboardOperacional from "./pages/DashboardOperacional";
+import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import ConectarUber from "./pages/ConectarUber";
 import Admin from "./pages/Admin";
@@ -46,6 +47,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireVehicle>
                   <DashboardOperacional />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/financeiro"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <DashboardFinanceiro />
                 </ProtectedRoute>
               }
             />
