@@ -141,8 +141,9 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing }: N
     }
 
     const dia = format(form.data_corrida, "yyyy-MM-dd");
-    const inicio = new Date(`${dia}T${form.horario_inicio}:00`);
-    let fim = new Date(`${dia}T${form.horario_fim}:00`);
+    // Interpreta HH:mm como horário de SP e converte para instante UTC
+    const inicio = spWallToUTC(dia, form.horario_inicio);
+    let fim = spWallToUTC(dia, form.horario_fim);
     if (fim < inicio) fim = new Date(fim.getTime() + 24 * 60 * 60 * 1000);
     const duracao = Math.round((fim.getTime() - inicio.getTime()) / 60000);
     const kmTotal = kmPax + kmDesl;
