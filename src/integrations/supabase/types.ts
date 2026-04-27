@@ -14,7 +14,326 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      goals: {
+        Row: {
+          horas_meta_dia: number | null
+          id: string
+          km_max_deslocamento: number | null
+          km_vazio_max_percent: number | null
+          meta_diaria: number | null
+          meta_mensal: number | null
+          meta_semanal: number | null
+          r_por_km_minimo: number | null
+          updated_at: string
+          user_id: string
+          valor_minimo_corrida: number | null
+        }
+        Insert: {
+          horas_meta_dia?: number | null
+          id?: string
+          km_max_deslocamento?: number | null
+          km_vazio_max_percent?: number | null
+          meta_diaria?: number | null
+          meta_mensal?: number | null
+          meta_semanal?: number | null
+          r_por_km_minimo?: number | null
+          updated_at?: string
+          user_id: string
+          valor_minimo_corrida?: number | null
+        }
+        Update: {
+          horas_meta_dia?: number | null
+          id?: string
+          km_max_deslocamento?: number | null
+          km_vazio_max_percent?: number | null
+          meta_diaria?: number | null
+          meta_mensal?: number | null
+          meta_semanal?: number | null
+          r_por_km_minimo?: number | null
+          updated_at?: string
+          user_id?: string
+          valor_minimo_corrida?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rides: {
+        Row: {
+          bairro_destino: string | null
+          bairro_origem: string | null
+          classificacao: string | null
+          created_at: string
+          custo_combustivel_corrida: number | null
+          data_corrida: string | null
+          duracao_minutos: number | null
+          fonte: string | null
+          ganho_real_corrida: number | null
+          horario_fim: string | null
+          horario_inicio: string | null
+          id: string
+          km_deslocamento: number | null
+          km_passageiro: number | null
+          km_total: number | null
+          observacao: string | null
+          plataforma: string
+          r_por_km_real: number | null
+          uber_ride_uuid: string | null
+          user_id: string
+          valor_bruto: number | null
+          valor_liquido: number | null
+        }
+        Insert: {
+          bairro_destino?: string | null
+          bairro_origem?: string | null
+          classificacao?: string | null
+          created_at?: string
+          custo_combustivel_corrida?: number | null
+          data_corrida?: string | null
+          duracao_minutos?: number | null
+          fonte?: string | null
+          ganho_real_corrida?: number | null
+          horario_fim?: string | null
+          horario_inicio?: string | null
+          id?: string
+          km_deslocamento?: number | null
+          km_passageiro?: number | null
+          km_total?: number | null
+          observacao?: string | null
+          plataforma?: string
+          r_por_km_real?: number | null
+          uber_ride_uuid?: string | null
+          user_id: string
+          valor_bruto?: number | null
+          valor_liquido?: number | null
+        }
+        Update: {
+          bairro_destino?: string | null
+          bairro_origem?: string | null
+          classificacao?: string | null
+          created_at?: string
+          custo_combustivel_corrida?: number | null
+          data_corrida?: string | null
+          duracao_minutos?: number | null
+          fonte?: string | null
+          ganho_real_corrida?: number | null
+          horario_fim?: string | null
+          horario_inicio?: string | null
+          id?: string
+          km_deslocamento?: number | null
+          km_passageiro?: number | null
+          km_total?: number | null
+          observacao?: string | null
+          plataforma?: string
+          r_por_km_real?: number | null
+          uber_ride_uuid?: string | null
+          user_id?: string
+          valor_bruto?: number | null
+          valor_liquido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          data_inicio: string
+          data_renovacao: string | null
+          id: string
+          plano: string
+          status: string
+          user_id: string
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_inicio?: string
+          data_renovacao?: string | null
+          id?: string
+          plano: string
+          status: string
+          user_id: string
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_inicio?: string
+          data_renovacao?: string | null
+          id?: string
+          plano?: string
+          status?: string
+          user_id?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          ativo: boolean
+          cidade: string | null
+          created_at: string
+          email: string
+          id: string
+          is_admin: boolean
+          nome: string | null
+          plano: string
+          telefone: string | null
+          trial_expira_em: string | null
+          uber_conectado: boolean
+          uber_cookie: string | null
+          uber_csrf_token: string | null
+          uber_earnings_seed: string | null
+          uber_ultimo_sync: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          cidade?: string | null
+          created_at?: string
+          email: string
+          id: string
+          is_admin?: boolean
+          nome?: string | null
+          plano?: string
+          telefone?: string | null
+          trial_expira_em?: string | null
+          uber_conectado?: boolean
+          uber_cookie?: string | null
+          uber_csrf_token?: string | null
+          uber_earnings_seed?: string | null
+          uber_ultimo_sync?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          cidade?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          is_admin?: boolean
+          nome?: string | null
+          plano?: string
+          telefone?: string | null
+          trial_expira_em?: string | null
+          uber_conectado?: boolean
+          uber_cookie?: string | null
+          uber_csrf_token?: string | null
+          uber_earnings_seed?: string | null
+          uber_ultimo_sync?: string | null
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          ano: number | null
+          capacidade_tanque: number | null
+          combustivel: string | null
+          consumo_km_kwh: number | null
+          consumo_km_litro: number | null
+          created_at: string
+          custo_ipva_mensal: number | null
+          custo_lavagem_mensal: number | null
+          custo_manutencao_mensal: number | null
+          custo_seguro_mensal: number | null
+          dias_trabalhados_mes: number
+          id: string
+          marca: string | null
+          modelo: string | null
+          outros_custos_label: string | null
+          outros_custos_valor: number | null
+          percentual_celular_trabalho: number | null
+          placa: string | null
+          preco_combustivel: number | null
+          preco_kwh: number | null
+          taxa_uber_percent: number
+          tipo_posse: string | null
+          user_id: string
+          valor_parcela_ou_diaria: number | null
+          valor_plano_celular: number | null
+        }
+        Insert: {
+          ano?: number | null
+          capacidade_tanque?: number | null
+          combustivel?: string | null
+          consumo_km_kwh?: number | null
+          consumo_km_litro?: number | null
+          created_at?: string
+          custo_ipva_mensal?: number | null
+          custo_lavagem_mensal?: number | null
+          custo_manutencao_mensal?: number | null
+          custo_seguro_mensal?: number | null
+          dias_trabalhados_mes?: number
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          outros_custos_label?: string | null
+          outros_custos_valor?: number | null
+          percentual_celular_trabalho?: number | null
+          placa?: string | null
+          preco_combustivel?: number | null
+          preco_kwh?: number | null
+          taxa_uber_percent?: number
+          tipo_posse?: string | null
+          user_id: string
+          valor_parcela_ou_diaria?: number | null
+          valor_plano_celular?: number | null
+        }
+        Update: {
+          ano?: number | null
+          capacidade_tanque?: number | null
+          combustivel?: string | null
+          consumo_km_kwh?: number | null
+          consumo_km_litro?: number | null
+          created_at?: string
+          custo_ipva_mensal?: number | null
+          custo_lavagem_mensal?: number | null
+          custo_manutencao_mensal?: number | null
+          custo_seguro_mensal?: number | null
+          dias_trabalhados_mes?: number
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          outros_custos_label?: string | null
+          outros_custos_valor?: number | null
+          percentual_celular_trabalho?: number | null
+          placa?: string | null
+          preco_combustivel?: number | null
+          preco_kwh?: number | null
+          taxa_uber_percent?: number
+          tipo_posse?: string | null
+          user_id?: string
+          valor_parcela_ou_diaria?: number | null
+          valor_plano_celular?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
