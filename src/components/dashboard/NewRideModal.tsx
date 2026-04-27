@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -25,38 +28,42 @@ interface NewRideModalProps {
 }
 
 interface FormState {
+  data_corrida: Date;
   horario_inicio: string;
   horario_fim: string;
   valor_bruto: string;
   km_passageiro: string;
   km_deslocamento: string;
+  rua_origem: string;
   bairro_origem: string;
+  rua_destino: string;
   bairro_destino: string;
   observacao: string;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
-
-const initial: FormState = {
+const makeInitial = (): FormState => ({
+  data_corrida: new Date(),
   horario_inicio: "",
   horario_fim: "",
   valor_bruto: "",
   km_passageiro: "",
   km_deslocamento: "",
+  rua_origem: "",
   bairro_origem: "",
+  rua_destino: "",
   bairro_destino: "",
   observacao: "",
-};
+});
 
 export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideModalProps) {
   const { user } = useAuth();
-  const [form, setForm] = useState<FormState>(initial);
+  const [form, setForm] = useState<FormState>(makeInitial);
   const [saving, setSaving] = useState(false);
   const [resultado, setResultado] = useState<Classificacao | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setForm(initial);
+      setForm(makeInitial());
       setResultado(null);
     }
   }, [open]);
@@ -74,8 +81,12 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
       toast.error("Preencha horários, valor e km com passageiro");
       return;
     }
+    if (!form.bairro_origem.trim() || !form.bairro_destino.trim()) {
+      toast.error("Preencha bairro de origem e bairro de destino");
+      return;
+    }
 
-    const dia = today();
+    const dia = format(form.data_corrida, "yyyy-MM-dd");
     const inicio = new Date(`${dia}T${form.horario_inicio}:00`);
     let fim = new Date(`${dia}T${form.horario_fim}:00`);
     if (fim < inicio) fim = new Date(fim.getTime() + 24 * 60 * 60 * 1000);
@@ -89,7 +100,7 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
     );
 
     setSaving(true);
-    const { error } = await supabase.from("rides").insert({
+    const payload = {
       user_id: user.id,
       plataforma: "Uber",
       fonte: "manual",
@@ -104,15 +115,19 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
       km_total: kmTotal,
       r_por_km_real: rPorKm,
       ganho_real_corrida: valor,
-      bairro_origem: form.bairro_origem || null,
-      bairro_destino: form.bairro_destino || null,
-      observacao: form.observacao || null,
+      rua_origem: form.rua_origem.trim() || null,
+      bairro_origem: form.bairro_origem.trim(),
+      rua_destino: form.rua_destino.trim() || null,
+      bairro_destino: form.bairro_destino.trim(),
+      observacao: form.observacao.trim() || null,
       classificacao,
-    });
+    };
+    const { error } = await supabase.from("rides").insert(payload);
     setSaving(false);
 
     if (error) {
-      toast.error("Erro ao salvar corrida");
+      console.error("[NewRideModal] insert error:", error, "payload:", payload);
+      toast.error(`Erro ao salvar: ${error.message}`);
       return;
     }
     setResultado(classificacao);
@@ -124,9 +139,12 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Registrar Corrida Manualmente</DialogTitle>
+          <DialogDescription>
+            Informe os dados da corrida para registrar e classificar automaticamente.
+          </DialogDescription>
         </DialogHeader>
 
         {resultado ? (
@@ -143,6 +161,32 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Data da corrida</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(form.data_corrida, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.data_corrida}
+                    onSelect={(d) => d && set("data_corrida", d)}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="hi">Horário início</Label>
@@ -172,12 +216,23 @@ export function NewRideModal({ open, onOpenChange, onSaved, params }: NewRideMod
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="bo">Bairro origem</Label>
-                <Input id="bo" value={form.bairro_origem} onChange={(e) => set("bairro_origem", e.target.value)} />
+                <Label htmlFor="ro">Rua/Av. de origem</Label>
+                <Input id="ro" placeholder="Opcional" value={form.rua_origem} onChange={(e) => set("rua_origem", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bd">Bairro destino</Label>
-                <Input id="bd" value={form.bairro_destino} onChange={(e) => set("bairro_destino", e.target.value)} />
+                <Label htmlFor="bo">Bairro de origem *</Label>
+                <Input id="bo" value={form.bairro_origem} onChange={(e) => set("bairro_origem", e.target.value)} required />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="rd">Rua/Av. de destino</Label>
+                <Input id="rd" placeholder="Opcional" value={form.rua_destino} onChange={(e) => set("rua_destino", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bd">Bairro de destino *</Label>
+                <Input id="bd" value={form.bairro_destino} onChange={(e) => set("bairro_destino", e.target.value)} required />
               </div>
             </div>
 
