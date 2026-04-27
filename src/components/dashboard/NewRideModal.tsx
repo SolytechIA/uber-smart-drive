@@ -99,7 +99,7 @@ const spWallToUTC = (dateYmd: string, timeHm: string): Date => {
   return new Date(refUTC.getTime() - offsetMin * 60000);
 };
 
-
+const fromEditing = (e: EditingRide): FormState => {
   const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : new Date();
   return {
     data_corrida: dia,
