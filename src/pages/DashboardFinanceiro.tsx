@@ -261,8 +261,8 @@ export default function DashboardFinanceiro() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <MiniCard title="Custo total por km" value={`R$ ${fmtNumber(custoTotalKm)}/km`} />
                 <MiniCard title="Custo combustível por km" value={`R$ ${fmtNumber(custoCombKm)}/km`} hint="Use para avaliar corridas" />
-                <MiniCard title="Ganho real por km" value={`R$ ${fmtNumber(ganhoRealKm)}/km`} positive={ganhoRealKm >= 0} />
-                <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoRealHora)}/h`} positive={ganhoRealHora >= 0} />
+                <MiniCard title="Ganho real por km" value={`R$ ${fmtNumber(ganhoPorKm)}/km`} positive={ganhoPorKm >= 0} hint="Bruto ÷ km totais (com vazio)" />
+                <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
                 <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
                 <MiniCard
                   title="Lucro real acima do equilíbrio"
