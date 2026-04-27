@@ -286,23 +286,40 @@ export function metaPeriodo(metaDiaria: number, diasNoPeriodo: number): number {
   return metaDiaria * diasNoPeriodo;
 }
 
-export function projecaoFimDia(ganhoAtual: number, horasTrabalhadasHoje: number): number {
-  // Projeta linear até 10h padrão se ainda não atingiu
-  if (horasTrabalhadasHoje <= 0) return ganhoAtual;
-  const horasAlvo = 10;
-  if (horasTrabalhadasHoje >= horasAlvo) return ganhoAtual;
-  return (ganhoAtual / horasTrabalhadasHoje) * horasAlvo;
+/** Projeção de fim de dia. Retorna null se não houver horas/corridas registradas. */
+export function projecaoFimDia(receitaHoje: number, horasTrabalhadasHoje: number, horasMetaDia: number, numCorridasHoje: number): number | null {
+  if (numCorridasHoje <= 0 || horasTrabalhadasHoje <= 0 || horasMetaDia <= 0) return null;
+  if (horasTrabalhadasHoje >= horasMetaDia) return receitaHoje;
+  return (receitaHoje / horasTrabalhadasHoje) * horasMetaDia;
 }
 
 export function diasRestantesSemana(): number {
-  const now = new Date();
+  const now = nowInTZ();
   const fim = endOfWeek(now, { weekStartsOn: 1 });
   return Math.max(0, differenceInCalendarDays(fim, now));
 }
 
-export function projecaoMensal(ganhoMesAtual: number, diaAtualDoMes: number, diasNoMes: number): number {
-  if (diaAtualDoMes <= 0) return 0;
-  return (ganhoMesAtual / diaAtualDoMes) * diasNoMes;
+export function diasJaPassadosSemana(): number {
+  const now = nowInTZ();
+  const ini = startOfWeek(now, { weekStartsOn: 1 });
+  return Math.max(1, differenceInCalendarDays(now, ini) + 1);
+}
+
+/** Projeção semanal: receita atual + (média diária × dias restantes). null se não houver dados. */
+export function projecaoSemanal(receitaSemanaAtual: number, numCorridasSemana: number): number | null {
+  if (numCorridasSemana <= 0) return null;
+  const passados = diasJaPassadosSemana();
+  const restantes = diasRestantesSemana();
+  const mediaDia = receitaSemanaAtual / passados;
+  return receitaSemanaAtual + mediaDia * restantes;
+}
+
+/** Projeção mensal baseada em receita atual / dias passados × total dias do mês. */
+export function projecaoMensal(receitaMesAtual: number, diaAtualDoMes: number, diasNoMes: number, numCorridasMes: number): number | null {
+  if (numCorridasMes <= 0 || diaAtualDoMes <= 0) return null;
+  const mediaDia = receitaMesAtual / diaAtualDoMes;
+  const diasRestantes = Math.max(0, diasNoMes - diaAtualDoMes);
+  return receitaMesAtual + mediaDia * diasRestantes;
 }
 
 export { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay };
