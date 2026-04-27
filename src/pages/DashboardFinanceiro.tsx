@@ -143,10 +143,6 @@ export default function DashboardFinanceiro() {
     return calcPeriodMetrics(rides, vehicle, r.from, r.to);
   }, [rides, vehicle]);
 
-  const projDia = projecaoFimDia(metricsHoje.ganhoReal, metricsHoje.horasTrabalhadas);
-  const diasRestSem = diasRestantesSemana();
-  const hoje = new Date();
-  const projMes = projecaoMensal(metricsMes.ganhoReal, getDate(hoje), getDaysInMonth(hoje));
 
   return (
     <AppLayout>
