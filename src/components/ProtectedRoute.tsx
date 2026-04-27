@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,7 @@ export function ProtectedRoute({
   const [checking, setChecking] = useState(requireVehicle || requireAdmin);
   const [hasVehicle, setHasVehicle] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const checkedForUserId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -27,6 +28,11 @@ export function ProtectedRoute({
       setChecking(false);
       return;
     }
+    // Only run the check once per user id — prevents re-checks during local
+    // state updates inside protected pages (e.g. typing in onboarding fields).
+    if (checkedForUserId.current === user.id) return;
+    checkedForUserId.current = user.id;
+
     (async () => {
       if (requireVehicle) {
         const { count } = await supabase
@@ -47,7 +53,7 @@ export function ProtectedRoute({
     })();
   }, [user, requireVehicle, requireAdmin]);
 
-  if (loading || checking) {
+  if (loading || (user && checking)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse">
