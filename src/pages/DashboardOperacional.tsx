@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { NewRideModal } from "@/components/dashboard/NewRideModal";
+import { NewRideModal, type EditingRide } from "@/components/dashboard/NewRideModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -84,7 +84,24 @@ export default function DashboardOperacional() {
   const [nome, setNome] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [editing, setEditing] = useState<EditingRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const handleEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("rides")
+      .select(
+        "id, data_corrida, horario_inicio, horario_fim, valor_bruto, km_passageiro, km_deslocamento, rua_origem, bairro_origem, rua_destino, bairro_destino, observacao",
+      )
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) {
+      toast.error("Não foi possível carregar a corrida");
+      return;
+    }
+    setEditing(data as EditingRide);
+    setShowNew(true);
+  };
 
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const yesterdayStr = useMemo(() => {
@@ -232,7 +249,7 @@ export default function DashboardOperacional() {
                   key={r.id}
                   ride={r}
                   onDelete={() => setDeleteId(r.id)}
-                  onEdit={() => toast.info("Edição estará disponível em breve")}
+                  onEdit={() => handleEdit(r.id)}
                 />
               ))}
             </ul>
@@ -253,9 +270,13 @@ export default function DashboardOperacional() {
 
       <NewRideModal
         open={showNew}
-        onOpenChange={setShowNew}
+        onOpenChange={(o) => {
+          setShowNew(o);
+          if (!o) setEditing(null);
+        }}
         onSaved={loadAll}
         params={params}
+        editing={editing}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
