@@ -100,8 +100,9 @@ export default function DashboardFinanceiro() {
   // Indicadores por km/hora
   const custoTotalKm = metrics.kmTotal > 0 ? metrics.custoTotal / metrics.kmTotal : 0;
   const custoCombKm = metrics.kmTotal > 0 ? metrics.custoCombustivel / metrics.kmTotal : 0;
-  const ganhoRealKm = metrics.kmTotal > 0 ? metrics.ganhoReal / metrics.kmTotal : 0;
-  const ganhoRealHora = metrics.horasTrabalhadas > 0 ? metrics.ganhoReal / metrics.horasTrabalhadas : 0;
+  // Faturamento bruto por km e hora (não desconta custos/metas)
+  const ganhoPorKm = metrics.ganhoBrutoPorKm;
+  const ganhoPorHora = metrics.ganhoBrutoPorHora;
   const lucroAcimaEquilibrio = metrics.ganhoReal - metrics.pontoEquilibrioDiario * metrics.diasNoPeriodo;
 
   // Meta do período
