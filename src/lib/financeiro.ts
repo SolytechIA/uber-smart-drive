@@ -2,6 +2,30 @@ import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
 
 export type Periodo = "hoje" | "semana" | "mes" | "personalizado";
 
+export const TZ = "America/Sao_Paulo";
+
+/** Retorna a data "agora" como se estivesse em America/Sao_Paulo (componentes Y/M/D/H/m/s
+ * representam o horário local de SP, mesmo que o objeto Date em si seja UTC). */
+export function nowInTZ(): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value || 0);
+  const h = get("hour"); // 24h
+  return new Date(get("year"), get("month") - 1, get("day"), h === 24 ? 0 : h, get("minute"), get("second"));
+}
+
+/** Formata um instant ISO/Date no fuso de SP, ex: "HH:mm" ou "dd/MM HH:mm". */
+export function fmtInTZ(value: string | Date | null | undefined, opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" }): string {
+  if (!value) return "—";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, ...opts }).format(d);
+}
+
 export interface Vehicle {
   combustivel?: string | null;
   consumo_km_litro?: number | null;
@@ -44,7 +68,7 @@ export interface Ride {
 }
 
 export function getPeriodRange(periodo: Periodo, custom?: { from: Date; to: Date }): { from: Date; to: Date } {
-  const now = new Date();
+  const now = nowInTZ();
   switch (periodo) {
     case "hoje":
       return { from: startOfDay(now), to: endOfDay(now) };
