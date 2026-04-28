@@ -19,6 +19,7 @@ import {
   type ClassifyParams,
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
+import { nowInTZ } from "@/lib/financeiro";
 
 export interface EditingRide {
   id: string;
@@ -58,7 +59,7 @@ interface FormState {
 }
 
 const makeInitial = (): FormState => ({
-  data_corrida: new Date(),
+  data_corrida: nowInTZ(),
   horario_inicio: "",
   horario_fim: "",
   valor_bruto: "",
@@ -108,7 +109,7 @@ const spWallToUTC = (dateYmd: string, timeHm: string): Date => {
 };
 
 const fromEditing = (e: EditingRide): FormState => {
-  const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : new Date();
+  const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : nowInTZ();
   return {
     data_corrida: dia,
     horario_inicio: toTimeStr(e.horario_inicio),
@@ -271,7 +272,7 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing }: N
                     mode="single"
                     selected={form.data_corrida}
                     onSelect={(d) => d && set("data_corrida", d)}
-                    disabled={(date) => date > new Date()}
+                    disabled={(date) => date > nowInTZ()}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                   />

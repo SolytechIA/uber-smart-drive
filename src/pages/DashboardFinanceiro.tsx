@@ -4,6 +4,8 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
+  startOfDay,
+  endOfDay,
   subDays,
   subWeeks,
   subMonths,
@@ -44,6 +46,7 @@ import {
   buildDailySeries,
   calcPeriodMetrics,
   diasRestantesSemana,
+  filterRidesInRange,
   fmtBRL,
   fmtNumber,
   getPeriodRange,
@@ -54,6 +57,7 @@ import {
   projecaoMensal,
   projecaoSemanal,
   resolveGoals,
+  TZ,
   Ride,
   Vehicle,
   Goals,
@@ -107,12 +111,21 @@ export default function DashboardFinanceiro() {
   const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
   const ganhoPorKm = ganhoRealKm;
   const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  // Resultado do dia: receita bruta - ponto de equilíbrio diário
-  const resultadoDia = receitaBrutaPeriodo - metrics.pontoEquilibrioDiario;
+  // Ticket médio por corrida
+  const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
 
   // Comparativos
+  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle), [rides, vehicle]);
   const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle), [rides, vehicle]);
   const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle), [rides, vehicle]);
+
+  // Série para o gráfico "Evolução do ganho real":
+  // - Filtro "hoje": eixo X por hora (00h..hora atual)
+  // - Demais: por dia (mantém buildDailySeries)
+  const evolucaoSeries = useMemo(() => {
+    if (periodo !== "hoje") return series;
+    return buildHourlySeriesToday(rides, range.from, range.to);
+  }, [periodo, series, rides, range]);
 
   // Donut data
   const donutData = [
@@ -276,10 +289,9 @@ export default function DashboardFinanceiro() {
                 <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
                 <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
                 <MiniCard
-                  title="Resultado do dia"
-                  value={fmtBRL(resultadoDia)}
-                  positive={resultadoDia >= 0}
-                  hint={resultadoDia >= 0 ? "✓ Acima do equilíbrio" : `Faltam ${fmtBRL(Math.abs(resultadoDia))} para cobrir custos`}
+                  title="Ticket médio por corrida"
+                  value={metrics.numCorridas > 0 ? fmtBRL(ticketMedio) : "—"}
+                  hint="Receita média por corrida"
                 />
               </div>
             </div>
@@ -292,7 +304,7 @@ export default function DashboardFinanceiro() {
               <CardContent>
                 <div className="h-72 w-full">
                   <ResponsiveContainer>
-                    <AreaChart data={series}>
+                    <AreaChart data={evolucaoSeries}>
                       <defs>
                         <linearGradient id="ganhoFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
@@ -309,11 +321,13 @@ export default function DashboardFinanceiro() {
                           return [fmtBRL(Number(v)), name];
                         }}
                       />
-                      {metas.diaria > 0 && (
+                      {periodo !== "hoje" && metas.diaria > 0 && (
                         <ReferenceLine y={metas.diaria} stroke="hsl(var(--warning))" strokeDasharray="4 4" label={{ value: "Meta diária", position: "right", fill: "hsl(var(--warning))", fontSize: 11 }} />
                       )}
-                      <Area type="monotone" dataKey="ganhoReal" name="Ganho real" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#ganhoFill)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="ganhoBruto" name="Ganho bruto" stroke="hsl(var(--success))" strokeWidth={1.5} dot={false} />
+                      <Area type="monotone" dataKey="ganhoReal" name={periodo === "hoje" ? "Ganho na hora" : "Ganho real"} stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#ganhoFill)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                      {periodo !== "hoje" && (
+                        <Line type="monotone" dataKey="ganhoBruto" name="Ganho bruto" stroke="hsl(var(--success))" strokeWidth={1.5} dot={false} />
+                      )}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -336,10 +350,9 @@ export default function DashboardFinanceiro() {
                         formatter={(v: any, name: string) => [fmtBRL(Number(v)), name]}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="ganhoReal" name="Ganho real" stackId="a" fill="hsl(var(--success))" />
-                      <Bar dataKey="custoCombustivel" name="Combustível" stackId="a" fill="hsl(var(--warning))" />
-                      <Bar dataKey="custoFixo" name="Custo fixo" stackId="a" fill="hsl(var(--primary))" />
-                      <Bar dataKey="comissaoUber" name="Comissão Uber" stackId="a" fill="hsl(var(--destructive))" />
+                      <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" />
+                      <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" />
+                      <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -404,6 +417,15 @@ export default function DashboardFinanceiro() {
             </div>
 
             {/* COMPARATIVOS */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Hoje vs. ontem</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <ComparativoTable rows={comparativoHojeOntem} colA="Hoje" colB="Ontem" />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Esta semana vs. semana passada</CardTitle>
@@ -554,6 +576,16 @@ interface CompRow {
   bHasData: boolean;
 }
 
+function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
+  const now = nowInTZ();
+  const aFrom = startOfDay(now);
+  const aTo = endOfDay(now);
+  const ontem = subDays(now, 1);
+  const bFrom = startOfDay(ontem);
+  const bTo = endOfDay(ontem);
+  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
+}
+
 function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
@@ -572,16 +604,63 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
   return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo));
 }
 
-function makeComp(a: ReturnType<typeof calcPeriodMetrics>, b: ReturnType<typeof calcPeriodMetrics>): CompRow[] {
+function makeComp(
+  a: ReturnType<typeof calcPeriodMetrics>,
+  b: ReturnType<typeof calcPeriodMetrics>,
+  opts: { includeTicket?: boolean } = {},
+): CompRow[] {
   const aHas = a.numCorridas > 0;
   const bHas = b.numCorridas > 0;
-  return [
+  const ticketA = a.numCorridas > 0 ? a.ganhoBruto / a.numCorridas : 0;
+  const ticketB = b.numCorridas > 0 ? b.ganhoBruto / b.numCorridas : 0;
+  const rows: CompRow[] = [
     { metric: "Ganho real", a: a.ganhoBruto, b: b.ganhoBruto, format: "brl", aHasData: aHas, bHasData: bHas },
-    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
     { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num", aHasData: aHas, bHasData: bHas },
+    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
     { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh", aHasData: aHas, bHasData: bHas },
     { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm", aHasData: aHas, bHasData: bHas },
   ];
+  if (opts.includeTicket) {
+    rows.push({ metric: "Ticket médio", a: ticketA, b: ticketB, format: "brl", aHasData: aHas, bHasData: bHas });
+  }
+  return rows;
+}
+
+/** Constrói série horária para o filtro "hoje": uma barra/ponto por hora (00h..23h),
+ *  somando o valor das corridas iniciadas naquela hora (em America/Sao_Paulo). */
+function buildHourlySeriesToday(rides: Ride[], from: Date, to: Date) {
+  const dayRides = filterRidesInRange(rides, from, to);
+  const buckets: Record<number, { ganho: number; n: number }> = {};
+  for (const r of dayRides) {
+    let hour = 0;
+    if (r.horario_inicio) {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: TZ,
+        hour: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date(r.horario_inicio));
+      hour = Number(parts.find((p) => p.type === "hour")?.value || 0);
+      if (hour === 24) hour = 0;
+    }
+    if (!buckets[hour]) buckets[hour] = { ganho: 0, n: 0 };
+    buckets[hour].ganho += Number(r.valor_bruto || 0);
+    buckets[hour].n += 1;
+  }
+  // Eixo: das 00h até a hora atual em SP (mínimo até a última corrida do dia).
+  const currentHour = nowInTZ().getHours();
+  const maxHour = Math.max(currentHour, ...Object.keys(buckets).map((k) => Number(k)), 0);
+  const out: { date: string; label: string; ganhoReal: number; ganhoBruto: number; numCorridas: number }[] = [];
+  for (let h = 0; h <= maxHour; h++) {
+    const b = buckets[h] || { ganho: 0, n: 0 };
+    out.push({
+      date: String(h),
+      label: `${String(h).padStart(2, "0")}h`,
+      ganhoReal: b.ganho,
+      ganhoBruto: b.ganho,
+      numCorridas: b.n,
+    });
+  }
+  return out;
 }
 
 function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string; colB: string }) {

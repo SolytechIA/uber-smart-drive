@@ -35,6 +35,7 @@ import {
   type ClassifyParams,
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
+import { getTodaySP, getYesterdaySP, formatLongDateSP } from "@/lib/dateUtils";
 
 interface RideRow {
   id: string;
@@ -65,15 +66,7 @@ const fmtHora = (iso: string | null) => {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 };
 
-const fmtDataHoje = () => {
-  const d = new Date();
-  const f = d.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-  return f.charAt(0).toUpperCase() + f.slice(1);
-};
+const fmtDataHoje = () => formatLongDateSP();
 
 export default function DashboardOperacional() {
   const { user } = useAuth();
@@ -103,12 +96,8 @@ export default function DashboardOperacional() {
     setShowNew(true);
   };
 
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const yesterdayStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }, []);
+  const todayStr = useMemo(() => getTodaySP(), []);
+  const yesterdayStr = useMemo(() => getYesterdaySP(), []);
 
   const loadAll = useCallback(async () => {
     if (!user) return;
