@@ -291,6 +291,7 @@ export default function DashboardFinanceiro() {
                 <MiniCard
                   title="Ticket médio por corrida"
                   value={metrics.numCorridas > 0 ? fmtBRL(ticketMedio) : "—"}
+                  positive={metrics.numCorridas > 0}
                   hint="Receita média por corrida"
                 />
               </div>
