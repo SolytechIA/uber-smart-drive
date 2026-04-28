@@ -291,6 +291,7 @@ export default function DashboardFinanceiro() {
                 <MiniCard
                   title="Ticket médio por corrida"
                   value={metrics.numCorridas > 0 ? fmtBRL(ticketMedio) : "—"}
+                  positive={metrics.numCorridas > 0}
                   hint="Receita média por corrida"
                 />
               </div>
@@ -592,7 +593,7 @@ function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRo
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   const bTo = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo));
+  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
 }
 
 function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
@@ -601,7 +602,7 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
   const bTo = endOfMonth(subMonths(now, 1));
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo));
+  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
 }
 
 function makeComp(
@@ -646,11 +647,9 @@ function buildHourlySeriesToday(rides: Ride[], from: Date, to: Date) {
     buckets[hour].ganho += Number(r.valor_bruto || 0);
     buckets[hour].n += 1;
   }
-  // Eixo: das 00h até a hora atual em SP (mínimo até a última corrida do dia).
-  const currentHour = nowInTZ().getHours();
-  const maxHour = Math.max(currentHour, ...Object.keys(buckets).map((k) => Number(k)), 0);
+  // Eixo X fixo: 00h..23h (24 horas completas), independentemente da hora atual.
   const out: { date: string; label: string; ganhoReal: number; ganhoBruto: number; numCorridas: number }[] = [];
-  for (let h = 0; h <= maxHour; h++) {
+  for (let h = 0; h <= 23; h++) {
     const b = buckets[h] || { ganho: 0, n: 0 };
     out.push({
       date: String(h),
