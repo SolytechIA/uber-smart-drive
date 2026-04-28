@@ -397,28 +397,9 @@ export default function DashboardFinanceiro() {
             <div>
               <h2 className="text-lg font-semibold mb-3">Metas</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <MetaCard
-                  titulo="Meta diária"
-                  atual={metricsHoje.ganhoBruto}
-                  meta={metas.diaria}
-                  rodape={projDia != null ? `Projeção fim do dia: ${fmtBRL(projDia)}` : "Projeção fim do dia: —"}
-                />
-                <MetaCard
-                  titulo="Meta semanal"
-                  atual={metricsSemana.ganhoBruto}
-                  meta={metas.semanal}
-                  rodape={
-                    projSem != null
-                      ? `Projeção semana: ${fmtBRL(projSem)} • ${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
-                      : `${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
-                  }
-                />
-                <MetaCard
-                  titulo="Meta mensal"
-                  atual={metricsMes.ganhoBruto}
-                  meta={metas.mensal}
-                  rodape={projMes != null ? `Projeção fechamento: ${fmtBRL(projMes)}` : "Projeção fechamento: —"}
-                />
+                <MetaCard titulo="Meta diária" atual={metricsHoje.ganhoBruto} meta={metas.diaria} />
+                <MetaCard titulo="Meta semanal" atual={metricsSemana.ganhoBruto} meta={metas.semanal} />
+                <MetaCard titulo="Meta mensal" atual={metricsMes.ganhoBruto} meta={metas.mensal} />
               </div>
             </div>
 
@@ -476,26 +457,89 @@ function MiniCard({ title, value, hint, positive }: { title: string; value: stri
   );
 }
 
-function MetaCard({ titulo, atual, meta, rodape }: { titulo: string; atual: number; meta: number; rodape: string }) {
-  const pct = meta > 0 ? Math.min(100, (atual / meta) * 100) : 0;
-  const atingida = meta > 0 && atual >= meta;
+function MetaCard({ titulo, atual, meta }: { titulo: string; atual: number; meta: number }) {
+  // Sem meta configurada
+  if (!meta || meta <= 0) {
+    return (
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <p className="text-sm font-medium">{titulo}</p>
+          <div className="flex items-baseline justify-between">
+            <span className="font-display font-bold text-xl tabular-nums">{fmtBRL(atual)}</span>
+            <span className="text-xs text-muted-foreground">/ —</span>
+          </div>
+          <p className="text-xs text-muted-foreground italic">Meta não configurada</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const pctRaw = (atual / meta) * 100;
+  const atingida = pctRaw >= 100;
+  const pctClamped = Math.min(100, Math.max(0, pctRaw));
+
+  // Cor conforme faixa
+  const corHex =
+    pctRaw >= 100 ? "#22C55E" :
+    pctRaw >= 80 ? "#EAB308" :
+    pctRaw >= 50 ? "#F97316" :
+    "#EF4444";
+
+  // Gradiente da barra (ajusta intensidade até a posição atingida)
+  const gradiente = atingida
+    ? "linear-gradient(90deg, #22C55E 0%, #22C55E 100%)"
+    : "linear-gradient(90deg, #EF4444 0%, #F97316 50%, #EAB308 80%, #22C55E 100%)";
+
   return (
-    <Card className={cn("transition-all", atingida && "border-emerald-500 shadow-[0_0_0_2px_hsl(var(--success)/0.3)] animate-pulse")}> 
+    <Card className={cn("transition-all", atingida && "border-emerald-500 shadow-[0_0_24px_-4px_rgba(34,197,94,0.5)]")}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">{titulo}</p>
           {atingida && <Trophy className="h-5 w-5 text-emerald-500" />}
         </div>
+
         <div className="flex items-baseline justify-between">
           <span className="font-display font-bold text-xl tabular-nums">{fmtBRL(atual)}</span>
           <span className="text-xs text-muted-foreground">/ {fmtBRL(meta)}</span>
         </div>
-        <Progress value={pct} className="h-2" />
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold">{pct.toFixed(0)}%</span>
-          <span className="text-muted-foreground">{rodape}</span>
+
+        {/* Termômetro */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold tabular-nums w-12 shrink-0" style={{ color: corHex }}>
+            {atingida ? "100%+" : `${Math.round(pctRaw)}%`}
+          </span>
+
+          <div className="relative flex-1 pt-3">
+            {/* Marcador triangular */}
+            <div
+              className="absolute -top-0.5 -translate-x-1/2 transition-all"
+              style={{ left: `${pctClamped}%` }}
+              aria-hidden="true"
+            >
+              <div
+                className="w-0 h-0"
+                style={{
+                  borderLeft: "5px solid transparent",
+                  borderRight: "5px solid transparent",
+                  borderTop: `7px solid ${corHex}`,
+                }}
+              />
+            </div>
+
+            {/* Trilha + preenchimento */}
+            <div className="relative h-2 rounded-full overflow-hidden" style={{ background: "#2A2D3A" }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${pctClamped}%`,
+                  background: gradiente,
+                  backgroundSize: atingida ? "100% 100%" : `${100 / (pctClamped / 100 || 1)}% 100%`,
+                  boxShadow: atingida ? "0 0 10px rgba(34,197,94,0.6)" : undefined,
+                }}
+              />
+            </div>
+          </div>
         </div>
-        {atingida && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">🎉 Meta atingida! Excelente trabalho!</p>}
       </CardContent>
     </Card>
   );
