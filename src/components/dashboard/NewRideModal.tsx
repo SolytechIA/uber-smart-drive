@@ -90,13 +90,21 @@ const numToStr = (n: number | null | undefined) => {
   return String(n).replace(".", ",");
 };
 
-/** Converte uma data (yyyy-MM-dd) e hora (HH:mm) interpretada em SP para um Date UTC. */
+/** Converte uma data (yyyy-MM-dd) e hora (HH:mm) interpretada como wallclock em
+ *  America/Sao_Paulo para um instante UTC. Independente do timezone do browser. */
 const spWallToUTC = (dateYmd: string, timeHm: string): Date => {
-  // Usamos uma data de referência em UTC para descobrir o offset de SP naquele momento
-  const refUTC = new Date(`${dateYmd}T${timeHm}:00Z`);
-  const sp = new Date(refUTC.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-  const offsetMin = (sp.getTime() - refUTC.getTime()) / 60000; // negativo (-180 normalmente)
-  return new Date(refUTC.getTime() - offsetMin * 60000);
+  // Tratamos os componentes como se fossem UTC e descobrimos o offset real de SP
+  // naquele instante via Intl (cobre horário de verão automaticamente).
+  const asUTC = new Date(`${dateYmd}T${timeHm}:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(asUTC);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value || 0);
+  const spAsUTCms = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") === 24 ? 0 : get("hour"), get("minute"), get("second"));
+  const offsetMin = (spAsUTCms - asUTC.getTime()) / 60000; // ex.: -180 para UTC-3
+  return new Date(asUTC.getTime() - offsetMin * 60000);
 };
 
 const fromEditing = (e: EditingRide): FormState => {
