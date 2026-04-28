@@ -397,28 +397,9 @@ export default function DashboardFinanceiro() {
             <div>
               <h2 className="text-lg font-semibold mb-3">Metas</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <MetaCard
-                  titulo="Meta diária"
-                  atual={metricsHoje.ganhoBruto}
-                  meta={metas.diaria}
-                  rodape={projDia != null ? `Projeção fim do dia: ${fmtBRL(projDia)}` : "Projeção fim do dia: —"}
-                />
-                <MetaCard
-                  titulo="Meta semanal"
-                  atual={metricsSemana.ganhoBruto}
-                  meta={metas.semanal}
-                  rodape={
-                    projSem != null
-                      ? `Projeção semana: ${fmtBRL(projSem)} • ${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
-                      : `${diasRestSem} ${diasRestSem === 1 ? "dia restante" : "dias restantes"}`
-                  }
-                />
-                <MetaCard
-                  titulo="Meta mensal"
-                  atual={metricsMes.ganhoBruto}
-                  meta={metas.mensal}
-                  rodape={projMes != null ? `Projeção fechamento: ${fmtBRL(projMes)}` : "Projeção fechamento: —"}
-                />
+                <MetaCard titulo="Meta diária" atual={metricsHoje.ganhoBruto} meta={metas.diaria} />
+                <MetaCard titulo="Meta semanal" atual={metricsSemana.ganhoBruto} meta={metas.semanal} />
+                <MetaCard titulo="Meta mensal" atual={metricsMes.ganhoBruto} meta={metas.mensal} />
               </div>
             </div>
 
