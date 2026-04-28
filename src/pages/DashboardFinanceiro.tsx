@@ -576,6 +576,16 @@ interface CompRow {
   bHasData: boolean;
 }
 
+function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
+  const now = nowInTZ();
+  const aFrom = startOfDay(now);
+  const aTo = endOfDay(now);
+  const ontem = subDays(now, 1);
+  const bFrom = startOfDay(ontem);
+  const bTo = endOfDay(ontem);
+  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
+}
+
 function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
@@ -594,16 +604,63 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
   return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo));
 }
 
-function makeComp(a: ReturnType<typeof calcPeriodMetrics>, b: ReturnType<typeof calcPeriodMetrics>): CompRow[] {
+function makeComp(
+  a: ReturnType<typeof calcPeriodMetrics>,
+  b: ReturnType<typeof calcPeriodMetrics>,
+  opts: { includeTicket?: boolean } = {},
+): CompRow[] {
   const aHas = a.numCorridas > 0;
   const bHas = b.numCorridas > 0;
-  return [
+  const ticketA = a.numCorridas > 0 ? a.ganhoBruto / a.numCorridas : 0;
+  const ticketB = b.numCorridas > 0 ? b.ganhoBruto / b.numCorridas : 0;
+  const rows: CompRow[] = [
     { metric: "Ganho real", a: a.ganhoBruto, b: b.ganhoBruto, format: "brl", aHasData: aHas, bHasData: bHas },
-    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
     { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num", aHasData: aHas, bHasData: bHas },
+    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
     { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh", aHasData: aHas, bHasData: bHas },
     { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm", aHasData: aHas, bHasData: bHas },
   ];
+  if (opts.includeTicket) {
+    rows.push({ metric: "Ticket médio", a: ticketA, b: ticketB, format: "brl", aHasData: aHas, bHasData: bHas });
+  }
+  return rows;
+}
+
+/** Constrói série horária para o filtro "hoje": uma barra/ponto por hora (00h..23h),
+ *  somando o valor das corridas iniciadas naquela hora (em America/Sao_Paulo). */
+function buildHourlySeriesToday(rides: Ride[], from: Date, to: Date) {
+  const dayRides = filterRidesInRange(rides, from, to);
+  const buckets: Record<number, { ganho: number; n: number }> = {};
+  for (const r of dayRides) {
+    let hour = 0;
+    if (r.horario_inicio) {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: TZ,
+        hour: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date(r.horario_inicio));
+      hour = Number(parts.find((p) => p.type === "hour")?.value || 0);
+      if (hour === 24) hour = 0;
+    }
+    if (!buckets[hour]) buckets[hour] = { ganho: 0, n: 0 };
+    buckets[hour].ganho += Number(r.valor_bruto || 0);
+    buckets[hour].n += 1;
+  }
+  // Eixo: das 00h até a hora atual em SP (mínimo até a última corrida do dia).
+  const currentHour = nowInTZ().getHours();
+  const maxHour = Math.max(currentHour, ...Object.keys(buckets).map((k) => Number(k)), 0);
+  const out: { date: string; label: string; ganhoReal: number; ganhoBruto: number; numCorridas: number }[] = [];
+  for (let h = 0; h <= maxHour; h++) {
+    const b = buckets[h] || { ganho: 0, n: 0 };
+    out.push({
+      date: String(h),
+      label: `${String(h).padStart(2, "0")}h`,
+      ganhoReal: b.ganho,
+      ganhoBruto: b.ganho,
+      numCorridas: b.n,
+    });
+  }
+  return out;
 }
 
 function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string; colB: string }) {
