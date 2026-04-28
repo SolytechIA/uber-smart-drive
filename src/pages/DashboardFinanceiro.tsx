@@ -289,10 +289,9 @@ export default function DashboardFinanceiro() {
                 <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
                 <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
                 <MiniCard
-                  title="Resultado do dia"
-                  value={fmtBRL(resultadoDia)}
-                  positive={resultadoDia >= 0}
-                  hint={resultadoDia >= 0 ? "✓ Acima do equilíbrio" : `Faltam ${fmtBRL(Math.abs(resultadoDia))} para cobrir custos`}
+                  title="Ticket médio por corrida"
+                  value={metrics.numCorridas > 0 ? fmtBRL(ticketMedio) : "—"}
+                  hint="Receita média por corrida"
                 />
               </div>
             </div>
@@ -305,7 +304,7 @@ export default function DashboardFinanceiro() {
               <CardContent>
                 <div className="h-72 w-full">
                   <ResponsiveContainer>
-                    <AreaChart data={series}>
+                    <AreaChart data={evolucaoSeries}>
                       <defs>
                         <linearGradient id="ganhoFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
@@ -322,11 +321,13 @@ export default function DashboardFinanceiro() {
                           return [fmtBRL(Number(v)), name];
                         }}
                       />
-                      {metas.diaria > 0 && (
+                      {periodo !== "hoje" && metas.diaria > 0 && (
                         <ReferenceLine y={metas.diaria} stroke="hsl(var(--warning))" strokeDasharray="4 4" label={{ value: "Meta diária", position: "right", fill: "hsl(var(--warning))", fontSize: 11 }} />
                       )}
-                      <Area type="monotone" dataKey="ganhoReal" name="Ganho real" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#ganhoFill)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="ganhoBruto" name="Ganho bruto" stroke="hsl(var(--success))" strokeWidth={1.5} dot={false} />
+                      <Area type="monotone" dataKey="ganhoReal" name={periodo === "hoje" ? "Ganho na hora" : "Ganho real"} stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#ganhoFill)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                      {periodo !== "hoje" && (
+                        <Line type="monotone" dataKey="ganhoBruto" name="Ganho bruto" stroke="hsl(var(--success))" strokeWidth={1.5} dot={false} />
+                      )}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -349,10 +350,9 @@ export default function DashboardFinanceiro() {
                         formatter={(v: any, name: string) => [fmtBRL(Number(v)), name]}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="ganhoReal" name="Ganho real" stackId="a" fill="hsl(var(--success))" />
-                      <Bar dataKey="custoCombustivel" name="Combustível" stackId="a" fill="hsl(var(--warning))" />
-                      <Bar dataKey="custoFixo" name="Custo fixo" stackId="a" fill="hsl(var(--primary))" />
-                      <Bar dataKey="comissaoUber" name="Comissão Uber" stackId="a" fill="hsl(var(--destructive))" />
+                      <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" />
+                      <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" />
+                      <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
