@@ -419,6 +419,15 @@ export default function DashboardFinanceiro() {
             {/* COMPARATIVOS */}
             <Card>
               <CardHeader>
+                <CardTitle>Hoje vs. ontem</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <ComparativoTable rows={comparativoHojeOntem} colA="Hoje" colB="Ontem" />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Esta semana vs. semana passada</CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
