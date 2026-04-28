@@ -592,7 +592,7 @@ function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRo
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   const bTo = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo));
+  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
 }
 
 function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
