@@ -601,7 +601,7 @@ function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
   const bTo = endOfMonth(subMonths(now, 1));
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo));
+  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
 }
 
 function makeComp(
