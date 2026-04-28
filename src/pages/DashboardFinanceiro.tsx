@@ -111,12 +111,21 @@ export default function DashboardFinanceiro() {
   const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
   const ganhoPorKm = ganhoRealKm;
   const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  // Resultado do dia: receita bruta - ponto de equilíbrio diário
-  const resultadoDia = receitaBrutaPeriodo - metrics.pontoEquilibrioDiario;
+  // Ticket médio por corrida
+  const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
 
   // Comparativos
+  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle), [rides, vehicle]);
   const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle), [rides, vehicle]);
   const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle), [rides, vehicle]);
+
+  // Série para o gráfico "Evolução do ganho real":
+  // - Filtro "hoje": eixo X por hora (00h..hora atual)
+  // - Demais: por dia (mantém buildDailySeries)
+  const evolucaoSeries = useMemo(() => {
+    if (periodo !== "hoje") return series;
+    return buildHourlySeriesToday(rides, range.from, range.to);
+  }, [periodo, series, rides, range]);
 
   // Donut data
   const donutData = [
