@@ -14,6 +14,8 @@ import Onboarding from "./pages/Onboarding";
 import DashboardOperacional from "./pages/DashboardOperacional";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
+import Relatorios from "./pages/Relatorios";
+import AnaliseIA from "./pages/AnaliseIA";
 import ConectarUber from "./pages/ConectarUber";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -55,6 +57,22 @@ const App = () => (
               element={
                 <ProtectedRoute requireVehicle>
                   <DashboardFinanceiro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/relatorios"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <Relatorios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analise-ia"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <AnaliseIA />
                 </ProtectedRoute>
               }
             />
