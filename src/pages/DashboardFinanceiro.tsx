@@ -189,25 +189,7 @@ export default function DashboardFinanceiro() {
               </TabsList>
             </Tabs>
             {periodo === "personalizado" && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    {custom ? `${format(custom.from, "dd/MM")} - ${format(custom.to, "dd/MM")}` : "Selecionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="range"
-                    selected={custom ? { from: custom.from, to: custom.to } : undefined}
-                    onSelect={(r: any) => {
-                      if (r?.from && r?.to) setCustom({ from: r.from, to: r.to });
-                    }}
-                    numberOfMonths={2}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <CustomRangePicker custom={custom} onApply={setCustom} />
             )}
           </div>
         </div>
