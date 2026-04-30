@@ -82,7 +82,23 @@ export default function DashboardOperacional() {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [editing, setEditing] = useState<EditingRide | null>(null);
+  const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const handleView = async (id: string) => {
+    const { data, error } = await supabase
+      .from("rides")
+      .select(
+        "id, data_corrida, horario_inicio, horario_fim, duracao_minutos, valor_bruto, custo_combustivel_corrida, ganho_real_corrida, km_passageiro, km_deslocamento, rua_origem, bairro_origem, rua_destino, bairro_destino, classificacao, observacao",
+      )
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) {
+      toast.error("Não foi possível carregar a corrida");
+      return;
+    }
+    setViewing(data as ViewRide);
+  };
 
   const handleEdit = async (id: string) => {
     const { data, error } = await supabase
@@ -96,6 +112,7 @@ export default function DashboardOperacional() {
       toast.error("Não foi possível carregar a corrida");
       return;
     }
+    setViewing(null);
     setEditing(data as EditingRide);
     setShowNew(true);
   };
@@ -247,6 +264,7 @@ export default function DashboardOperacional() {
                   ride={r}
                   onDelete={() => setDeleteId(r.id)}
                   onEdit={() => handleEdit(r.id)}
+                  onView={() => handleView(r.id)}
                 />
               ))}
             </ul>
@@ -274,6 +292,13 @@ export default function DashboardOperacional() {
         onSaved={loadAll}
         params={params}
         editing={editing}
+      />
+
+      <RideViewModal
+        ride={viewing}
+        open={!!viewing}
+        onOpenChange={(o) => !o && setViewing(null)}
+        onEdit={() => viewing && handleEdit(viewing.id)}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
@@ -325,50 +350,84 @@ function RideItem({
   ride,
   onDelete,
   onEdit,
+  onView,
 }: {
   ride: RideRow;
   onDelete: () => void;
   onEdit: () => void;
+  onView: () => void;
 }) {
   const c = (ride.classificacao as Classificacao) || "MEDIA";
   const kmPax = Number(ride.km_passageiro) || 0;
   const kmDesl = Number(ride.km_deslocamento) || 0;
+  const valor = Number(ride.valor_bruto) || 0;
+  const dur = Number(ride.duracao_minutos) || 0;
+  const insight = buildInsight(c, valor, kmPax, kmDesl, dur);
   return (
-    <li className="group flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/30 p-3 transition-colors hover:bg-secondary/60">
-      <div className="w-14 shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
-        {fmtHora(ride.horario_inicio)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span className="font-display text-lg font-bold">
-            {fmtBRL(Number(ride.valor_bruto) || 0)}
-          </span>
-          <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>
-            {classificacaoLabel[c]}
-          </Badge>
+    <li className="group rounded-lg border border-border/60 bg-secondary/30 p-3 transition-colors hover:bg-secondary/60">
+      <div className="flex items-center gap-3">
+        <div className="w-14 shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
+          {fmtHora(ride.horario_inicio)}
         </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {fmtKm(kmPax)} + {fmtKm(kmDesl)} vazio · {ride.duracao_minutos ?? 0}min
-          {ride.bairro_origem && ` · ${ride.bairro_origem}`}
-          {ride.bairro_destino && ` → ${ride.bairro_destino}`}
-        </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-lg font-bold">{fmtBRL(valor)}</span>
+            <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>
+              {classificacaoLabel[c]}
+            </Badge>
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {fmtKm(kmPax)} + {fmtKm(kmDesl)} vazio · {dur}min
+            {ride.bairro_origem && ` · ${ride.bairro_origem}`}
+            {ride.bairro_destino && ` → ${ride.bairro_destino}`}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onView} aria-label="Visualizar">
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} aria-label="Editar">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            onClick={onDelete}
+            aria-label="Excluir"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} aria-label="Editar">
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive"
-          onClick={onDelete}
-          aria-label="Excluir"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      <p className="mt-1 pl-[3.75rem] text-xs italic text-purple-400/80 dark:text-purple-300/80">
+        {insight}
+      </p>
     </li>
   );
+}
+
+function buildInsight(
+  c: Classificacao,
+  valor: number,
+  kmPax: number,
+  kmDesl: number,
+  dur: number,
+): string {
+  if (c === "BOA") {
+    if (kmDesl < 0.5) return "✨ Corrida eficiente — deslocamento mínimo com ótimo retorno por km.";
+    if (valor > 15) return "🏆 Corrida premium — entre as mais rentáveis do dia.";
+    return "✅ Boa corrida — acima da sua meta de R$/km.";
+  }
+  if (c === "MEDIA") {
+    if (kmDesl > kmPax) return "⚠️ Você rodou mais vazio que com passageiro — impactou o R$/km.";
+    if (dur > 15) return "⏱️ Corrida longa — avalie se o tempo valeu o retorno.";
+    return "📊 Corrida dentro da média — há espaço para melhorar.";
+  }
+  // RUIM
+  if (kmDesl > 1.5) return "🔴 Alto deslocamento vazio reduziu seu ganho real nesta corrida.";
+  if (valor < 6) return "🔴 Valor baixo para a distância — considere os parâmetros de aceitação.";
+  return "🔴 Corrida abaixo da meta — revise seus critérios de aceitação.";
 }
 
 function EmptyState({ onNew }: { onNew: () => void }) {
