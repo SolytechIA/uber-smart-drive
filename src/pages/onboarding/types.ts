@@ -1,4 +1,8 @@
-export type TipoPosse = "proprio" | "financiado" | "diaria" | "semanal";
+export type TipoPosse =
+  | "proprio_quitado"
+  | "financiado"
+  | "alugado_diaria"
+  | "alugado_semana";
 export type Combustivel = "gasolina" | "etanol" | "flex" | "gnv" | "diesel" | "eletrico" | "hibrido";
 
 export interface VehicleData {
@@ -14,6 +18,14 @@ export interface VehicleData {
   capacidade_tanque: number | null;
   consumo_km_kwh: number | null;
   preco_kwh: number | null;
+  // Flex (Bug 5B)
+  preco_gasolina: number | null;
+  preco_alcool: number | null;
+  consumo_gasolina: number | null;
+  consumo_alcool: number | null;
+  // GNV reserva (Bug 5C) — preco_combustivel/consumo_km_litro são usados para o GNV em si
+  preco_gasolina_reserva: number | null;
+  consumo_gasolina_reserva: number | null;
 }
 
 export interface CostsData {
@@ -39,6 +51,9 @@ export interface GoalsData {
   valor_minimo_corrida: number | null;
   r_por_km_minimo: number | null;
   km_vazio_max_percent: number | null;
+  // Bug 2: faixas de classificação por R$/km
+  r_km_bom: number | null;
+  r_km_medio: number | null;
 }
 
 export const initialVehicle: VehicleData = {
@@ -54,6 +69,12 @@ export const initialVehicle: VehicleData = {
   capacidade_tanque: null,
   consumo_km_kwh: null,
   preco_kwh: null,
+  preco_gasolina: null,
+  preco_alcool: null,
+  consumo_gasolina: null,
+  consumo_alcool: null,
+  preco_gasolina_reserva: null,
+  consumo_gasolina_reserva: null,
 };
 
 export const initialCosts: CostsData = {
@@ -79,4 +100,6 @@ export const initialGoals: GoalsData = {
   valor_minimo_corrida: 8,
   r_por_km_minimo: 1.8,
   km_vazio_max_percent: 40,
+  r_km_bom: 1.8,
+  r_km_medio: 1.3,
 };
