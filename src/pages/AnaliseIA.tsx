@@ -226,9 +226,27 @@ export default function AnaliseIA() {
       if (error) throw error;
       if (!data || (data as any).error) throw new Error((data as any)?.error || "Erro desconhecido");
 
-      setAnalysis(data as Analysis);
-      setGeneratedAt(new Date());
+      const result = data as Analysis;
+      const ts = Date.now();
+      setAnalysis(result);
+      setGeneratedAt(new Date(ts));
       setStatus("ok");
+      try {
+        localStorage.setItem(
+          STORAGE_ANALYSIS,
+          JSON.stringify({
+            analysis: result,
+            generatedAt: ts,
+            progressPct: metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0,
+            realizadoMes: mMes.ganhoReal,
+            metaMensal: metaMensalCfg,
+          }),
+        );
+        localStorage.setItem(STORAGE_TIMESTAMP, String(ts));
+        setNow(ts);
+      } catch {
+        // ignore storage errors
+      }
     } catch (e) {
       console.error("Erro análise IA:", e);
       setErrorMsg((e as Error).message || "Erro inesperado");
@@ -254,28 +272,41 @@ export default function AnaliseIA() {
             </div>
             <h1 className="text-2xl font-bold md:text-3xl">Análise Inteligente</h1>
             <p className="mt-1 text-sm text-white/80">
-              Gerado por IA • LLaMA 3.3 70B • Baseado no seu histórico
+              Análise personalizada baseada no seu histórico
             </p>
           </div>
         </header>
 
-        {/* Botão gerar */}
+        {/* Botão gerar (visível também quando há análise antiga, ao lado do "nova análise") */}
         {status !== "ok" && (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-2">
             <Button
               size="lg"
               onClick={handleGenerate}
-              disabled={status === "loading"}
-              className="group relative overflow-hidden px-8 py-6 text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
-              style={{
-                background:
-                  "linear-gradient(135deg, hsl(270 80% 50%), hsl(180 80% 45%))",
-              }}
+              disabled={status === "loading" || rateLimited}
+              className={cn(
+                "group relative overflow-hidden px-8 py-6 text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]",
+                rateLimited && "opacity-60 grayscale",
+              )}
+              style={
+                rateLimited
+                  ? { background: "hsl(var(--muted))" }
+                  : { background: "linear-gradient(135deg, hsl(270 80% 50%), hsl(180 80% 45%))" }
+              }
             >
               <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               <Sparkles className="mr-2 h-5 w-5" />
-              {status === "loading" ? "Analisando..." : "Gerar Análise do Dia"}
+              {status === "loading"
+                ? "Analisando..."
+                : rateLimited
+                ? `Disponível em ${minutesLeft} min`
+                : "Gerar Análise do Dia"}
             </Button>
+            {rateLimited && (
+              <p className="text-xs text-muted-foreground">
+                Próxima análise disponível às {nextAvailableTime}
+              </p>
+            )}
           </div>
         )}
 
@@ -382,24 +413,46 @@ export default function AnaliseIA() {
               </CardContent>
             </Card>
 
+            {/* Aviso se análise é de outro dia */}
+            {isFromAnotherDay && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
+                Esta análise é de {generatedAt?.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}. Gere uma nova análise para ver os dados de hoje.
+              </div>
+            )}
+
             {/* Footer badge */}
             <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
               <Badge variant="secondary" className="gap-1.5">
                 <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                Gerado por IA • LLaMA 3.3 70B • Groq
+                ✨ Gerado por Drive IA
               </Badge>
               {generatedAt && (
                 <span className="text-xs text-muted-foreground">
-                  {generatedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                  {`Gerado ${
+                    new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) ===
+                    generatedAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+                      ? "hoje"
+                      : `em ${generatedAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+                  } às ${generatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}`}
                 </span>
               )}
             </div>
 
-            <div className="flex justify-center pt-2">
-              <Button variant="outline" onClick={handleGenerate}>
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={handleGenerate}
+                disabled={rateLimited || status === "loading"}
+                className={cn(rateLimited && "opacity-60")}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Gerar nova análise
+                {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
               </Button>
+              {rateLimited && (
+                <p className="text-xs text-muted-foreground">
+                  Próxima análise disponível às {nextAvailableTime}
+                </p>
+              )}
             </div>
           </div>
         )}
