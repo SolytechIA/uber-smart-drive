@@ -43,6 +43,13 @@ export interface Vehicle {
   tipo_posse?: string | null;
   taxa_uber_percent?: number | null;
   dias_trabalhados_mes?: number | null;
+  // Flex / GNV
+  preco_gasolina?: number | null;
+  preco_alcool?: number | null;
+  consumo_gasolina?: number | null;
+  consumo_alcool?: number | null;
+  preco_gasolina_reserva?: number | null;
+  consumo_gasolina_reserva?: number | null;
 }
 
 export interface Goals {
@@ -84,9 +91,16 @@ export function getPeriodRange(periodo: Periodo, custom?: { from: Date; to: Date
 /** Soma de todos os custos fixos mensais cadastrados no veículo. */
 export function calcCustoFixoMensal(v: Vehicle | null): number {
   if (!v) return 0;
-  const parcela = v.tipo_posse && v.tipo_posse !== "proprio" ? Number(v.valor_parcela_ou_diaria || 0) : Number(v.valor_parcela_ou_diaria || 0);
-  // Se é diária, multiplica pelos dias trabalhados/mês; senão é mensal direto
-  const parcelaMensal = v.tipo_posse === "alugado_diaria" ? parcela * Number(v.dias_trabalhados_mes || 22) : parcela;
+  const parcela = Number(v.valor_parcela_ou_diaria || 0);
+  // diária × dias trabalhados; semanal × 4.33; senão mensal direto
+  const parcelaMensal =
+    v.tipo_posse === "alugado_diaria"
+      ? parcela * Number(v.dias_trabalhados_mes || 22)
+      : v.tipo_posse === "alugado_semana"
+      ? parcela * 4.33
+      : v.tipo_posse === "financiado"
+      ? parcela
+      : 0; // próprio quitado
   const celular = Number(v.valor_plano_celular || 0) * (Number(v.percentual_celular_trabalho || 0) / 100);
   return (
     parcelaMensal +
@@ -107,6 +121,19 @@ export function calcCustoCombustivel(kmTotal: number, v: Vehicle | null): number
     const preco = Number(v.preco_kwh || 0);
     if (!consumo) return 0;
     return (kmTotal / consumo) * preco;
+  }
+  if (v.combustivel === "flex") {
+    // Média entre gasolina e álcool quando ambos informados; caso contrário, usa o disponível.
+    const cg = Number(v.consumo_gasolina || 0);
+    const pg = Number(v.preco_gasolina || 0);
+    const ca = Number(v.consumo_alcool || 0);
+    const pa = Number(v.preco_alcool || 0);
+    const custoG = cg > 0 && pg > 0 ? (kmTotal / cg) * pg : null;
+    const custoA = ca > 0 && pa > 0 ? (kmTotal / ca) * pa : null;
+    if (custoG != null && custoA != null) return (custoG + custoA) / 2;
+    if (custoG != null) return custoG;
+    if (custoA != null) return custoA;
+    // fallback nos campos antigos
   }
   const consumo = Number(v.consumo_km_litro || 0);
   const preco = Number(v.preco_combustivel || 0);
