@@ -189,25 +189,7 @@ export default function DashboardFinanceiro() {
               </TabsList>
             </Tabs>
             {periodo === "personalizado" && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    {custom ? `${format(custom.from, "dd/MM")} - ${format(custom.to, "dd/MM")}` : "Selecionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="range"
-                    selected={custom ? { from: custom.from, to: custom.to } : undefined}
-                    onSelect={(r: any) => {
-                      if (r?.from && r?.to) setCustom({ from: r.from, to: r.to });
-                    }}
-                    numberOfMonths={2}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <CustomRangePicker custom={custom} onApply={setCustom} />
             )}
           </div>
         </div>
@@ -727,4 +709,63 @@ function formatVal(v: number, fmt: CompRow["format"]): string {
     case "rh":
       return `R$ ${fmtNumber(v)}/h`;
   }
+}
+
+function CustomRangePicker({
+  custom,
+  onApply,
+}: {
+  custom: { from: Date; to: Date } | undefined;
+  onApply: (r: { from: Date; to: Date } | undefined) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ from?: Date; to?: Date } | undefined>(
+    custom ? { from: custom.from, to: custom.to } : undefined,
+  );
+
+  useEffect(() => {
+    if (open) setDraft(custom ? { from: custom.from, to: custom.to } : undefined);
+  }, [open, custom]);
+
+  const handleApply = () => {
+    if (draft?.from && draft?.to) {
+      onApply({ from: draft.from, to: draft.to });
+      setOpen(false);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <CalendarIcon className="h-4 w-4" />
+          {custom ? `${format(custom.from, "dd/MM")} - ${format(custom.to, "dd/MM")}` : "Selecionar"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <Calendar
+          mode="range"
+          selected={draft as any}
+          onSelect={(r: any) => setDraft(r || undefined)}
+          numberOfMonths={2}
+          className={cn("p-3 pointer-events-auto")}
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 p-3">
+          <div className="text-xs text-muted-foreground">
+            {draft?.from && draft?.to
+              ? `${format(draft.from, "dd/MM/yyyy")} → ${format(draft.to, "dd/MM/yyyy")}`
+              : "Selecione data inicial e final"}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleApply} disabled={!draft?.from || !draft?.to}>
+              Aplicar período
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }

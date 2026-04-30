@@ -52,6 +52,12 @@ export default function Configuracoes() {
           capacidade_tanque: v.capacidade_tanque ?? null,
           consumo_km_kwh: v.consumo_km_kwh ?? null,
           preco_kwh: v.preco_kwh ?? null,
+          preco_gasolina: (v as any).preco_gasolina ?? null,
+          preco_alcool: (v as any).preco_alcool ?? null,
+          consumo_gasolina: (v as any).consumo_gasolina ?? null,
+          consumo_alcool: (v as any).consumo_alcool ?? null,
+          preco_gasolina_reserva: (v as any).preco_gasolina_reserva ?? null,
+          consumo_gasolina_reserva: (v as any).consumo_gasolina_reserva ?? null,
         });
         setCosts({
           custo_ipva_mensal: v.custo_ipva_mensal ?? null,
@@ -77,6 +83,8 @@ export default function Configuracoes() {
           valor_minimo_corrida: g.valor_minimo_corrida ?? 8,
           r_por_km_minimo: g.r_por_km_minimo ?? 1.8,
           km_vazio_max_percent: g.km_vazio_max_percent ?? 40,
+          r_km_bom: (g as any).r_km_bom ?? g.r_por_km_minimo ?? 1.8,
+          r_km_medio: (g as any).r_km_medio ?? 1.3,
         });
       }
       setLoading(false);
@@ -104,7 +112,13 @@ export default function Configuracoes() {
         capacidade_tanque: vehicle.capacidade_tanque,
         consumo_km_kwh: vehicle.consumo_km_kwh,
         preco_kwh: vehicle.preco_kwh,
-      },
+        preco_gasolina: vehicle.preco_gasolina,
+        preco_alcool: vehicle.preco_alcool,
+        consumo_gasolina: vehicle.consumo_gasolina,
+        consumo_alcool: vehicle.consumo_alcool,
+        preco_gasolina_reserva: vehicle.preco_gasolina_reserva,
+        consumo_gasolina_reserva: vehicle.consumo_gasolina_reserva,
+      } as any,
       { onConflict: "user_id" },
     );
     setSaving(null);
@@ -149,7 +163,9 @@ export default function Configuracoes() {
         valor_minimo_corrida: goals.valor_minimo_corrida,
         r_por_km_minimo: goals.r_por_km_minimo,
         km_vazio_max_percent: goals.km_vazio_max_percent,
-      },
+        r_km_bom: goals.r_km_bom,
+        r_km_medio: goals.r_km_medio,
+      } as any,
       { onConflict: "user_id" },
     );
     setSaving(null);

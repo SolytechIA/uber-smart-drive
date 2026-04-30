@@ -5,14 +5,29 @@ import { Label } from "@/components/ui/label";
 import { Field } from "./Field";
 import type { VehicleData, Combustivel, TipoPosse } from "./types";
 
-const MARCAS = ["Chevrolet", "Fiat", "Ford", "Honda", "Hyundai", "Nissan", "Renault", "Toyota", "Volkswagen", "Outras"];
+const MARCAS = [
+  "BYD",
+  "Chevrolet",
+  "Fiat",
+  "Ford",
+  "Geely",
+  "Honda",
+  "Hyundai",
+  "JAC",
+  "Jeep",
+  "Nissan",
+  "Renault",
+  "Toyota",
+  "Volkswagen",
+  "Outras",
+];
 const ANOS = Array.from({ length: 2026 - 2010 + 1 }, (_, i) => 2026 - i);
 
 const POSSE_OPTS: { v: TipoPosse; label: string }[] = [
-  { v: "proprio", label: "Próprio quitado" },
+  { v: "proprio_quitado", label: "Próprio quitado" },
   { v: "financiado", label: "Financiado" },
-  { v: "diaria", label: "Alugado por diária" },
-  { v: "semanal", label: "Alugado por semana" },
+  { v: "alugado_diaria", label: "Alugado por diária" },
+  { v: "alugado_semana", label: "Alugado por semana" },
 ];
 
 const COMB_OPTS: { v: Combustivel; label: string; emoji: string }[] = [
@@ -28,7 +43,6 @@ const COMB_OPTS: { v: Combustivel; label: string; emoji: string }[] = [
 function formatPlaca(value: string) {
   const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
   if (clean.length <= 3) return clean;
-  // ABC1D234 (Mercosul) ou ABC-1234
   if (/^[A-Z]{3}[0-9][A-Z]/.test(clean)) return clean;
   return clean.slice(0, 3) + "-" + clean.slice(3);
 }
@@ -40,7 +54,8 @@ interface Props {
 }
 
 export function StepVehicle({ data, onChange, errors }: Props) {
-  const showLiquido = ["gasolina", "etanol", "flex", "diesel"].includes(data.combustivel);
+  const showLiquidoSimples = ["gasolina", "etanol", "diesel"].includes(data.combustivel);
+  const showFlex = data.combustivel === "flex";
   const showGNV = data.combustivel === "gnv";
   const showEletrico = data.combustivel === "eletrico";
   const showHibrido = data.combustivel === "hibrido";
@@ -118,14 +133,14 @@ export function StepVehicle({ data, onChange, errors }: Props) {
             onChange={(e) => onChange({ valor_parcela_ou_diaria: e.target.value ? Number(e.target.value) : null })} />
         </Field>
       )}
-      {data.tipo_posse === "diaria" && (
+      {data.tipo_posse === "alugado_diaria" && (
         <Field label="Valor da diária (R$)" error={errors.valor_parcela_ou_diaria}>
           <Input type="number" step="0.01" min={0} placeholder="0,00"
             value={data.valor_parcela_ou_diaria ?? ""}
             onChange={(e) => onChange({ valor_parcela_ou_diaria: e.target.value ? Number(e.target.value) : null })} />
         </Field>
       )}
-      {data.tipo_posse === "semanal" && (
+      {data.tipo_posse === "alugado_semana" && (
         <Field label="Valor semanal (R$)" error={errors.valor_parcela_ou_diaria}>
           <Input type="number" step="0.01" min={0} placeholder="0,00"
             value={data.valor_parcela_ou_diaria ?? ""}
@@ -153,9 +168,9 @@ export function StepVehicle({ data, onChange, errors }: Props) {
         </RadioGroup>
       </Field>
 
-      {(showLiquido || showHibrido) && (
+      {showLiquidoSimples && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Consumo médio (km/l)" tooltip="Quantos km seu carro faz com 1 litro. Use a média do painel ou calcule abastecendo o tanque cheio." error={errors.consumo_km_litro}>
+          <Field label="Consumo médio (km/l)" tooltip="Quantos km seu carro faz com 1 litro." error={errors.consumo_km_litro}>
             <Input type="number" step="0.1" min={0} placeholder="12,5"
               value={data.consumo_km_litro ?? ""}
               onChange={(e) => onChange({ consumo_km_litro: e.target.value ? Number(e.target.value) : null })} />
@@ -173,24 +188,70 @@ export function StepVehicle({ data, onChange, errors }: Props) {
         </div>
       )}
 
+      {showFlex && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground">Combustível Flex — informe ambos preços e consumos</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Preço Gasolina R$/litro">
+              <Input type="number" step="0.01" min={0} placeholder="5,89"
+                value={data.preco_gasolina ?? ""}
+                onChange={(e) => onChange({ preco_gasolina: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Preço Álcool R$/litro">
+              <Input type="number" step="0.01" min={0} placeholder="3,99"
+                value={data.preco_alcool ?? ""}
+                onChange={(e) => onChange({ preco_alcool: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Consumo médio km/l (Gasolina)">
+              <Input type="number" step="0.1" min={0} placeholder="12,5"
+                value={data.consumo_gasolina ?? ""}
+                onChange={(e) => onChange({ consumo_gasolina: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Consumo médio km/l (Álcool)">
+              <Input type="number" step="0.1" min={0} placeholder="9,0"
+                value={data.consumo_alcool ?? ""}
+                onChange={(e) => onChange({ consumo_alcool: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Capacidade do tanque (litros)">
+              <Input type="number" step="1" min={0} placeholder="50"
+                value={data.capacidade_tanque ?? ""}
+                onChange={(e) => onChange({ capacidade_tanque: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+          </div>
+        </div>
+      )}
+
       {showGNV && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Consumo médio (km/m³)" tooltip="Quantos km você faz por metro cúbico de gás." error={errors.consumo_km_litro}>
-            <Input type="number" step="0.1" min={0} placeholder="14"
-              value={data.consumo_km_litro ?? ""}
-              onChange={(e) => onChange({ consumo_km_litro: e.target.value ? Number(e.target.value) : null })} />
-          </Field>
-          <Field label="Preço do gás R$/m³" error={errors.preco_combustivel}>
-            <Input type="number" step="0.01" min={0} placeholder="4,29"
-              value={data.preco_combustivel ?? ""}
-              onChange={(e) => onChange({ preco_combustivel: e.target.value ? Number(e.target.value) : null })} />
-          </Field>
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground">GNV principal + Gasolina como reserva</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Preço GNV R$/m³" error={errors.preco_combustivel}>
+              <Input type="number" step="0.01" min={0} placeholder="4,29"
+                value={data.preco_combustivel ?? ""}
+                onChange={(e) => onChange({ preco_combustivel: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Consumo médio (km/m³)" error={errors.consumo_km_litro}>
+              <Input type="number" step="0.1" min={0} placeholder="14"
+                value={data.consumo_km_litro ?? ""}
+                onChange={(e) => onChange({ consumo_km_litro: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Preço Gasolina R$/litro (reserva)">
+              <Input type="number" step="0.01" min={0} placeholder="5,89"
+                value={data.preco_gasolina_reserva ?? ""}
+                onChange={(e) => onChange({ preco_gasolina_reserva: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+            <Field label="Consumo km/l (reserva)">
+              <Input type="number" step="0.1" min={0} placeholder="11,0"
+                value={data.consumo_gasolina_reserva ?? ""}
+                onChange={(e) => onChange({ consumo_gasolina_reserva: e.target.value ? Number(e.target.value) : null })} />
+            </Field>
+          </div>
         </div>
       )}
 
       {(showEletrico || showHibrido) && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Consumo médio (km/kWh)" tooltip="Quantos km seu carro faz com 1 kWh." error={errors.consumo_km_kwh}>
+          <Field label="Consumo médio (km/kWh)" error={errors.consumo_km_kwh}>
             <Input type="number" step="0.1" min={0} placeholder="6,5"
               value={data.consumo_km_kwh ?? ""}
               onChange={(e) => onChange({ consumo_km_kwh: e.target.value ? Number(e.target.value) : null })} />
@@ -204,6 +265,21 @@ export function StepVehicle({ data, onChange, errors }: Props) {
             <Input type="number" step="0.1" min={0} placeholder="50"
               value={data.capacidade_tanque ?? ""}
               onChange={(e) => onChange({ capacidade_tanque: e.target.value ? Number(e.target.value) : null })} />
+          </Field>
+        </div>
+      )}
+
+      {showHibrido && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Consumo médio (km/l)">
+            <Input type="number" step="0.1" min={0} placeholder="14"
+              value={data.consumo_km_litro ?? ""}
+              onChange={(e) => onChange({ consumo_km_litro: e.target.value ? Number(e.target.value) : null })} />
+          </Field>
+          <Field label="Preço combustível R$/litro">
+            <Input type="number" step="0.01" min={0} placeholder="5,89"
+              value={data.preco_combustivel ?? ""}
+              onChange={(e) => onChange({ preco_combustivel: e.target.value ? Number(e.target.value) : null })} />
           </Field>
         </div>
       )}

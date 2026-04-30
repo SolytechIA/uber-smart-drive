@@ -23,6 +23,8 @@ export type Database = {
           meta_diaria: number | null
           meta_mensal: number | null
           meta_semanal: number | null
+          r_km_bom: number | null
+          r_km_medio: number | null
           r_por_km_minimo: number | null
           updated_at: string
           user_id: string
@@ -36,6 +38,8 @@ export type Database = {
           meta_diaria?: number | null
           meta_mensal?: number | null
           meta_semanal?: number | null
+          r_km_bom?: number | null
+          r_km_medio?: number | null
           r_por_km_minimo?: number | null
           updated_at?: string
           user_id: string
@@ -49,6 +53,8 @@ export type Database = {
           meta_diaria?: number | null
           meta_mensal?: number | null
           meta_semanal?: number | null
+          r_km_bom?: number | null
+          r_km_medio?: number | null
           r_por_km_minimo?: number | null
           updated_at?: string
           user_id?: string
@@ -253,6 +259,9 @@ export type Database = {
           ano: number | null
           capacidade_tanque: number | null
           combustivel: string | null
+          consumo_alcool: number | null
+          consumo_gasolina: number | null
+          consumo_gasolina_reserva: number | null
           consumo_km_kwh: number | null
           consumo_km_litro: number | null
           created_at: string
@@ -268,7 +277,10 @@ export type Database = {
           outros_custos_valor: number | null
           percentual_celular_trabalho: number | null
           placa: string | null
+          preco_alcool: number | null
           preco_combustivel: number | null
+          preco_gasolina: number | null
+          preco_gasolina_reserva: number | null
           preco_kwh: number | null
           taxa_uber_percent: number
           tipo_posse: string | null
@@ -280,6 +292,9 @@ export type Database = {
           ano?: number | null
           capacidade_tanque?: number | null
           combustivel?: string | null
+          consumo_alcool?: number | null
+          consumo_gasolina?: number | null
+          consumo_gasolina_reserva?: number | null
           consumo_km_kwh?: number | null
           consumo_km_litro?: number | null
           created_at?: string
@@ -295,7 +310,10 @@ export type Database = {
           outros_custos_valor?: number | null
           percentual_celular_trabalho?: number | null
           placa?: string | null
+          preco_alcool?: number | null
           preco_combustivel?: number | null
+          preco_gasolina?: number | null
+          preco_gasolina_reserva?: number | null
           preco_kwh?: number | null
           taxa_uber_percent?: number
           tipo_posse?: string | null
@@ -307,6 +325,9 @@ export type Database = {
           ano?: number | null
           capacidade_tanque?: number | null
           combustivel?: string | null
+          consumo_alcool?: number | null
+          consumo_gasolina?: number | null
+          consumo_gasolina_reserva?: number | null
           consumo_km_kwh?: number | null
           consumo_km_litro?: number | null
           created_at?: string
@@ -322,7 +343,10 @@ export type Database = {
           outros_custos_valor?: number | null
           percentual_celular_trabalho?: number | null
           placa?: string | null
+          preco_alcool?: number | null
           preco_combustivel?: number | null
+          preco_gasolina?: number | null
+          preco_gasolina_reserva?: number | null
           preco_kwh?: number | null
           taxa_uber_percent?: number
           tipo_posse?: string | null

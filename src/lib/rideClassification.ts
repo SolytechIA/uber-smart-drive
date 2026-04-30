@@ -1,9 +1,15 @@
 export type Classificacao = "BOA" | "MEDIA" | "RUIM";
 
+/**
+ * Parâmetros legados (mantidos por compatibilidade com chamadas antigas).
+ * A classificação real agora usa as faixas de R$/km abaixo (r_km_bom / r_km_medio).
+ */
 export interface ClassifyParams {
   valor_minimo_corrida: number;
   km_max_deslocamento: number;
   r_por_km_minimo: number;
+  r_km_bom?: number;
+  r_km_medio?: number;
 }
 
 export interface RideMetrics {
@@ -13,22 +19,26 @@ export interface RideMetrics {
 }
 
 /**
- * Lógica:
- *  - BOA: valor >= valor_minimo E deslocamento <= km_max_deslocamento E (valor/km_total) >= r_por_km_minimo
- *  - RUIM: falha em 2 ou mais critérios
- *  - MEDIA: falha em apenas 1 critério
+ * Classificação por R$/km real (denominador = km_passageiro + km_deslocamento):
+ *   - r_por_km >= r_km_bom            → BOA
+ *   - r_por_km >= r_km_medio          → MEDIA
+ *   - r_por_km <  r_km_medio          → RUIM
+ *
+ * Defaults seguros caso os parâmetros não estejam configurados:
+ *   r_km_bom   = r_por_km_minimo (ou 1.8)
+ *   r_km_medio = max(r_por_km_minimo - 0.5, r_por_km_minimo * 0.7) (ou 1.3)
  */
 export function classifyRide(ride: RideMetrics, params: ClassifyParams): Classificacao {
   const kmTotal = (ride.km_passageiro || 0) + (ride.km_deslocamento || 0);
   const rPorKm = kmTotal > 0 ? ride.valor_bruto / kmTotal : 0;
 
-  let falhas = 0;
-  if (ride.valor_bruto < params.valor_minimo_corrida) falhas++;
-  if (ride.km_deslocamento > params.km_max_deslocamento) falhas++;
-  if (rPorKm < params.r_por_km_minimo) falhas++;
+  const baseMin = Number(params.r_por_km_minimo) || 1.8;
+  const rBom = Number(params.r_km_bom) || baseMin;
+  const rMedio =
+    Number(params.r_km_medio) || Math.max(baseMin - 0.5, baseMin * 0.7);
 
-  if (falhas === 0) return "BOA";
-  if (falhas === 1) return "MEDIA";
+  if (rPorKm >= rBom) return "BOA";
+  if (rPorKm >= rMedio) return "MEDIA";
   return "RUIM";
 }
 
