@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Car,
   Clock,
+  Eye,
   Loader2,
   Pencil,
   Plus,
@@ -13,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { NewRideModal, type EditingRide } from "@/components/dashboard/NewRideModal";
+import { RideViewModal, type ViewRide } from "@/components/dashboard/RideViewModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
