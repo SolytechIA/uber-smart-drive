@@ -43,52 +43,38 @@ const fmt = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function buildPrompt(d: Payload): string {
-  return `Você é um analista especializado em otimização de renda para motoristas de aplicativo no Brasil. Analise os dados abaixo e gere uma análise personalizada, direta e útil em português brasileiro.
+  return `Você é um analista especializado em renda para motoristas de aplicativo no Brasil. Com base nos dados abaixo, gere uma análise CONCISA e SEM REPETIÇÕES entre as seções.
 
-DADOS DO DIA:
+DADOS:
 - Data: ${d.data_hoje}
-- Corridas realizadas: ${d.total_corridas}
-- Ganho bruto total: R$ ${fmt(d.ganho_bruto)}
-- Custo total (combustível + fixo proporcional): R$ ${fmt(d.custo_total)}
-- Ganho real (bruto - custos): R$ ${fmt(d.ganho_real)}
-- Meta diária configurada: R$ ${fmt(d.meta_diaria)}
-- Percentual da meta atingido: ${fmt(d.percentual_meta)}%
-- Km total rodado (com e sem passageiro): ${fmt(d.km_total)}
-- Km rodado vazio (deslocamento): ${fmt(d.km_deslocamento_total)}
-- Horas ao volante: ${fmt(d.horas)}h
-- R$/hora do dia: R$ ${fmt(d.r_por_hora)}
-- R$/km do dia: R$ ${fmt(d.r_por_km)}
-- Ticket médio por corrida: R$ ${fmt(d.ticket_medio)}
-- Corridas BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: ${d.n_ruins}
-- Horário da primeira corrida: ${d.hora_inicio}
-- Horário da última corrida: ${d.hora_fim}
-- Corrida mais rentável: R$ ${fmt(d.corrida_melhor.valor)} (${fmt(d.corrida_melhor.km)}km, ${d.corrida_melhor.origem}→${d.corrida_melhor.destino})
-- Corrida menos rentável: R$ ${fmt(d.corrida_pior.valor)} (${fmt(d.corrida_pior.km)}km, ${d.corrida_pior.origem}→${d.corrida_pior.destino})
-- Projeção de fechamento do mês: R$ ${fmt(d.projecao_mensal)}
-- Meta mensal: R$ ${fmt(d.meta_mensal)}
-- Dias restantes no mês: ${d.dias_restantes_mes}
-- Valor faltante para meta mensal: R$ ${fmt(d.valor_faltante_meta)}
-- Valor necessário por dia para atingir meta: R$ ${fmt(d.valor_necessario_por_dia)}
+- Corridas: ${d.total_corridas} (BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: ${d.n_ruins})
+- Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custo: R$ ${fmt(d.custo_total)} | Ganho real: R$ ${fmt(d.ganho_real)}
+- Meta diária: R$ ${fmt(d.meta_diaria)} (${fmt(d.percentual_meta)}% atingida)
+- Km total: ${fmt(d.km_total)} (vazio: ${fmt(d.km_deslocamento_total)}) | Horas: ${fmt(d.horas)}h
+- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
+- Janela: ${d.hora_inicio} → ${d.hora_fim}
+- Melhor: R$ ${fmt(d.corrida_melhor.valor)} (${d.corrida_melhor.origem}→${d.corrida_melhor.destino}) | Pior: R$ ${fmt(d.corrida_pior.valor)} (${d.corrida_pior.origem}→${d.corrida_pior.destino})
+- Mês: realizado R$ ${fmt(d.ganho_real)} de meta R$ ${fmt(d.meta_mensal)} | projeção R$ ${fmt(d.projecao_mensal)} | falta R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) (R$ ${fmt(d.valor_necessario_por_dia)}/dia)
 
-Gere exatamente 4 seções com os títulos abaixo:
+Gere 4 seções distintas e complementares (NÃO repita informações entre elas):
 
 ## RESUMO DO DIA
-(2-3 parágrafos narrativos com análise do desempenho, pontos positivos e o que pode melhorar. Use os dados reais.)
+2 parágrafos: desempenho geral e ponto mais relevante do dia. Inclua obrigatoriamente um insight motivacional genuíno adequado ao resultado, que motive o motorista a continuar ou melhorar.
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-(4 itens obrigatórios em tópicos)
-🕐 Melhores horários para trabalhar
-📍 Regiões/bairros a priorizar
-✅ Tipo de corrida para aceitar
-⚠️ O que evitar
+Exatamente 4 tópicos DIFERENTES entre si (sem repetir recomendações entre os 4 itens):
+🕐 [horários específicos baseados nos dados]
+📍 [regiões/bairros baseados nos dados]
+✅ [critério de corrida a aceitar com valor/km específico]
+⚠️ [comportamento específico a evitar]
 
 ## PROJEÇÃO DO MÊS
-(Análise da projeção mensal comparando com a meta, o que precisa fazer nos dias restantes)
+Apenas números e projeção — não repetir análise do dia. 1 parágrafo com projeção realista e ação concreta necessária.
 
-## DICA ESTRATÉGICA DO DIA
-(Uma dica prática e específica que o motorista pode aplicar amanhã imediatamente, baseada nos dados)
+## DICA ESTRATÉGICA
+1 dica NOVA não mencionada nas seções anteriores, específica e aplicável amanhã.
 
-Seja direto, use linguagem simples e motivadora. Máximo 500 palavras no total.`;
+Máximo 380 palavras totais. Linguagem direta e motivadora.`;
 }
 
 function splitSections(text: string) {
@@ -103,7 +89,7 @@ function splitSections(text: string) {
     ["resumo_dia", /##\s*RESUMO DO DIA\s*([\s\S]*?)(?=##\s*RECOMENDAÇÕES|##\s*RECOMENDACOES|$)/i],
     ["recomendacoes", /##\s*RECOMENDA[ÇC][ÕO]ES PARA AMANH[ÃA]\s*([\s\S]*?)(?=##\s*PROJE[ÇC][ÃA]O|$)/i],
     ["projecao_mes", /##\s*PROJE[ÇC][ÃA]O DO M[ÊE]S\s*([\s\S]*?)(?=##\s*DICA|$)/i],
-    ["dica_estrategica", /##\s*DICA ESTRAT[ÉE]GICA DO DIA\s*([\s\S]*?)$/i],
+    ["dica_estrategica", /##\s*DICA ESTRAT[ÉE]GICA(?:\s+DO DIA)?\s*([\s\S]*?)$/i],
   ];
 
   for (const [key, re] of patterns) {
