@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 import {
   calcPeriodMetrics,
   resolveGoals,
@@ -442,7 +443,7 @@ export default function AnaliseIA() {
               <Button
                 variant="outline"
                 onClick={handleGenerate}
-                disabled={rateLimited || status === "loading"}
+                disabled={rateLimited}
                 className={cn(rateLimited && "opacity-60")}
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
