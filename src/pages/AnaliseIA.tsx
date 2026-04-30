@@ -36,6 +36,10 @@ interface Analysis {
 
 type Status = "idle" | "loading" | "ok" | "error" | "empty";
 
+const STORAGE_ANALYSIS = "driveIA_ultima_analise";
+const STORAGE_TIMESTAMP = "driveIA_ultima_geracao";
+const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hora
+
 export default function AnaliseIA() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -46,9 +50,61 @@ export default function AnaliseIA() {
   const [realizadoMes, setRealizadoMes] = useState(0);
   const [metaMensal, setMetaMensal] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [now, setNow] = useState<number>(Date.now());
+
+  // Carrega análise salva ao montar
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_ANALYSIS);
+      const ts = localStorage.getItem(STORAGE_TIMESTAMP);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.analysis) {
+          setAnalysis(parsed.analysis);
+          setGeneratedAt(ts ? new Date(Number(ts)) : new Date(parsed.generatedAt));
+          setProgressPct(parsed.progressPct || 0);
+          setRealizadoMes(parsed.realizadoMes || 0);
+          setMetaMensal(parsed.metaMensal || 0);
+          setStatus("ok");
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Tick para countdown
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const lastGenTs = (() => {
+    const v = localStorage.getItem(STORAGE_TIMESTAMP);
+    return v ? Number(v) : 0;
+  })();
+  const msSinceLast = now - lastGenTs;
+  const rateLimited = lastGenTs > 0 && msSinceLast < RATE_LIMIT_MS;
+  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - msSinceLast) / 60_000) : 0;
+  const nextAvailableTime = rateLimited
+    ? new Date(lastGenTs + RATE_LIMIT_MS).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      })
+    : "";
+
+  // Aviso se análise é de outro dia
+  const isFromAnotherDay = (() => {
+    if (!generatedAt) return false;
+    const todayStr = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const genStr = generatedAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    return todayStr !== genStr;
+  })();
 
   const handleGenerate = async () => {
     if (!user) return;
+    if (rateLimited) return;
     setStatus("loading");
     setErrorMsg("");
 
