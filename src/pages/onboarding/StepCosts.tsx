@@ -24,8 +24,8 @@ export function StepCosts({ data, vehicle, onChange, errors }: Props) {
   const veiculoMensal = useMemo(() => {
     const v = vehicle.valor_parcela_ou_diaria ?? 0;
     if (vehicle.tipo_posse === "financiado") return v;
-    if (vehicle.tipo_posse === "diaria") return v * data.dias_trabalhados_mes;
-    if (vehicle.tipo_posse === "semanal") return v * 4.33;
+    if (vehicle.tipo_posse === "alugado_diaria") return v * data.dias_trabalhados_mes;
+    if (vehicle.tipo_posse === "alugado_semana") return v * 4.33;
     return 0;
   }, [vehicle, data.dias_trabalhados_mes]);
 
