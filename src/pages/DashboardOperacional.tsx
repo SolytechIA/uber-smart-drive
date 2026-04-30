@@ -53,6 +53,8 @@ const DEFAULT_PARAMS: ClassifyParams = {
   valor_minimo_corrida: 8,
   km_max_deslocamento: 3,
   r_por_km_minimo: 1.8,
+  r_km_bom: 1.8,
+  r_km_medio: 1.3,
 };
 
 const fmtBRL = (v: number) =>
@@ -106,7 +108,7 @@ export default function DashboardOperacional() {
       supabase.from("users").select("nome").eq("id", user.id).maybeSingle(),
       supabase
         .from("goals")
-        .select("valor_minimo_corrida, km_max_deslocamento, r_por_km_minimo")
+        .select("valor_minimo_corrida, km_max_deslocamento, r_por_km_minimo, r_km_bom, r_km_medio")
         .eq("user_id", user.id)
         .maybeSingle(),
       supabase
@@ -126,10 +128,14 @@ export default function DashboardOperacional() {
 
     setNome(profileRes.data?.nome || "");
     if (goalsRes.data) {
+      const g = goalsRes.data as any;
+      const baseMin = Number(g.r_por_km_minimo) || DEFAULT_PARAMS.r_por_km_minimo;
       setParams({
-        valor_minimo_corrida: Number(goalsRes.data.valor_minimo_corrida) || DEFAULT_PARAMS.valor_minimo_corrida,
-        km_max_deslocamento: Number(goalsRes.data.km_max_deslocamento) || DEFAULT_PARAMS.km_max_deslocamento,
-        r_por_km_minimo: Number(goalsRes.data.r_por_km_minimo) || DEFAULT_PARAMS.r_por_km_minimo,
+        valor_minimo_corrida: Number(g.valor_minimo_corrida) || DEFAULT_PARAMS.valor_minimo_corrida,
+        km_max_deslocamento: Number(g.km_max_deslocamento) || DEFAULT_PARAMS.km_max_deslocamento,
+        r_por_km_minimo: baseMin,
+        r_km_bom: Number(g.r_km_bom) || baseMin,
+        r_km_medio: Number(g.r_km_medio) || Math.max(baseMin - 0.5, baseMin * 0.7),
       });
     }
     setRides((ridesRes.data as RideRow[]) || []);
