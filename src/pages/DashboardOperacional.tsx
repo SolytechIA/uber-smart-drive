@@ -89,8 +89,18 @@ export default function DashboardOperacional() {
   const [editing, setEditing] = useState<EditingRide | null>(null);
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => nowInTZ());
 
-  const handleView = async (id: string) => {
+  const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
+  const todayStr = useMemo(() => getTodaySP(), []);
+  const yesterdayStr = useMemo(() => getYesterdaySP(), []);
+  const isToday = selectedDateStr === todayStr;
+  // Comparativo: dia anterior à data selecionada
+  const prevDayStr = useMemo(() => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    return format(d, "yyyy-MM-dd");
+  }, [selectedDate]);
     const { data, error } = await supabase
       .from("rides")
       .select(
