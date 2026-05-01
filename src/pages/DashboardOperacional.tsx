@@ -101,6 +101,8 @@ export default function DashboardOperacional() {
     d.setDate(d.getDate() - 1);
     return format(d, "yyyy-MM-dd");
   }, [selectedDate]);
+
+  const handleView = async (id: string) => {
     const { data, error } = await supabase
       .from("rides")
       .select(
@@ -132,9 +134,6 @@ export default function DashboardOperacional() {
     setShowNew(true);
   };
 
-  const todayStr = useMemo(() => getTodaySP(), []);
-  const yesterdayStr = useMemo(() => getYesterdaySP(), []);
-
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -151,13 +150,13 @@ export default function DashboardOperacional() {
           "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino",
         )
         .eq("user_id", user.id)
-        .eq("data_corrida", todayStr)
+        .eq("data_corrida", selectedDateStr)
         .order("horario_inicio", { ascending: false }),
       supabase
         .from("rides")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("data_corrida", yesterdayStr),
+        .eq("data_corrida", prevDayStr),
     ]);
 
     setNome(profileRes.data?.nome || "");
@@ -175,7 +174,7 @@ export default function DashboardOperacional() {
     setRides((ridesRes.data as RideRow[]) || []);
     setYesterdayCount(yRes.count || 0);
     setLoading(false);
-  }, [user, todayStr, yesterdayStr]);
+  }, [user, selectedDateStr, prevDayStr]);
 
   useEffect(() => {
     loadAll();
