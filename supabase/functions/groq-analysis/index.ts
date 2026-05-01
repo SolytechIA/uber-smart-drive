@@ -74,8 +74,8 @@ Gere 4 seções distintas e complementares (NÃO repita informações entre elas
 Exatamente 4 tópicos DIFERENTES entre si (sem repetir recomendações entre os 4 itens):
 🕐 [horários específicos baseados nos dados]
 📍 [regiões/bairros baseados nos dados]
-✅ [critério de corrida a aceitar com valor/km específico]
-⚠️ [comportamento específico a evitar]
+✅ Baseado na meta configurada de R$ ${fmt(rkmBom)}/km real, recomende o tipo de corrida ideal para atingir ou superar esta meta. Use este valor como referência — NÃO invente valores de R$/km.
+⚠️ [comportamento específico a evitar — pode citar o piso de R$ ${fmt(rkmMedio)}/km como limite mínimo aceitável]
 
 ## PROJEÇÃO DO MÊS
 Apenas números e projeção — não repetir análise do dia. 1 parágrafo com projeção realista e ação concreta necessária.
