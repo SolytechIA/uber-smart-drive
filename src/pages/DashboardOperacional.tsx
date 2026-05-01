@@ -257,12 +257,54 @@ export default function DashboardOperacional() {
 
         {/* Lista de corridas */}
         <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Corridas de Hoje</h2>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-lg font-semibold">
+                {isToday ? "Corridas de Hoje" : "Corridas do dia"}
+              </h2>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {format(selectedDate, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(d) => d && setSelectedDate(d)}
+                    disabled={(date) => date > nowInTZ()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             {rides.length > 0 && (
               <span className="text-xs text-muted-foreground">{rides.length} registro(s)</span>
             )}
           </div>
+
+          {!isToday && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
+              <span>
+                📅 Visualizando{" "}
+                {selectedDate
+                  .toLocaleDateString("pt-BR", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    timeZone: "America/Sao_Paulo",
+                  })
+                  .replace(/^./, (m) => m.toUpperCase())}
+              </span>
+              <Button variant="ghost" size="sm" className="h-7" onClick={() => setSelectedDate(nowInTZ())}>
+                Voltar para hoje
+              </Button>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
