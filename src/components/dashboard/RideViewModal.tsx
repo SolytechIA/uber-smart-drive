@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,9 @@ import {
   type Classificacao,
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
+import { calcCustoCombustivel, type Vehicle } from "@/lib/financeiro";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ViewRide {
   id: string;
@@ -56,14 +60,36 @@ const fmtData = (data: string | null, iso: string | null) => {
 };
 
 export function RideViewModal({ ride, open, onOpenChange, onEdit }: Props) {
+  const { user } = useAuth();
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancel = false;
+    supabase
+      .from("vehicles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancel) setVehicle((data as Vehicle | null) ?? null);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [open, user]);
+
   if (!ride) return null;
   const c = (ride.classificacao as Classificacao) || "MEDIA";
   const kmPax = Number(ride.km_passageiro || 0);
   const kmDesl = Number(ride.km_deslocamento || 0);
   const kmTotal = kmPax + kmDesl;
   const valorBruto = Number(ride.valor_bruto || 0);
-  const custoComb = Number(ride.custo_combustivel_corrida || 0);
-  const ganhoReal = ride.ganho_real_corrida != null ? Number(ride.ganho_real_corrida) : valorBruto - custoComb;
+  // Sempre prioriza recálculo a partir do veículo (caso o salvo esteja zerado/desatualizado)
+  const custoCalculado = calcCustoCombustivel(kmTotal, vehicle);
+  const custoSalvo = Number(ride.custo_combustivel_corrida || 0);
+  const custoComb = custoCalculado > 0 ? custoCalculado : custoSalvo;
+  const ganhoReal = valorBruto - custoComb;
   const rPorKm = kmTotal > 0 ? valorBruto / kmTotal : 0;
 
   return (

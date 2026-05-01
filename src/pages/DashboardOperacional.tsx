@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import {
+  CalendarIcon,
   Car,
   Clock,
   Eye,
@@ -18,6 +20,8 @@ import { RideViewModal, type ViewRide } from "@/components/dashboard/RideViewMod
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +41,8 @@ import {
   type ClassifyParams,
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
-import { getTodaySP, getYesterdaySP, formatLongDateSP } from "@/lib/dateUtils";
+import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
+import { nowInTZ } from "@/lib/financeiro";
 
 interface RideRow {
   id: string;
@@ -84,6 +89,18 @@ export default function DashboardOperacional() {
   const [editing, setEditing] = useState<EditingRide | null>(null);
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => nowInTZ());
+
+  const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
+  const todayStr = useMemo(() => getTodaySP(), []);
+  
+  const isToday = selectedDateStr === todayStr;
+  // Comparativo: dia anterior à data selecionada
+  const prevDayStr = useMemo(() => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    return format(d, "yyyy-MM-dd");
+  }, [selectedDate]);
 
   const handleView = async (id: string) => {
     const { data, error } = await supabase
@@ -117,9 +134,6 @@ export default function DashboardOperacional() {
     setShowNew(true);
   };
 
-  const todayStr = useMemo(() => getTodaySP(), []);
-  const yesterdayStr = useMemo(() => getYesterdaySP(), []);
-
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -136,13 +150,13 @@ export default function DashboardOperacional() {
           "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino",
         )
         .eq("user_id", user.id)
-        .eq("data_corrida", todayStr)
+        .eq("data_corrida", selectedDateStr)
         .order("horario_inicio", { ascending: false }),
       supabase
         .from("rides")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("data_corrida", yesterdayStr),
+        .eq("data_corrida", prevDayStr),
     ]);
 
     setNome(profileRes.data?.nome || "");
@@ -160,7 +174,7 @@ export default function DashboardOperacional() {
     setRides((ridesRes.data as RideRow[]) || []);
     setYesterdayCount(yRes.count || 0);
     setLoading(false);
-  }, [user, todayStr, yesterdayStr]);
+  }, [user, selectedDateStr, prevDayStr]);
 
   useEffect(() => {
     loadAll();
@@ -212,13 +226,13 @@ export default function DashboardOperacional() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <SummaryCard
             icon={Car}
-            label="Corridas hoje"
+            label={isToday ? "Corridas hoje" : "Corridas no dia"}
             value={String(stats.total)}
             badge={
               variacao !== 0 ? (
                 <Badge variant="outline" className={cn("text-xs", variacao > 0 ? "text-success" : "text-destructive")}>
                   {variacao > 0 ? "+" : ""}
-                  {variacao} vs ontem
+                  {variacao} {isToday ? "vs ontem" : "vs dia anterior"}
                 </Badge>
               ) : null
             }
@@ -243,12 +257,54 @@ export default function DashboardOperacional() {
 
         {/* Lista de corridas */}
         <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Corridas de Hoje</h2>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-lg font-semibold">
+                {isToday ? "Corridas de Hoje" : "Corridas do dia"}
+              </h2>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {format(selectedDate, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(d) => d && setSelectedDate(d)}
+                    disabled={(date) => date > nowInTZ()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             {rides.length > 0 && (
               <span className="text-xs text-muted-foreground">{rides.length} registro(s)</span>
             )}
           </div>
+
+          {!isToday && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
+              <span>
+                📅 Visualizando{" "}
+                {selectedDate
+                  .toLocaleDateString("pt-BR", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    timeZone: "America/Sao_Paulo",
+                  })
+                  .replace(/^./, (m) => m.toUpperCase())}
+              </span>
+              <Button variant="ghost" size="sm" className="h-7" onClick={() => setSelectedDate(nowInTZ())}>
+                Voltar para hoje
+              </Button>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -292,6 +348,7 @@ export default function DashboardOperacional() {
         onSaved={loadAll}
         params={params}
         editing={editing}
+        defaultDate={selectedDate}
       />
 
       <RideViewModal
