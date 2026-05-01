@@ -41,7 +41,7 @@ import {
   type ClassifyParams,
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
-import { getTodaySP, getYesterdaySP, formatLongDateSP } from "@/lib/dateUtils";
+import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
 import { nowInTZ } from "@/lib/financeiro";
 
 interface RideRow {
@@ -93,7 +93,7 @@ export default function DashboardOperacional() {
 
   const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
   const todayStr = useMemo(() => getTodaySP(), []);
-  const yesterdayStr = useMemo(() => getYesterdaySP(), []);
+  
   const isToday = selectedDateStr === todayStr;
   // Comparativo: dia anterior à data selecionada
   const prevDayStr = useMemo(() => {
