@@ -226,13 +226,13 @@ export default function DashboardOperacional() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <SummaryCard
             icon={Car}
-            label="Corridas hoje"
+            label={isToday ? "Corridas hoje" : "Corridas no dia"}
             value={String(stats.total)}
             badge={
               variacao !== 0 ? (
                 <Badge variant="outline" className={cn("text-xs", variacao > 0 ? "text-success" : "text-destructive")}>
                   {variacao > 0 ? "+" : ""}
-                  {variacao} vs ontem
+                  {variacao} {isToday ? "vs ontem" : "vs dia anterior"}
                 </Badge>
               ) : null
             }
