@@ -42,6 +42,7 @@ interface NewRideModalProps {
   onSaved: () => void;
   params: ClassifyParams;
   editing?: EditingRide | null;
+  defaultDate?: Date;
 }
 
 interface FormState {
@@ -58,8 +59,8 @@ interface FormState {
   observacao: string;
 }
 
-const makeInitial = (): FormState => ({
-  data_corrida: nowInTZ(),
+const makeInitial = (defaultDate?: Date): FormState => ({
+  data_corrida: defaultDate ?? nowInTZ(),
   horario_inicio: "",
   horario_fim: "",
   valor_bruto: "",
@@ -125,9 +126,9 @@ const fromEditing = (e: EditingRide): FormState => {
   };
 };
 
-export function NewRideModal({ open, onOpenChange, onSaved, params, editing }: NewRideModalProps) {
+export function NewRideModal({ open, onOpenChange, onSaved, params, editing, defaultDate }: NewRideModalProps) {
   const { user } = useAuth();
-  const [form, setForm] = useState<FormState>(makeInitial);
+  const [form, setForm] = useState<FormState>(() => makeInitial(defaultDate));
   const [saving, setSaving] = useState(false);
   const [resultado, setResultado] = useState<Classificacao | null>(null);
 
@@ -135,10 +136,10 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing }: N
 
   useEffect(() => {
     if (open) {
-      setForm(editing ? fromEditing(editing) : makeInitial());
+      setForm(editing ? fromEditing(editing) : makeInitial(defaultDate));
       setResultado(null);
     }
-  }, [open, editing]);
+  }, [open, editing, defaultDate]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
