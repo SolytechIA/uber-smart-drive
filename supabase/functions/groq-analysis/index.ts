@@ -37,12 +37,19 @@ interface Payload {
   dias_restantes_mes: number;
   valor_faltante_meta: number;
   valor_necessario_por_dia: number;
+  // Metas configuradas pelo motorista
+  r_km_bom?: number;
+  r_km_medio?: number;
+  ticket_minimo?: number;
 }
 
 const fmt = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function buildPrompt(d: Payload): string {
+  const rkmBom = Number(d.r_km_bom || 0);
+  const rkmMedio = Number(d.r_km_medio || 0);
+  const ticketMin = Number(d.ticket_minimo || 0);
   return `Você é um analista especializado em renda para motoristas de aplicativo no Brasil. Com base nos dados abaixo, gere uma análise CONCISA e SEM REPETIÇÕES entre as seções.
 
 DADOS:
@@ -51,8 +58,10 @@ DADOS:
 - Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custo: R$ ${fmt(d.custo_total)} | Ganho real: R$ ${fmt(d.ganho_real)}
 - Meta diária: R$ ${fmt(d.meta_diaria)} (${fmt(d.percentual_meta)}% atingida)
 - Km total: ${fmt(d.km_total)} (vazio: ${fmt(d.km_deslocamento_total)}) | Horas: ${fmt(d.horas)}h
-- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
-- Janela: ${d.hora_inicio} → ${d.hora_fim}
+- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km real: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
+- Meta R$/km configurada (corrida BOA): R$ ${fmt(rkmBom)}
+- Meta R$/km mínimo (corrida MÉDIA): R$ ${fmt(rkmMedio)}
+${ticketMin > 0 ? `- Ticket mínimo configurado: R$ ${fmt(ticketMin)}\n` : ""}- Janela: ${d.hora_inicio} → ${d.hora_fim}
 - Melhor: R$ ${fmt(d.corrida_melhor.valor)} (${d.corrida_melhor.origem}→${d.corrida_melhor.destino}) | Pior: R$ ${fmt(d.corrida_pior.valor)} (${d.corrida_pior.origem}→${d.corrida_pior.destino})
 - Mês: realizado R$ ${fmt(d.ganho_real)} de meta R$ ${fmt(d.meta_mensal)} | projeção R$ ${fmt(d.projecao_mensal)} | falta R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) (R$ ${fmt(d.valor_necessario_por_dia)}/dia)
 
