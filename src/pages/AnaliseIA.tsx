@@ -217,6 +217,9 @@ export default function AnaliseIA() {
         dias_restantes_mes: diasRestantes,
         valor_faltante_meta: valorFaltante,
         valor_necessario_por_dia: valorPorDia,
+        r_km_bom: Number((goals as any)?.r_km_bom || (goals as any)?.r_por_km_minimo || 0),
+        r_km_medio: Number((goals as any)?.r_km_medio || 0),
+        ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
       };
 
       setRealizadoMes(mMes.ganhoReal);
