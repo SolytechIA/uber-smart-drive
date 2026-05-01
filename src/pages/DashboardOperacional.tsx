@@ -348,6 +348,7 @@ export default function DashboardOperacional() {
         onSaved={loadAll}
         params={params}
         editing={editing}
+        defaultDate={selectedDate}
       />
 
       <RideViewModal
