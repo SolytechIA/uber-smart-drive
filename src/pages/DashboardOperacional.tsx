@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import {
+  CalendarIcon,
   Car,
   Clock,
   Eye,
@@ -18,6 +20,8 @@ import { RideViewModal, type ViewRide } from "@/components/dashboard/RideViewMod
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +42,7 @@ import {
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
 import { getTodaySP, getYesterdaySP, formatLongDateSP } from "@/lib/dateUtils";
+import { nowInTZ } from "@/lib/financeiro";
 
 interface RideRow {
   id: string;
