@@ -28,12 +28,10 @@ export function ProtectedRoute({
 
   useEffect(() => {
     if (!user) return;
-    if (!requireVehicle && !requireAdmin) {
+    if (!requireVehicle && !requireAdmin && !requireActivePlan) {
       setChecking(false);
       return;
     }
-    // Only run the check once per user id — prevents re-checks during local
-    // state updates inside protected pages (e.g. typing in onboarding fields).
     if (checkedForUserId.current === user.id) return;
     checkedForUserId.current = user.id;
 
@@ -45,17 +43,27 @@ export function ProtectedRoute({
           .eq("user_id", user.id);
         setHasVehicle((count ?? 0) > 0);
       }
-      if (requireAdmin) {
+      if (requireAdmin || requireActivePlan) {
         const { data } = await supabase
           .from("users")
-          .select("is_admin")
+          .select("is_admin, plano, trial_expira_em")
           .eq("id", user.id)
           .maybeSingle();
         setIsAdmin(!!data?.is_admin);
+        if (requireActivePlan && data) {
+          const plano = data.plano as string;
+          const expiry = data.trial_expira_em
+            ? new Date(data.trial_expira_em).getTime()
+            : null;
+          const expired =
+            plano === "expired" ||
+            (plano === "trial" && expiry !== null && expiry <= Date.now());
+          setPlanExpired(expired);
+        }
       }
       setChecking(false);
     })();
-  }, [user, requireVehicle, requireAdmin]);
+  }, [user, requireVehicle, requireAdmin, requireActivePlan]);
 
   if (loading || (user && checking)) {
     return (
@@ -73,6 +81,10 @@ export function ProtectedRoute({
 
   if (requireAdmin && isAdmin === false) {
     return <Navigate to="/dashboard/operacional" replace />;
+  }
+
+  if (requireActivePlan && planExpired && location.pathname !== "/planos") {
+    return <Navigate to="/planos" replace />;
   }
 
   if (requireVehicle && hasVehicle === false) {
