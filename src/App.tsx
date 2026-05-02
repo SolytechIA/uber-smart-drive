@@ -18,6 +18,8 @@ import Relatorios from "./pages/Relatorios";
 import AnaliseIA from "./pages/AnaliseIA";
 import ConectarUber from "./pages/ConectarUber";
 import Admin from "./pages/Admin";
+import Planos from "./pages/Planos";
+import Privacidade from "./pages/Privacidade";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
