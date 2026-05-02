@@ -9,11 +9,14 @@ import {
   LogOut,
   Menu,
   Settings,
+  Shield,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlanStatus } from "@/hooks/usePlanStatus";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
