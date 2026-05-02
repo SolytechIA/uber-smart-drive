@@ -37,7 +37,16 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/recuperar-senha" element={<RecuperarSenha />} />
             <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+            <Route path="/privacidade" element={<Privacidade />} />
 
+            <Route
+              path="/planos"
+              element={
+                <ProtectedRoute requireActivePlan={false}>
+                  <Planos />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/onboarding"
               element={
