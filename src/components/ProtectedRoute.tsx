@@ -8,18 +8,22 @@ interface ProtectedRouteProps {
   children: ReactNode;
   requireVehicle?: boolean;
   requireAdmin?: boolean;
+  /** If true (default for app pages), redirect users with expired trial to /planos */
+  requireActivePlan?: boolean;
 }
 
 export function ProtectedRoute({
   children,
   requireVehicle = false,
   requireAdmin = false,
+  requireActivePlan = true,
 }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [checking, setChecking] = useState(requireVehicle || requireAdmin);
+  const [checking, setChecking] = useState(requireVehicle || requireAdmin || requireActivePlan);
   const [hasVehicle, setHasVehicle] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [planExpired, setPlanExpired] = useState<boolean>(false);
   const checkedForUserId = useRef<string | null>(null);
 
   useEffect(() => {
