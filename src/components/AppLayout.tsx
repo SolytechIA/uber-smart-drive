@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
+  const { planType, daysRemaining, isAdmin } = usePlanStatus();
   const navigate = useNavigate();
   const location = useLocation();
 
