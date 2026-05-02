@@ -18,6 +18,8 @@ import Relatorios from "./pages/Relatorios";
 import AnaliseIA from "./pages/AnaliseIA";
 import ConectarUber from "./pages/ConectarUber";
 import Admin from "./pages/Admin";
+import Planos from "./pages/Planos";
+import Privacidade from "./pages/Privacidade";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +37,16 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/recuperar-senha" element={<RecuperarSenha />} />
             <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+            <Route path="/privacidade" element={<Privacidade />} />
 
+            <Route
+              path="/planos"
+              element={
+                <ProtectedRoute requireActivePlan={false}>
+                  <Planos />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/onboarding"
               element={

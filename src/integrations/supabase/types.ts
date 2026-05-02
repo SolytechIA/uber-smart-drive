@@ -208,6 +208,7 @@ export type Database = {
           email: string
           id: string
           is_admin: boolean
+          mp_subscription_id: string | null
           nome: string | null
           plano: string
           telefone: string | null
@@ -225,6 +226,7 @@ export type Database = {
           email: string
           id: string
           is_admin?: boolean
+          mp_subscription_id?: string | null
           nome?: string | null
           plano?: string
           telefone?: string | null
@@ -242,6 +244,7 @@ export type Database = {
           email?: string
           id?: string
           is_admin?: boolean
+          mp_subscription_id?: string | null
           nome?: string | null
           plano?: string
           telefone?: string | null
@@ -369,7 +372,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_list_users: {
+        Args: never
+        Returns: {
+          ativo: boolean
+          cidade: string | null
+          created_at: string
+          email: string
+          id: string
+          is_admin: boolean
+          mp_subscription_id: string | null
+          nome: string | null
+          plano: string
+          telefone: string | null
+          trial_expira_em: string | null
+          uber_conectado: boolean
+          uber_cookie: string | null
+          uber_csrf_token: string | null
+          uber_earnings_seed: string | null
+          uber_ultimo_sync: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "users"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_update_user_plan: {
+        Args: {
+          new_plano: string
+          new_trial_expiry?: string
+          target_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

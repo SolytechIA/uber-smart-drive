@@ -8,28 +8,30 @@ interface ProtectedRouteProps {
   children: ReactNode;
   requireVehicle?: boolean;
   requireAdmin?: boolean;
+  /** If true (default for app pages), redirect users with expired trial to /planos */
+  requireActivePlan?: boolean;
 }
 
 export function ProtectedRoute({
   children,
   requireVehicle = false,
   requireAdmin = false,
+  requireActivePlan = true,
 }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [checking, setChecking] = useState(requireVehicle || requireAdmin);
+  const [checking, setChecking] = useState(requireVehicle || requireAdmin || requireActivePlan);
   const [hasVehicle, setHasVehicle] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [planExpired, setPlanExpired] = useState<boolean>(false);
   const checkedForUserId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    if (!requireVehicle && !requireAdmin) {
+    if (!requireVehicle && !requireAdmin && !requireActivePlan) {
       setChecking(false);
       return;
     }
-    // Only run the check once per user id — prevents re-checks during local
-    // state updates inside protected pages (e.g. typing in onboarding fields).
     if (checkedForUserId.current === user.id) return;
     checkedForUserId.current = user.id;
 
@@ -41,17 +43,27 @@ export function ProtectedRoute({
           .eq("user_id", user.id);
         setHasVehicle((count ?? 0) > 0);
       }
-      if (requireAdmin) {
+      if (requireAdmin || requireActivePlan) {
         const { data } = await supabase
           .from("users")
-          .select("is_admin")
+          .select("is_admin, plano, trial_expira_em")
           .eq("id", user.id)
           .maybeSingle();
         setIsAdmin(!!data?.is_admin);
+        if (requireActivePlan && data) {
+          const plano = data.plano as string;
+          const expiry = data.trial_expira_em
+            ? new Date(data.trial_expira_em).getTime()
+            : null;
+          const expired =
+            plano === "expired" ||
+            (plano === "trial" && expiry !== null && expiry <= Date.now());
+          setPlanExpired(expired);
+        }
       }
       setChecking(false);
     })();
-  }, [user, requireVehicle, requireAdmin]);
+  }, [user, requireVehicle, requireAdmin, requireActivePlan]);
 
   if (loading || (user && checking)) {
     return (
@@ -69,6 +81,10 @@ export function ProtectedRoute({
 
   if (requireAdmin && isAdmin === false) {
     return <Navigate to="/dashboard/operacional" replace />;
+  }
+
+  if (requireActivePlan && planExpired && location.pathname !== "/planos") {
+    return <Navigate to="/planos" replace />;
   }
 
   if (requireVehicle && hasVehicle === false) {

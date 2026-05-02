@@ -121,6 +121,12 @@ export default function Cadastro() {
             onChange={(e) => handleChange("email", e.target.value)}
           />
           {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
+          <div className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+            <span className="leading-none">⚠️</span>
+            <p className="leading-snug">
+              <strong>Importante:</strong> use o mesmo e-mail da sua conta Uber. Isso permitirá a sincronização automática das suas corridas em breve.
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

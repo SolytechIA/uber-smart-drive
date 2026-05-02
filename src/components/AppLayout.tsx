@@ -9,11 +9,14 @@ import {
   LogOut,
   Menu,
   Settings,
+  Shield,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlanStatus } from "@/hooks/usePlanStatus";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -33,6 +36,7 @@ const navItems: NavItem[] = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
+  const { planType, daysRemaining, isAdmin } = usePlanStatus();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -100,8 +104,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="space-y-2">
               <div className="px-2">
                 <p className="truncate text-sm font-medium">{user?.email}</p>
-                <p className="text-xs text-muted-foreground">Plano Free Trial</p>
+                {planType === "pro" && (
+                  <Badge className="mt-1 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/15">
+                    Plano Pro ✓
+                  </Badge>
+                )}
+                {planType === "trial" && (
+                  <Badge className="mt-1 bg-amber-500/15 text-amber-600 hover:bg-amber-500/15 dark:text-amber-400">
+                    Trial • {daysRemaining} {daysRemaining === 1 ? "dia restante" : "dias restantes"}
+                  </Badge>
+                )}
+                {planType === "expired" && (
+                  <Link to="/planos">
+                    <Badge className="mt-1 bg-destructive/15 text-destructive hover:bg-destructive/20">
+                      Trial expirado
+                    </Badge>
+                  </Link>
+                )}
               </div>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <Shield className="h-3.5 w-3.5" /> Admin
+                </Link>
+              )}
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <Button
@@ -116,6 +144,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
+              {isAdmin && (
+                <Link to="/admin" title="Admin">
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Shield className="h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
               <ThemeToggle />
               <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
