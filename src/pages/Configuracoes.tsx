@@ -198,10 +198,11 @@ export default function Configuracoes() {
           </div>
         ) : (
           <Tabs defaultValue="vehicle" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-2 sm:grid-cols-4">
               <TabsTrigger value="vehicle">Veículo</TabsTrigger>
               <TabsTrigger value="costs">Custos</TabsTrigger>
               <TabsTrigger value="goals">Metas</TabsTrigger>
+              <TabsTrigger value="uber">Conectar Uber</TabsTrigger>
             </TabsList>
 
             <TabsContent value="vehicle">
