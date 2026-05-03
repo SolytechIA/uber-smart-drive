@@ -253,6 +253,10 @@ export default function Configuracoes() {
                 </div>
               </Card>
             </TabsContent>
+
+            <TabsContent value="uber">
+              <ConectarUberTab />
+            </TabsContent>
           </Tabs>
         )}
       </main>
