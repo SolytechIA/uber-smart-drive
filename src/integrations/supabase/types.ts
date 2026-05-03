@@ -88,6 +88,7 @@ export type Database = {
           km_passageiro: number | null
           km_total: number | null
           observacao: string | null
+          origem: string
           plataforma: string
           r_por_km_real: number | null
           rua_destino: string | null
@@ -114,6 +115,7 @@ export type Database = {
           km_passageiro?: number | null
           km_total?: number | null
           observacao?: string | null
+          origem?: string
           plataforma?: string
           r_por_km_real?: number | null
           rua_destino?: string | null
@@ -140,6 +142,7 @@ export type Database = {
           km_passageiro?: number | null
           km_total?: number | null
           observacao?: string | null
+          origem?: string
           plataforma?: string
           r_por_km_real?: number | null
           rua_destino?: string | null
@@ -200,8 +203,43 @@ export type Database = {
           },
         ]
       }
+      uber_connections: {
+        Row: {
+          atualizado_em: string
+          criado_em: string
+          id: string
+          status: string
+          uber_cookie: string | null
+          uber_email: string | null
+          ultima_sincronizacao: string | null
+          user_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          criado_em?: string
+          id?: string
+          status?: string
+          uber_cookie?: string | null
+          uber_email?: string | null
+          ultima_sincronizacao?: string | null
+          user_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          criado_em?: string
+          id?: string
+          status?: string
+          uber_cookie?: string | null
+          uber_email?: string | null
+          ultima_sincronizacao?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
+          aceite_privacidade: boolean
+          aceite_privacidade_em: string | null
           ativo: boolean
           cidade: string | null
           created_at: string
@@ -220,6 +258,8 @@ export type Database = {
           uber_ultimo_sync: string | null
         }
         Insert: {
+          aceite_privacidade?: boolean
+          aceite_privacidade_em?: string | null
           ativo?: boolean
           cidade?: string | null
           created_at?: string
@@ -238,6 +278,8 @@ export type Database = {
           uber_ultimo_sync?: string | null
         }
         Update: {
+          aceite_privacidade?: boolean
+          aceite_privacidade_em?: string | null
           ativo?: boolean
           cidade?: string | null
           created_at?: string
@@ -375,6 +417,8 @@ export type Database = {
       admin_list_users: {
         Args: never
         Returns: {
+          aceite_privacidade: boolean
+          aceite_privacidade_em: string | null
           ativo: boolean
           cidade: string | null
           created_at: string
