@@ -18,7 +18,7 @@ const schema = z
     cidade: z.string().trim().min(2, "Informe sua cidade").max(80),
     senha: z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(72),
     confirmar: z.string(),
-    aceite: z.literal(true, { errorMap: () => ({ message: "Aceite os termos para continuar" }) }),
+    aceite: z.literal(true, { errorMap: () => ({ message: "Você precisa aceitar a Política de Privacidade para continuar." }) }),
   })
   .refine((d) => d.senha === d.confirmar, {
     path: ["confirmar"],
@@ -65,7 +65,7 @@ export default function Cadastro() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.senha,
       options: {
@@ -77,9 +77,9 @@ export default function Cadastro() {
         },
       },
     });
-    setLoading(false);
 
     if (error) {
+      setLoading(false);
       if (error.message.toLowerCase().includes("registered")) {
         toast.error("Este e-mail já está cadastrado.");
       } else {
@@ -87,6 +87,15 @@ export default function Cadastro() {
       }
       return;
     }
+
+    // Persiste aceite de privacidade (se sessão já existe)
+    if (signUpData.user?.id) {
+      await supabase
+        .from("users")
+        .update({ aceite_privacidade: true, aceite_privacidade_em: new Date().toISOString() })
+        .eq("id", signUpData.user.id);
+    }
+    setLoading(false);
 
     toast.success("Conta criada! Verifique seu e-mail para confirmar.");
     navigate("/login");
@@ -175,7 +184,10 @@ export default function Cadastro() {
             className="mt-0.5"
           />
           <Label htmlFor="aceite" className="text-xs font-normal leading-relaxed text-muted-foreground">
-            Li e aceito os Termos de Uso e Política de Privacidade
+            Li e concordo com a{" "}
+            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Política de Privacidade
+            </a>
           </Label>
         </div>
         {errors.aceite && <p className="-mt-2 text-xs text-destructive">{errors.aceite}</p>}

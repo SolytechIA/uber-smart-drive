@@ -54,6 +54,7 @@ interface RideRow {
   classificacao: string | null;
   bairro_origem: string | null;
   bairro_destino: string | null;
+  origem?: string | null;
 }
 
 const DEFAULT_PARAMS: ClassifyParams = {
@@ -147,7 +148,7 @@ export default function DashboardOperacional() {
       supabase
         .from("rides")
         .select(
-          "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino",
+          "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem",
         )
         .eq("user_id", user.id)
         .eq("data_corrida", selectedDateStr)
@@ -432,6 +433,9 @@ function RideItem({
             <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>
               {classificacaoLabel[c]}
             </Badge>
+            {ride.origem === "uber_sync" && (
+              <span title="Sincronizada automaticamente da Uber" className="text-xs">🔄</span>
+            )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {fmtKm(kmPax)} + {fmtKm(kmDesl)} vazio · {dur}min
