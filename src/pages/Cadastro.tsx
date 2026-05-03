@@ -18,7 +18,7 @@ const schema = z
     cidade: z.string().trim().min(2, "Informe sua cidade").max(80),
     senha: z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(72),
     confirmar: z.string(),
-    aceite: z.literal(true, { errorMap: () => ({ message: "Aceite os termos para continuar" }) }),
+    aceite: z.literal(true, { errorMap: () => ({ message: "Você precisa aceitar a Política de Privacidade para continuar." }) }),
   })
   .refine((d) => d.senha === d.confirmar, {
     path: ["confirmar"],
