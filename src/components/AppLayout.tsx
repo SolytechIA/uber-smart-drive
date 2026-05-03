@@ -183,7 +183,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-center justify-around border-t border-border/60 bg-card/95 backdrop-blur md:hidden">
-        {navItems.map((item) => {
+        {[...navItems, ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Shield } as NavItem] : [])].map((item) => {
           const Icon = item.icon;
           const active = isActive(item.to);
           return (
