@@ -433,6 +433,9 @@ function RideItem({
             <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>
               {classificacaoLabel[c]}
             </Badge>
+            {ride.origem === "uber_sync" && (
+              <span title="Sincronizada automaticamente da Uber" className="text-xs">🔄</span>
+            )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {fmtKm(kmPax)} + {fmtKm(kmDesl)} vazio · {dur}min
