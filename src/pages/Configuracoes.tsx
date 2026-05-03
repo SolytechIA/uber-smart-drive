@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { StepVehicle } from "./onboarding/StepVehicle";
 import { StepCosts } from "./onboarding/StepCosts";
 import { StepGoals } from "./onboarding/StepGoals";
+import { ConectarUberTab } from "@/components/configuracoes/ConectarUberTab";
 import {
   initialCosts,
   initialGoals,
