@@ -65,7 +65,7 @@ export default function Cadastro() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.senha,
       options: {
@@ -77,9 +77,9 @@ export default function Cadastro() {
         },
       },
     });
-    setLoading(false);
 
     if (error) {
+      setLoading(false);
       if (error.message.toLowerCase().includes("registered")) {
         toast.error("Este e-mail já está cadastrado.");
       } else {
@@ -87,6 +87,15 @@ export default function Cadastro() {
       }
       return;
     }
+
+    // Persiste aceite de privacidade (se sessão já existe)
+    if (signUpData.user?.id) {
+      await supabase
+        .from("users")
+        .update({ aceite_privacidade: true, aceite_privacidade_em: new Date().toISOString() })
+        .eq("id", signUpData.user.id);
+    }
+    setLoading(false);
 
     toast.success("Conta criada! Verifique seu e-mail para confirmar.");
     navigate("/login");
