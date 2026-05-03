@@ -184,7 +184,10 @@ export default function Cadastro() {
             className="mt-0.5"
           />
           <Label htmlFor="aceite" className="text-xs font-normal leading-relaxed text-muted-foreground">
-            Li e aceito os Termos de Uso e Política de Privacidade
+            Li e concordo com a{" "}
+            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Política de Privacidade
+            </a>
           </Label>
         </div>
         {errors.aceite && <p className="-mt-2 text-xs text-destructive">{errors.aceite}</p>}
