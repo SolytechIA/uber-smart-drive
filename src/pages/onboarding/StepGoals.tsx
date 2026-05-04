@@ -16,7 +16,7 @@ export function StepGoals({ data, onChange, errors }: Props) {
     onChange({
       meta_diaria: v,
       meta_semanal: v ? v * 5 : null,
-      meta_mensal: v ? v * 22 : null,
+      meta_mensal: v ? v * 25 : null,
     });
   };
 
