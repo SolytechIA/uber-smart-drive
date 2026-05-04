@@ -140,10 +140,25 @@ export default function Onboarding() {
     return Object.keys(e).length === 0;
   };
 
+  const ensureUserRow = async () => {
+    if (!user) return;
+    // Garante que public.users tem linha para satisfazer FK em vehicles/goals
+    const { error } = await supabase.from("users").upsert(
+      {
+        id: user.id,
+        email: user.email ?? "",
+        nome: (user.user_metadata as any)?.nome ?? "",
+        telefone: (user.user_metadata as any)?.telefone ?? "",
+        cidade: (user.user_metadata as any)?.cidade ?? "",
+      } as any,
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+    if (error) console.warn("ensureUserRow:", error);
+  };
+
   const persistPartial = async () => {
     if (!user) return;
-    // Atualiza users com cidade/telefone se vierem (não vem nessa fase)
-    // Persistimos parciais já no avanço usando upserts
+    await ensureUserRow();
     if (step === 1) {
       const { error } = await supabase.from("vehicles").upsert(
         {
@@ -199,10 +214,11 @@ export default function Onboarding() {
       setSaving(false);
       setStep((s) => s + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
+    } catch (err: any) {
       setSaving(false);
-      toast.error("Não foi possível salvar. Tente novamente.");
-      console.error(err);
+      const msg = err?.message || err?.error_description || "Tente novamente.";
+      toast.error(`Não foi possível salvar: ${msg}`);
+      console.error("Onboarding save error:", err);
     }
   };
 
@@ -210,6 +226,7 @@ export default function Onboarding() {
     if (!validateStep(3) || !user) return;
     try {
       setSaving(true);
+      await ensureUserRow();
       // garante custos/dias salvos no veículo
       await supabase
         .from("vehicles")
@@ -238,10 +255,11 @@ export default function Onboarding() {
       if (error) throw error;
       setSaving(false);
       setDone(true);
-    } catch (err) {
+    } catch (err: any) {
       setSaving(false);
-      toast.error("Não foi possível salvar suas metas.");
-      console.error(err);
+      const msg = err?.message || "Tente novamente.";
+      toast.error(`Não foi possível salvar suas metas: ${msg}`);
+      console.error("Goals save error:", err);
     }
   };
 
