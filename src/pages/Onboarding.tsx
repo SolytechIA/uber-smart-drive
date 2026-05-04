@@ -255,10 +255,11 @@ export default function Onboarding() {
       if (error) throw error;
       setSaving(false);
       setDone(true);
-    } catch (err) {
+    } catch (err: any) {
       setSaving(false);
-      toast.error("Não foi possível salvar suas metas.");
-      console.error(err);
+      const msg = err?.message || "Tente novamente.";
+      toast.error(`Não foi possível salvar suas metas: ${msg}`);
+      console.error("Goals save error:", err);
     }
   };
 
