@@ -214,10 +214,11 @@ export default function Onboarding() {
       setSaving(false);
       setStep((s) => s + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
+    } catch (err: any) {
       setSaving(false);
-      toast.error("Não foi possível salvar. Tente novamente.");
-      console.error(err);
+      const msg = err?.message || err?.error_description || "Tente novamente.";
+      toast.error(`Não foi possível salvar: ${msg}`);
+      console.error("Onboarding save error:", err);
     }
   };
 
@@ -225,6 +226,7 @@ export default function Onboarding() {
     if (!validateStep(3) || !user) return;
     try {
       setSaving(true);
+      await ensureUserRow();
       // garante custos/dias salvos no veículo
       await supabase
         .from("vehicles")
