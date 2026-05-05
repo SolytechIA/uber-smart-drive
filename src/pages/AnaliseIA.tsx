@@ -218,9 +218,15 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
   const [metaMensal, setMetaMensal] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [now, setNow] = useState<number>(Date.now());
+  const [resumo, setResumo] = useState<{
+    cur: { corridas: number; ganho_real: number; r_por_hora: number; r_por_km: number };
+    prev: { corridas: number; ganho_real: number; r_por_hora: number; r_por_km: number };
+    pct: number;
+    hasPrev: boolean;
+  } | null>(null);
 
   useEffect(() => {
-    setStatus("idle"); setAnalysis(null); setGeneratedAt(null);
+    setStatus("idle"); setAnalysis(null); setGeneratedAt(null); setResumo(null);
     const c = loadCache(cacheKey);
     if (c?.analysis) {
       setAnalysis(c.analysis);
@@ -231,6 +237,52 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       setStatus("ok");
     }
   }, [cacheKey]);
+
+  // Carrega resumo do dia (KPIs e comparação) independentemente da IA
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+        supabase.from("rides").select("*").eq("user_id", user.id),
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const rides = (ridesRes.data || []) as Ride[];
+      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
+      const goals = (goalsRes.data as Goals | null) ?? null;
+
+      const fromCur = startOfDay(selectedDay);
+      const toCur = endOfDay(selectedDay);
+      const prevDate = new Date(selectedDay); prevDate.setDate(prevDate.getDate() - 1);
+      const fromPrev = startOfDay(prevDate);
+      const toPrev = endOfDay(prevDate);
+
+      const mCur = calcPeriodMetrics(rides, vehicle, fromCur, toCur);
+      const mPrev = calcPeriodMetrics(rides, vehicle, fromPrev, toPrev);
+      const { diaria } = resolveGoals(goals, vehicle);
+      const pct = diaria > 0 ? (mCur.ganhoReal / diaria) * 100 : 0;
+
+      setResumo({
+        cur: {
+          corridas: mCur.numCorridas,
+          ganho_real: mCur.ganhoReal,
+          r_por_hora: mCur.horasTrabalhadas > 0 ? mCur.ganhoReal / mCur.horasTrabalhadas : 0,
+          r_por_km: mCur.kmTotal > 0 ? mCur.ganhoReal / mCur.kmTotal : 0,
+        },
+        prev: {
+          corridas: mPrev.numCorridas,
+          ganho_real: mPrev.ganhoReal,
+          r_por_hora: mPrev.horasTrabalhadas > 0 ? mPrev.ganhoReal / mPrev.horasTrabalhadas : 0,
+          r_por_km: mPrev.kmTotal > 0 ? mPrev.ganhoReal / mPrev.kmTotal : 0,
+        },
+        pct,
+        hasPrev: mPrev.numCorridas > 0,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [user, selectedDay]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
