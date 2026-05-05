@@ -28,6 +28,9 @@ import { ptBR } from "date-fns/locale";
 import {
   aggregateWeek, aggregateMonth, getWeekRange, getPrevWeekRange, getMonthRange, getPrevMonthRange,
 } from "@/lib/aiAggregations";
+import {
+  calcAnalisePersonalizada, calcContextoDia, calcContextoSemana, calcContextoMes,
+} from "@/lib/aiBehavioral";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -313,6 +316,8 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         r_km_bom: Number((goals as any)?.r_km_bom || (goals as any)?.r_por_km_minimo || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
+        ...calcContextoDia(rides, selectedDay),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
@@ -409,6 +414,8 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         projecao_semanal: aCur.projecao_semanal,
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
+        ...calcContextoSemana(rides, cur.from, cur.to),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
       };
 
       const newMeta = { aCur, aPrev, metaSemanal, pct };
@@ -528,6 +535,8 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         },
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
+        ...calcContextoMes(rides, cur.from, cur.to),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
       };
 
       const newMeta = { aCur, aPrev, metaMensal, pct };
