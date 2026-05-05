@@ -148,7 +148,8 @@ export default function DashboardFinanceiro() {
     return calcPeriodMetrics(rides, vehicle, r.from, r.to);
   }, [rides, vehicle]);
 
-  // Meta do período (compara receita bruta com a meta configurada)
+  // Meta do período (sempre usa o valor FIXO configurado pelo motorista,
+  // nunca recalcula proporcional ao número de dias do filtro).
   const metaDoPeriodo =
     periodo === "hoje"
       ? metas.diaria
@@ -156,7 +157,7 @@ export default function DashboardFinanceiro() {
       ? metas.semanal
       : periodo === "mes"
       ? metas.mensal
-      : metaPeriodo(metas.diaria, metrics.diasNoPeriodo);
+      : metas.mensal; // personalizado: sempre meta mensal
   const percentualMeta = metaDoPeriodo > 0 ? Math.min(100, (metrics.ganhoBruto / metaDoPeriodo) * 100) : 0;
 
   const horasMetaDia = Number(goals?.horas_meta_dia || 8);

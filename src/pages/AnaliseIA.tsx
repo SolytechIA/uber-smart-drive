@@ -23,11 +23,14 @@ import {
 import {
   getStartOfTodaySP, getEndOfTodaySP, getStartOfMonthSP, getEndOfMonthSP,
 } from "@/lib/dateUtils";
-import { endOfMonth, format, subMonths } from "date-fns";
+import { endOfMonth, format, subMonths, subWeeks, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   aggregateWeek, aggregateMonth, getWeekRange, getPrevWeekRange, getMonthRange, getPrevMonthRange,
 } from "@/lib/aiAggregations";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 
 interface Analysis {
   resumo_dia: string;
@@ -63,6 +66,11 @@ export default function AnaliseIA() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Periodo>("hoje");
   const [selectedMonth, setSelectedMonth] = useState<string>(() => format(nowInTZ(), "yyyy-MM"));
+  const [selectedDay, setSelectedDay] = useState<Date>(() => nowInTZ());
+  // semana selecionada: armazenada como ISO yyyy-MM-dd da segunda-feira
+  const [selectedWeek, setSelectedWeek] = useState<string>(() =>
+    format(getWeekRange(nowInTZ()).from, "yyyy-MM-dd"),
+  );
 
   return (
     <AppLayout>
@@ -93,12 +101,18 @@ export default function AnaliseIA() {
             <TabsTrigger value="mes">Este Mês</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="hoje" className="mt-6">
-            <PainelDia user={user} navigate={navigate} />
+          <TabsContent value="hoje" className="mt-6 space-y-4">
+            <div className="flex items-center justify-end">
+              <SeletorDia value={selectedDay} onChange={setSelectedDay} />
+            </div>
+            <PainelDia user={user} navigate={navigate} selectedDay={selectedDay} />
           </TabsContent>
 
-          <TabsContent value="semana" className="mt-6">
-            <PainelSemana user={user} />
+          <TabsContent value="semana" className="mt-6 space-y-4">
+            <div className="flex items-center justify-end">
+              <SeletorSemana value={selectedWeek} onChange={setSelectedWeek} />
+            </div>
+            <PainelSemana user={user} weekStartISO={selectedWeek} />
           </TabsContent>
 
           <TabsContent value="mes" className="mt-6 space-y-4">
@@ -110,6 +124,58 @@ export default function AnaliseIA() {
         </Tabs>
       </div>
     </AppLayout>
+  );
+}
+
+function SeletorDia({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-[220px] justify-start text-left font-normal">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {format(value, "dd 'de' MMMM yyyy", { locale: ptBR })}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <Calendar
+          mode="single"
+          selected={value}
+          onSelect={(d) => d && onChange(d)}
+          disabled={(d) => d > nowInTZ()}
+          initialFocus
+          className={cn("p-3 pointer-events-auto")}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SeletorSemana({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const opts = useMemo(() => {
+    const arr: Array<{ v: string; label: string }> = [];
+    const now = nowInTZ();
+    for (let i = 0; i < 6; i++) {
+      const d = subWeeks(now, i);
+      const r = getWeekRange(d);
+      const v = format(r.from, "yyyy-MM-dd");
+      const label = i === 0
+        ? `Esta semana (${format(r.from, "dd/MM")})`
+        : i === 1
+        ? `Semana passada (${format(r.from, "dd/MM")})`
+        : `Semana de ${format(r.from, "dd/MM")}`;
+      arr.push({ v, label });
+    }
+    return arr;
+  }, []);
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-[240px]"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {opts.map((o) => (
+          <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -139,8 +205,8 @@ function SeletorMes({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 /* ======================== Painel HOJE (lógica original) ======================== */
-function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof useNavigate> }) {
-  const cacheKey = "dia";
+function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: ReturnType<typeof useNavigate>; selectedDay: Date }) {
+  const cacheKey = `dia_${format(selectedDay, "yyyy-MM-dd")}`;
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -151,6 +217,7 @@ function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof 
   const [now, setNow] = useState<number>(Date.now());
 
   useEffect(() => {
+    setStatus("idle"); setAnalysis(null); setGeneratedAt(null);
     const c = loadCache(cacheKey);
     if (c?.analysis) {
       setAnalysis(c.analysis);
@@ -160,7 +227,7 @@ function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof 
       setMetaMensal(c.meta?.metaMensal || 0);
       setStatus("ok");
     }
-  }, []);
+  }, [cacheKey]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
@@ -184,8 +251,8 @@ function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof 
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
 
-      const fromHoje = getStartOfTodaySP();
-      const toHoje = getEndOfTodaySP();
+      const fromHoje = startOfDay(selectedDay);
+      const toHoje = endOfDay(selectedDay);
       const fromMes = getStartOfMonthSP();
       const toMes = getEndOfMonthSP();
       const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
@@ -263,13 +330,16 @@ function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof 
     }
   };
 
+  const isHojeReal = format(selectedDay, "yyyy-MM-dd") === format(nowInTZ(), "yyyy-MM-dd");
   return (
     <ResultadoLayout
       status={status} analysis={analysis} errorMsg={errorMsg}
       onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
-      generatedAt={generatedAt} ctaLabel="Gerar Análise do Dia"
-      emptyAction={() => navigate("/dashboard/operacional")}
-      emptyText="Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+      generatedAt={generatedAt} ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
+      emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
+      emptyText={isHojeReal
+        ? "Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+        : "Nenhuma corrida registrada neste dia."}
       titleResumo="📊 Resumo do Dia" titleProj="📈 Projeção do Mês" titleDica="💡 Dica Estratégica do Dia" titleRecs="🎯 Recomendações para Amanhã"
       footerProgress={{ realizado: realizadoMes, meta: metaMensal, pct: progressPct }}
     />
@@ -277,8 +347,8 @@ function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof 
 }
 
 /* ======================== Painel SEMANA ======================== */
-function PainelSemana({ user }: { user: any }) {
-  const cacheKey = "semana";
+function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string }) {
+  const cacheKey = `semana_${weekStartISO}`;
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -287,12 +357,13 @@ function PainelSemana({ user }: { user: any }) {
   const [now, setNow] = useState<number>(Date.now());
 
   useEffect(() => {
+    setStatus("idle"); setAnalysis(null); setGeneratedAt(null); setMeta(null);
     const c = loadCache(cacheKey);
     if (c?.analysis) {
       setAnalysis(c.analysis); setGeneratedAt(new Date(c.generatedAt));
       setMeta(c.meta); setStatus("ok");
     }
-  }, []);
+  }, [cacheKey]);
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
   const lastTs = generatedAt?.getTime() || 0;
   const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
@@ -311,9 +382,9 @@ function PainelSemana({ user }: { user: any }) {
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
 
-      const nowD = nowInTZ();
-      const cur = getWeekRange(nowD);
-      const prev = getPrevWeekRange(nowD);
+      const refDate = new Date(weekStartISO + "T12:00:00");
+      const cur = getWeekRange(refDate);
+      const prev = getPrevWeekRange(refDate);
       const aCur = aggregateWeek(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateWeek(rides, vehicle, prev.from, prev.to);
       if (aCur.total_corridas === 0) { setStatus("empty"); return; }
