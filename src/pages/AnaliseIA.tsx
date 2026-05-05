@@ -205,8 +205,8 @@ function SeletorMes({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 /* ======================== Painel HOJE (lógica original) ======================== */
-function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof useNavigate> }) {
-  const cacheKey = "dia";
+function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: ReturnType<typeof useNavigate>; selectedDay: Date }) {
+  const cacheKey = `dia_${format(selectedDay, "yyyy-MM-dd")}`;
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
