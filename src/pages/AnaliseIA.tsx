@@ -317,7 +317,7 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
         ...calcContextoDia(rides, selectedDay),
-        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
