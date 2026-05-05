@@ -816,30 +816,3 @@ function ResultadoLayout(props: {
   );
 }
 
-function RecomendacoesGrid({ raw }: { raw: string }) {
-  const grab = (emoji: string) => {
-    const re = new RegExp(`${emoji}([^\\n🕐📍✅⚠️]*(?:\\n(?!🕐|📍|✅|⚠️)[^\\n]*)*)`, "u");
-    const m = raw.match(re);
-    return m ? m[1].replace(/^[\s:.-]*/, "").trim() : "";
-  };
-  const items = [
-    { icon: <Clock className="h-4 w-4" />, emoji: "🕐", title: "Horários", text: grab("🕐") },
-    { icon: <MapPin className="h-4 w-4" />, emoji: "📍", title: "Padrão / Região", text: grab("📍") },
-    { icon: <Check className="h-4 w-4 text-emerald-500" />, emoji: "✅", title: "Priorize", text: grab("✅") },
-    { icon: <AlertTriangle className="h-4 w-4 text-orange-500" />, emoji: "⚠️", title: "Evite", text: grab("⚠️") },
-  ];
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {items.map((it) => (
-        <div key={it.emoji} className="rounded-lg border border-border/60 bg-muted/30 p-3">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            {it.icon}<span>{it.title}</span>
-          </div>
-          <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
-            {it.text || "—"}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
