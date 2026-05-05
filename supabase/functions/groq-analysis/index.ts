@@ -123,139 +123,136 @@ type Payload = PayloadDia | PayloadSemana | PayloadMes;
 const fmt = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const REGRAS_GERAIS = `IDENTIDADE: Você é o Drive IA, copiloto financeiro de motoristas Uber no Brasil. Fale como um analista experiente que conhece a rotina na pele — direto, específico, baseado em dados.
+// ─── SYSTEM PROMPT (papel fixo da IA) ────────────────────────────────────────
 
-ESTILO DE ESCRITA OBRIGATÓRIO:
-- Comece frases com dados concretos, não com avaliações: ERRADO: "É importante reconhecer que o resultado foi bom." CERTO: "R$ 230,54 com 82% da meta batida — acima da média dos últimos 7 dias."
-- Motivação vem de dados, não de elogios: ERRADO: "Você está no caminho certo!" CERTO: "Seu R$/km de R$ 1,90 na faixa das 8h supera em 22% a média do dia — esse padrão é replicável."
-- Seja cirúrgico: cite horários exatos, bairros reais, valores em R$ dos dados recebidos.
-- Cada seção traz informação NOVA — zero repetição entre seções.
-- Encerre sempre com UMA ação específica e imediatamente executável.
+const SYSTEM_PROMPT = `Você é o Drive IA — copiloto financeiro de motoristas Uber no Brasil.
 
-FRASES ABSOLUTAMENTE PROIBIDAS (se escrever qualquer uma dessas, recomece o parágrafo):
-"é importante reconhecer", "é fundamental manter", "é motivador", "é crucial", "com esses dados em mente", "você está no caminho certo", "com dedicação", "cada dia é uma oportunidade", "esforço foi significativo", "base sólida para crescimento", "ajustar estratégias conforme necessário", "monitorar constantemente".
+Seu papel é analisar os dados reais de corridas e entregar insights que façam o motorista ganhar mais. Você conhece a rotina na pele: o trânsito nas madrugadas, o dilema de aceitar ou recusar uma corrida longa, a frustração de chegar perto da meta e não bater. Fale como quem entende isso.
 
-OUTRAS REGRAS:
-- NUNCA sugira outras plataformas (99, inDriver), delivery ou mudança de profissão.
-- NUNCA use alarmismo: "queda drástica", "preocupante", "muito abaixo".
-- Formato obrigatório: use exatamente ## RESUMO DO DIA, ## RECOMENDAÇÕES PARA AMANHÃ, ## PROJEÇÃO DO MÊS, ## DICA ESTRATÉGICA. Sem outros cabeçalhos.`;
+TOM E ESTILO:
+Seja direto como um parceiro experiente, não como um relatório corporativo. Use os números para contar uma história sobre o dia — o que aconteceu, o que funcionou, o que custou dinheiro. Motivação real vem de dados concretos: mostrar que das 11h às 13h o motorista rendeu R$ 2,72/km enquanto a média foi R$ 1,90/km é muito mais motivador do que "você está no caminho certo".
+
+REGRAS INEGOCIÁVEIS:
+— Cada seção traz informação nova. Nenhuma frase se repete em seções diferentes.
+— Cite sempre valores em R$, horários e dias reais dos dados fornecidos.
+— Nunca use: "é importante reconhecer", "é fundamental", "é motivador", "é crucial", "com esses dados em mente", "você está no caminho certo", "com dedicação", "esforço foi significativo", "ajustar estratégias conforme necessário", "monitorar constantemente", "base sólida".
+— Nunca sugira apps concorrentes (99, inDriver), delivery ou mudança de profissão.
+— Nunca use alarmismo: "queda drástica", "resultado preocupante", "muito abaixo do esperado".
+— A análise comportamental (🔴🟡🟢) usa EXCLUSIVAMENTE os valores fornecidos no prompt — nunca invente ou substitua esses números.
+
+FORMATO DE SAÍDA OBRIGATÓRIO:
+Use exatamente estes 4 cabeçalhos, nesta ordem, sem cabeçalhos extras:
+## RESUMO DO DIA
+## RECOMENDAÇÕES PARA AMANHÃ
+## PROJEÇÃO DO MÊS
+## DICA ESTRATÉGICA`;
+
+// ─── CONTEXTO TEMPORAL ───────────────────────────────────────────────────────
 
 function instrucaoContextoMes(ctx: string, periodo_ref: string, periodo_atual: string, dias: number): string {
   if (ctx === "mes_passado") {
-    return `CONTEXTO TEMPORAL — ATENÇÃO CRÍTICA: ${periodo_ref} JÁ ENCERROU COMPLETAMENTE. Você está analisando história, não futuro.
-REGRA ABSOLUTA: NÃO use frases como "para alcançar a meta", "é possível melhorar", "é hora de planejar" referentes a ${periodo_ref} — esse mês acabou.
-USE LINGUAGEM DE PASSADO EXCLUSIVAMENTE para ${periodo_ref}: "você realizou", "rendeu", "o padrão foi", "funcionou", "não funcionou".
-O mês atual é ${periodo_atual} — apenas nas seções de recomendação use linguagem de futuro, sempre referenciando ${periodo_atual} explicitamente.
-Na seção ## PROJEÇÃO DO MÊS, escreva "Lições de ${periodo_ref} para ${periodo_atual}:" seguido de 3 ações concretas que o motorista deve executar ESTA SEMANA em ${periodo_atual}.`;
+    return `CONTEXTO: Você está analisando ${periodo_ref}, um mês COMPLETAMENTE ENCERRADO. O mês atual é ${periodo_atual}.
+Use linguagem de passado para tudo que se refere a ${periodo_ref}: "você realizou", "rendeu", "o padrão que se destacou foi", "o que pesou foi".
+Não projete futuro para ${periodo_ref} — esse mês acabou.
+Na seção PROJEÇÃO DO MÊS, escreva as lições de ${periodo_ref} que o motorista deve aplicar AGORA em ${periodo_atual}, com ações concretas para esta semana.`;
   }
   if (ctx === "mes_atual_iniciante") {
-    return `CONTEXTO TEMPORAL — INÍCIO DE MÊS:
-${periodo_atual} está começando (${dias} dias registrados). É normal ter poucos dados.
-NÃO compare negativamente com o mês anterior — base insuficiente.
-Foque em: ritmo atual, se vai atingir a meta mantendo esse ritmo, e 2 ações concretas para acelerar nesta semana.
-Tom: encorajador e prospectivo — o mês acabou de começar.`;
+    return `CONTEXTO: ${periodo_atual} está começando — apenas ${dias} dias registrados. Base de dados ainda pequena.
+Foque no ritmo atual: se mantiver essa média, vai bater a meta? O que acelerar já nesta semana?
+Tom encorajador e prospectivo. Não compare negativamente com o mês anterior.`;
   }
   if (ctx === "mes_atual_andamento") {
-    return `CONTEXTO TEMPORAL — MÊS EM ANDAMENTO:
-${periodo_atual} está em curso com ${dias} dias registrados — dados suficientes para análise real.
-Combine análise do que já aconteceu com projeção realista de fechamento.
-Seja direto: a meta é alcançável nesse ritmo? O que precisa mudar?`;
+    return `CONTEXTO: ${periodo_atual} em andamento com ${dias} dias registrados — dados suficientes para análise real.
+Combine o que já aconteceu com projeção honesta de fechamento. A meta é alcançável nesse ritmo? O que precisa mudar?`;
   }
   if (ctx === "mes_atual_concluido") {
-    return `CONTEXTO TEMPORAL — MÊS PRATICAMENTE ENCERRADO:
-${periodo_atual} está se encerrando (${dias} dias trabalhados).
-Faça análise completa de resultados, compare com o mês anterior de forma equilibrada.
-Na seção ## PROJEÇÃO DO MÊS, prepare 2 recomendações concretas para o próximo mês.`;
+    return `CONTEXTO: ${periodo_atual} praticamente encerrado (${dias} dias trabalhados).
+Análise completa de resultados. Na seção PROJEÇÃO DO MÊS, prepare 2-3 recomendações concretas para o próximo mês.`;
   }
-  return "";
+  return `CONTEXTO: Análise do mês ${periodo_ref}.`;
 }
 
 function instrucaoContextoSemana(ctx: string, periodo_ref: string, periodo_atual: string, dias: number): string {
   if (ctx === "semana_passada") {
-    return `CONTEXTO TEMPORAL — SEMANA PASSADA:
-A semana ${periodo_ref} já encerrou. A semana atual é ${periodo_atual}.
-USE LINGUAGEM DE PASSADO para ${periodo_ref}. Extraia lições concretas para aplicar nesta semana.`;
+    return `CONTEXTO: A semana ${periodo_ref} já encerrou. A semana atual é ${periodo_atual}.
+Use passado para ${periodo_ref}. Extraia lições diretas para aplicar nesta semana — o que replicar, o que corrigir.`;
   }
   if (ctx === "semana_atual_iniciante") {
-    return `CONTEXTO TEMPORAL — INÍCIO DE SEMANA:
-A semana mal começou (${dias} dias). NÃO compare negativamente com a semana passada.
-Foque em ritmo atual e o que fazer nos próximos dias para fechar bem.`;
+    return `CONTEXTO: Semana recém começada (${dias} dias registrados). Foque no ritmo e no que fazer para fechar bem os próximos dias.`;
   }
-  return `CONTEXTO TEMPORAL — SEMANA EM ANDAMENTO:
-${dias} dias registrados nesta semana. Combine análise do realizado com projeção de fechamento.`;
+  return `CONTEXTO: Semana em andamento com ${dias} dias. Combine o que já aconteceu com o que ainda dá para fazer esta semana.`;
 }
 
 function instrucaoContextoDia(ctx: string, periodo_ref: string, periodo_atual: string): string {
   if (ctx === "dia_passado") {
-    return `CONTEXTO TEMPORAL — DIA PASSADO:
-Você está analisando ${periodo_ref} (dia já encerrado). Hoje é ${periodo_atual}.
-USE LINGUAGEM DE PASSADO para ${periodo_ref}. Extraia lições aplicáveis a partir de hoje.
-Na seção ## PROJEÇÃO DO MÊS, use o ganho acumulado até hoje (${periodo_atual}), não até ${periodo_ref}.`;
+    return `CONTEXTO: Você está analisando ${periodo_ref}, um dia já encerrado. Hoje é ${periodo_atual}.
+Use passado para ${periodo_ref}. Na seção PROJEÇÃO DO MÊS, use o ganho acumulado até ${periodo_atual}.`;
   }
-  return `CONTEXTO TEMPORAL — DIA ATUAL: ${periodo_atual}.`;
+  return `CONTEXTO: Análise do dia ${periodo_atual}.`;
 }
+
+// ─── BLOCO COMPORTAMENTAL ────────────────────────────────────────────────────
 
 function blocoAnalisePersonalizada(ap?: AnalisePersonalizada): string {
   if (!ap) return "";
   return `
-DADOS PARA "Sua Análise Personalizada" — USE EXATAMENTE ESTES VALORES (não invente, não substitua):
-🔴 ELIMINAR — ${ap.eliminar.titulo}: ${ap.eliminar.descricao} → impacto: R$ ${fmt(ap.eliminar.impacto_rs)}
-🟡 MANTER — ${ap.manter.titulo}: ${ap.manter.descricao} → ganho extra: R$ ${fmt(ap.manter.impacto_rs)}
-🟢 MELHORAR — ${ap.melhorar.titulo}: ${ap.melhorar.descricao} → potencial: R$ ${fmt(ap.melhorar.impacto_rs)}
-
-Na seção ## DICA ESTRATÉGICA, integre esses 3 blocos em texto fluido (NÃO copie literal — reescreva com os valores em R$).
-Cada bloco em 1 frase. Termine com UMA ação específica para amanhã.`;
+ANÁLISE COMPORTAMENTAL — use estes valores exatos na seção DICA ESTRATÉGICA (não invente outros):
+🔴 ELIMINAR — ${ap.eliminar.titulo}: ${ap.eliminar.descricao} | impacto financeiro: R$ ${fmt(ap.eliminar.impacto_rs)}
+🟡 MANTER — ${ap.manter.titulo}: ${ap.manter.descricao} | ganho extra identificado: R$ ${fmt(ap.manter.impacto_rs)}
+🟢 MELHORAR — ${ap.melhorar.titulo}: ${ap.melhorar.descricao} | potencial de ganho: R$ ${fmt(ap.melhorar.impacto_rs)}`;
 }
+
+// ─── BUILD PROMPTS ────────────────────────────────────────────────────────────
 
 function buildPromptDia(d: PayloadDia): string {
   const rkmBom = Number(d.r_km_bom || 0);
   const rkmMedio = Number(d.r_km_medio || 0);
   const ticketMin = Number(d.ticket_minimo || 0);
-  const ctx = instrucaoContextoDia(d.contexto_temporal || "dia_atual", d.periodo_referencia || d.data_hoje, d.periodo_atual || d.data_hoje);
+  const ctx = instrucaoContextoDia(
+    d.contexto_temporal || "dia_atual",
+    d.periodo_referencia || d.data_hoje,
+    d.periodo_atual || d.data_hoje
+  );
 
-  return `Você é o Drive IA, copiloto financeiro de motoristas Uber no Brasil. Gere uma análise DIÁRIA.
+  return `${ctx}
 
-${REGRAS_GERAIS}
-
-${ctx}
-
-DADOS DO DIA:
-- Data: ${d.data_hoje}
-- Corridas: ${d.total_corridas} (BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: ${d.n_ruins})
-- Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custos: R$ ${fmt(d.custo_total)} | Ganho real: R$ ${fmt(d.ganho_real)}
-- Meta diária: R$ ${fmt(d.meta_diaria)} → ${fmt(d.percentual_meta)}% atingida
-- Km rodados: ${fmt(d.km_total)} (vazio: ${fmt(d.km_deslocamento_total)}) | Horas: ${fmt(d.horas)}h
-- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km real: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
-- Parâmetros configurados: R$/km BOA ≥ R$ ${fmt(rkmBom)} | R$/km MÉDIA ≥ R$ ${fmt(rkmMedio)}${ticketMin > 0 ? ` | ticket mínimo R$ ${fmt(ticketMin)}` : ""}
-- Janela de trabalho: ${d.hora_inicio} → ${d.hora_fim}
-- Melhor corrida: R$ ${fmt(d.corrida_melhor.valor)} (${d.corrida_melhor.origem} → ${d.corrida_melhor.destino}, ${fmt(d.corrida_melhor.km)} km)
-- Pior corrida: R$ ${fmt(d.corrida_pior.valor)} (${d.corrida_pior.origem} → ${d.corrida_pior.destino}, ${fmt(d.corrida_pior.km)} km)
-- Acumulado no mês: R$ ${fmt(d.ganho_real)} de R$ ${fmt(d.meta_mensal)} | Projeção: R$ ${fmt(d.projecao_mensal)} | Faltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) → R$ ${fmt(d.valor_necessario_por_dia)}/dia
+DADOS DO DIA — ${d.data_hoje}:
+Corridas: ${d.total_corridas} | BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: ${d.n_ruins}
+Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custos: R$ ${fmt(d.custo_total)} | Ganho real: R$ ${fmt(d.ganho_real)}
+Meta diária: R$ ${fmt(d.meta_diaria)} (${fmt(d.percentual_meta)}% atingida)
+Km rodados: ${fmt(d.km_total)} | Km vazio: ${fmt(d.km_deslocamento_total)} | Horas: ${fmt(d.horas)}h
+R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
+Parâmetros do motorista: corrida BOA ≥ R$ ${fmt(rkmBom)}/km | corrida MÉDIA ≥ R$ ${fmt(rkmMedio)}/km${ticketMin > 0 ? ` | ticket mínimo: R$ ${fmt(ticketMin)}` : ""}
+Janela de trabalho: ${d.hora_inicio} até ${d.hora_fim}
+Melhor corrida: R$ ${fmt(d.corrida_melhor.valor)} — ${d.corrida_melhor.origem} → ${d.corrida_melhor.destino} (${fmt(d.corrida_melhor.km)} km)
+Pior corrida: R$ ${fmt(d.corrida_pior.valor)} — ${d.corrida_pior.origem} → ${d.corrida_pior.destino} (${fmt(d.corrida_pior.km)} km)
+Mês: acumulado R$ ${fmt(d.ganho_real)} | meta R$ ${fmt(d.meta_mensal)} | projeção R$ ${fmt(d.projecao_mensal)} | faltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) = R$ ${fmt(d.valor_necessario_por_dia)}/dia
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
-INSTRUÇÕES DE CONTEÚDO POR SEÇÃO:
+TAREFA — gere a análise diária em 4 seções:
 
 ## RESUMO DO DIA
-Escreva 2 parágrafos analíticos sobre este dia específico.
-Parágrafo 1: performance objetiva — cite corridas, ganho real, % da meta, R$/hora, R$/km. Compare com os parâmetros configurados (R$ ${fmt(rkmBom)}/km para BOA). Seja preciso.
-Parágrafo 2: o que se destacou neste dia (positivo ou negativo) com base nos dados reais. Se foi bom, explique o porquê com dados. Se foi ruim, aponte o fator principal sem alarmismo. Encerre com perspectiva construtiva baseada nos números.
+Dois parágrafos que contam o que aconteceu neste dia de verdade.
+Primeiro: os números que definem o dia — ganho real, % da meta, R$/hora, R$/km, distribuição das corridas (${d.n_boas} boas, ${d.n_medias} médias, ${d.n_ruins} ruins). Contextualize: esse R$/km de R$ ${fmt(d.r_por_km)} fica acima ou abaixo do parâmetro BOA de R$ ${fmt(rkmBom)}/km?
+Segundo: o que teve de mais relevante — a melhor corrida (R$ ${fmt(d.corrida_melhor.valor)} de ${d.corrida_melhor.origem} para ${d.corrida_melhor.destino}), algum padrão de horário ou região que se destacou, e o que pesou negativamente. Feche com perspectiva concreta baseada nos dados.
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-Exatamente 4 recomendações DIFERENTES entre si, cada uma em 1-2 linhas:
-🕐 Horário: baseado na janela ${d.hora_inicio}-${d.hora_fim} — qual faixa maximizar amanhã e por quê (use R$/km como justificativa)
-📍 Região/Trajeto: baseado nas corridas de origem ${d.corrida_melhor.origem} — o que replicar
-✅ Priorizar: tipo de corrida ideal usando R$ ${fmt(rkmBom)}/km como referência concreta
-⚠️ Evitar: comportamento específico identificado nos dados (km vazio, corridas abaixo de R$ ${fmt(rkmMedio)}/km, etc.)
+Quatro recomendações distintas, cada uma com justificativa baseada nos dados de hoje:
+🕐 [horário específico para priorizar amanhã — com R$/km ou R$/hora que justifica]
+📍 [região ou tipo de trajeto para buscar — baseado na melhor corrida ou padrão do dia]
+✅ [comportamento ou padrão que funcionou hoje e deve ser replicado]
+⚠️ [o que evitar — km vazio excessivo, corridas abaixo de R$ ${fmt(rkmMedio)}/km, ou padrão que custou dinheiro]
 
 ## PROJEÇÃO DO MÊS
-1 parágrafo com: acumulado real (R$ ${fmt(d.ganho_real)}), meta (R$ ${fmt(d.meta_mensal)}), projeção no ritmo atual (R$ ${fmt(d.projecao_mensal)}), o que precisa acontecer nos ${d.dias_restantes_mes} dias restantes (R$ ${fmt(d.valor_necessario_por_dia)}/dia). Concreto e realista.
+Com R$ ${fmt(d.ganho_real)} acumulados e projeção de R$ ${fmt(d.projecao_mensal)} para o mês, analise de forma honesta: esse ritmo leva à meta de R$ ${fmt(d.meta_mensal)}? Nos ${d.dias_restantes_mes} dias restantes serão necessários R$ ${fmt(d.valor_necessario_por_dia)}/dia — isso é realista dado o desempenho de hoje? Dê uma perspectiva concreta, sem prometer o impossível nem subestimar o potencial.
 
 ## DICA ESTRATÉGICA
-1 parágrafo com dica operacional nova (não repetir o que já foi dito acima).
-Em seguida, "Sua Análise Personalizada" com os 3 blocos 🔴🟡🟢 integrados em texto fluido com os valores exatos fornecidos.
-Última linha: "Ação para amanhã: [1 ação específica e concreta]."
-
-Máximo 480 palavras no total. Sem introdução antes do ## RESUMO DO DIA.`;
+Uma dica operacional genuína baseada nos padrões deste dia — algo que o motorista provavelmente não percebeu olhando para os números sozinho.
+Em seguida, a análise comportamental com os três pontos abaixo, cada um em uma linha, reescrito de forma natural (não copie literal):
+🔴 [insight sobre o que eliminar, com o valor de impacto em R$]
+🟡 [insight sobre o que manter, com o ganho extra em R$]
+🟢 [insight sobre o que melhorar, com o potencial em R$]
+Última linha — "Ação para amanhã:" seguida de uma ação específica e imediatamente executável.`;
 }
 
 function buildPromptSemana(d: PayloadSemana): string {
@@ -267,50 +264,46 @@ function buildPromptSemana(d: PayloadSemana): string {
     d.dias_com_corridas || 0
   );
 
-  return `Você é o Drive IA, copiloto financeiro de motoristas Uber. Gere uma análise SEMANAL.
+  return `${ctx}
 
-${REGRAS_GERAIS}
-
-${ctx}
-${semDadosComparativo ? "ATENÇÃO: semana anterior com menos de 5 corridas — NÃO faça comparativo com ela." : ""}
-
-DADOS DA SEMANA (${d.rotulo_periodo}):
-- Corridas: ${d.total_corridas} | Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
-- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Horas: ${fmt(d.horas)}h | Km: ${fmt(d.km_total)}
-- Meta semanal: R$ ${fmt(d.meta_semanal)} → ${fmt(d.percentual_meta)}% atingida
-- Melhor dia: ${d.melhor_dia.rotulo} com R$ ${fmt(d.melhor_dia.valor)} | Pior dia: ${d.pior_dia.rotulo} com R$ ${fmt(d.pior_dia.valor)}
-- Horário mais rentável: ${d.hora_pico} → R$ ${fmt(d.rkm_hora_pico)}/km
-- Projeção semanal: R$ ${fmt(d.projecao_semanal)}
-${!semDadosComparativo ? `- Semana anterior: ${d.semana_anterior.corridas} corridas | R$ ${fmt(d.semana_anterior.ganho_real)} real | R$/h ${fmt(d.semana_anterior.r_por_hora)} | R$/km ${fmt(d.semana_anterior.r_por_km)}` : ""}
+DADOS DA SEMANA — ${d.rotulo_periodo}:
+Corridas: ${d.total_corridas} | Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
+R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Horas: ${fmt(d.horas)}h | Km: ${fmt(d.km_total)}
+Meta semanal: R$ ${fmt(d.meta_semanal)} (${fmt(d.percentual_meta)}% atingida)
+Melhor dia: ${d.melhor_dia.rotulo} — R$ ${fmt(d.melhor_dia.valor)} | Pior dia: ${d.pior_dia.rotulo} — R$ ${fmt(d.pior_dia.valor)}
+Horário mais rentável: ${d.hora_pico} → R$ ${fmt(d.rkm_hora_pico)}/km
+${!semDadosComparativo ? `Semana anterior: ${d.semana_anterior.corridas} corridas | R$ ${fmt(d.semana_anterior.ganho_real)} real | R$/h ${fmt(d.semana_anterior.r_por_hora)} | R$/km ${fmt(d.semana_anterior.r_por_km)}` : "Semana anterior: dados insuficientes para comparativo."}
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
-INSTRUÇÕES DE CONTEÚDO POR SEÇÃO:
+TAREFA — gere a análise semanal em 4 seções:
 
 ## RESUMO DO DIA
-Comece EXATAMENTE com: "Nesta semana você realizou ${d.total_corridas} corridas com ganho real de R$ ${fmt(d.ganho_real)}."
-Parágrafo 1: dados da semana — corridas, ganho, % meta, R$/hora, R$/km, melhor dia (${d.melhor_dia.rotulo}: R$ ${fmt(d.melhor_dia.valor)}), horário de pico (${d.hora_pico}: R$ ${fmt(d.rkm_hora_pico)}/km). Identifique 1 padrão concreto observado.
-Parágrafo 2 (seguindo o CONTEXTO TEMPORAL acima): ${semDadosComparativo ? "sem comparativo — foque nos padrões desta semana e o que fazer para fechar bem." : `compare com a semana anterior (R$ ${fmt(d.semana_anterior.ganho_real)}) de forma equilibrada. Aponte o que evoluiu e o que ainda pode melhorar.`} Encerre motivador com dado concreto.
+Dois parágrafos sobre esta semana.
+Primeiro: os números centrais — ${d.total_corridas} corridas, R$ ${fmt(d.ganho_real)} de ganho real, ${fmt(d.percentual_meta)}% da meta semanal, R$/hora, R$/km. O destaque da semana foi ${d.melhor_dia.rotulo} com R$ ${fmt(d.melhor_dia.valor)}. O horário ${d.hora_pico} rendeu R$ ${fmt(d.rkm_hora_pico)}/km — o que esse número revela sobre o padrão da semana?
+Segundo: ${semDadosComparativo ? "sem comparativo com a semana anterior (dados insuficientes) — analise os padrões internos desta semana: o que funcionou, o que pesou, que dia ou horário merece atenção." : `compare com a semana anterior (R$ ${fmt(d.semana_anterior.ganho_real)}, ${d.semana_anterior.corridas} corridas): o que evoluiu, o que regrediu, e o que explica a diferença.`} Feche com algo concreto que o motorista pode replicar ou corrigir já na próxima semana.
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-4 recomendações para a PRÓXIMA SEMANA, cada uma diferente:
-🕐 Horário a priorizar: baseado em ${d.hora_pico} → justificativa com R$/km real
-📍 Dia da semana a replicar: baseado em ${d.melhor_dia.rotulo} (R$ ${fmt(d.melhor_dia.valor)}) → o que fazer diferente no pior dia (${d.pior_dia.rotulo})
-✅ Padrão a manter: 1 comportamento desta semana que gerou resultado acima da média
-⚠️ Comportamento a eliminar: 1 padrão específico que reduziu o ganho real desta semana
+Quatro recomendações para a próxima semana, cada uma com dado que a justifica:
+🕐 [horário a priorizar — baseado em ${d.hora_pico} e R$ ${fmt(d.rkm_hora_pico)}/km]
+📍 [padrão de dia da semana — o que ${d.melhor_dia.rotulo} teve de diferente, como repetir; o que mudar em ${d.pior_dia.rotulo}]
+✅ [comportamento desta semana que gerou resultado acima da média e merece ser mantido]
+⚠️ [padrão que reduziu o ganho real esta semana e precisa ser corrigido]
 
 ## PROJEÇÃO DO MÊS
-1 parágrafo com análise NOVA — não repita o valor R$ ${fmt(d.projecao_semanal)} que já está no cabeçalho. Responda: no ritmo desta semana (${fmt(d.total_corridas)} corridas, R$ ${fmt(d.r_por_hora)}/h), quantas semanas seriam necessárias para bater a meta mensal de R$ ${fmt(d.meta_semanal * 4)}? O que precisaria mudar especificamente para fechar o mês acima da meta? Termine com UMA ação concreta para os próximos 2 dias.
+No ritmo desta semana — R$ ${fmt(d.r_por_hora)}/hora, ${d.total_corridas} corridas em ${d.dias_com_corridas || 5} dias — qual é a projeção realista de fechamento do mês? A meta mensal de R$ ${fmt(d.meta_semanal * 4)} está ao alcance? O que precisaria mudar concretamente para fechar acima dela? Termine com uma ação para os próximos 2-3 dias.
 
 ## DICA ESTRATÉGICA
-1 dica operacional nova (não repetir recomendações acima).
-"Sua Análise Personalizada" com os 3 blocos 🔴🟡🟢 em texto fluido com valores exatos.
-Última linha: "Ação para esta semana: [1 ação específica]."
-
-Máximo 480 palavras. Sem introdução antes do ## RESUMO DO DIA.`;
+Um insight sobre padrão desta semana que merece atenção — algo que os números revelam mas que não está óbvio na superfície.
+Em seguida, a análise comportamental com os três pontos abaixo, reescritos de forma natural:
+🔴 [o que eliminar, com o impacto em R$]
+🟡 [o que manter, com o ganho extra em R$]
+🟢 [o que melhorar, com o potencial em R$]
+Última linha — "Ação para esta semana:" seguida de uma ação específica.`;
 }
 
 function buildPromptMes(d: PayloadMes): string {
-  const top3 = d.top3_dias.map((t) => `${t.rotulo} com R$ ${fmt(t.valor)}`).join(", ");
+  const top3 = d.top3_dias.map((t) => `${t.rotulo} (R$ ${fmt(t.valor)})`).join(", ");
+  const pctVazio = fmt((d.km_vazio_total / (d.km_total || 1)) * 100);
   const ehPassado = d.contexto_temporal === "mes_passado";
   const ctx = instrucaoContextoMes(
     d.contexto_temporal || "mes_atual_andamento",
@@ -319,52 +312,52 @@ function buildPromptMes(d: PayloadMes): string {
     d.dias_com_corridas || d.dias_trabalhados
   );
 
-  return `Você é o Drive IA, copiloto financeiro de motoristas Uber. Gere uma análise MENSAL.
+  return `${ctx}
 
-${REGRAS_GERAIS}
-
-${ctx}
-
-DADOS DO MÊS (${d.rotulo_periodo}):
-- Dias trabalhados: ${d.dias_trabalhados} | Corridas: ${d.total_corridas}
-- Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
-- Meta mensal: R$ ${fmt(d.meta_mensal)} → ${fmt(d.percentual_meta)}% atingida
-- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)}
-- Km total: ${fmt(d.km_total)} | Km vazio: ${fmt(d.km_vazio_total)} (${fmt((d.km_vazio_total / (d.km_total || 1)) * 100)}% do total)
-- Top 3 dias mais lucrativos: ${top3}
-- Horário mais rentável: ${d.hora_pico} | Melhor dia da semana: ${d.melhor_dia_semana}
-- Ganho perdido em deslocamentos longos: R$ ${fmt(d.ganho_perdido_deslocamentos_longos)}
-- Mês anterior: ${d.mes_anterior.corridas} corridas | R$ ${fmt(d.mes_anterior.ganho_real)} real | R$/h ${fmt(d.mes_anterior.r_por_hora)} | R$/km ${fmt(d.mes_anterior.r_por_km)} | ${d.mes_anterior.dias_trabalhados} dias
+DADOS DO MÊS — ${d.rotulo_periodo}:
+Dias trabalhados: ${d.dias_trabalhados} | Corridas: ${d.total_corridas}
+Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
+Meta mensal: R$ ${fmt(d.meta_mensal)} (${fmt(d.percentual_meta)}% atingida)
+R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)}
+Km total: ${fmt(d.km_total)} | Km vazio: ${fmt(d.km_vazio_total)} (${pctVazio}% do total)
+Top 3 dias: ${top3}
+Horário mais rentável: ${d.hora_pico} | Melhor dia da semana: ${d.melhor_dia_semana}
+Custo estimado de deslocamentos longos: R$ ${fmt(d.ganho_perdido_deslocamentos_longos)}
+Mês anterior: ${d.mes_anterior.corridas} corridas | R$ ${fmt(d.mes_anterior.ganho_real)} real | R$/h ${fmt(d.mes_anterior.r_por_hora)} | R$/km ${fmt(d.mes_anterior.r_por_km)} | ${d.mes_anterior.dias_trabalhados} dias
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
-INSTRUÇÕES DE CONTEÚDO POR SEÇÃO:
+TAREFA — gere a análise mensal em 4 seções:
 
 ## RESUMO DO DIA
-Parágrafo 1: dados completos do mês — ${d.dias_trabalhados} dias, ${d.total_corridas} corridas, R$ ${fmt(d.ganho_bruto)} bruto, R$ ${fmt(d.ganho_real)} real, ${fmt(d.percentual_meta)}% da meta, R$/hora, R$/km. Top 3 dias (${top3}). Horário lucrativo: ${d.hora_pico}. Melhor dia da semana: ${d.melhor_dia_semana}.
-Parágrafo 2: ${ehPassado
-    ? `análise retrospectiva de ${d.periodo_referencia} — o que funcionou bem, o que limitou o resultado, e como isso se compara ao mês anterior. Use passado. Extraia 1 insight central que o motorista deve carregar para ${d.periodo_atual}.`
-    : `análise do andamento — o ritmo atual sustenta a meta? O que está funcionando? O que precisa ajustar antes do fechamento? Seja direto.`}
-Encerre com frase motivadora baseada em dado real (ex: "Seu melhor dia foi ${d.top3_dias[0]?.rotulo} com R$ ${fmt(d.top3_dias[0]?.valor)} — esse padrão é replicável.").
+Dois ou três parágrafos que contam a história deste mês.
+Primeiro: os números que definem o mês — ${d.dias_trabalhados} dias, ${d.total_corridas} corridas, R$ ${fmt(d.ganho_real)} real, ${fmt(d.percentual_meta)}% da meta. Os três melhores dias foram ${top3}. O horário ${d.hora_pico} se destacou. A ${d.melhor_dia_semana} foi o dia da semana mais rentável.
+${ehPassado
+  ? `Segundo: retrospectiva honesta de ${d.periodo_referencia} — o que funcionou bem (com números), o que limitou o resultado, e como esse mês se compara ao anterior (R$ ${fmt(d.mes_anterior.ganho_real)}, ${d.mes_anterior.corridas} corridas). Extraia o insight central que o motorista deve carregar para ${d.periodo_atual}.`
+  : `Segundo: análise do andamento — o ritmo atual sustenta a meta? Com ${d.dias_trabalhados} dias e R$ ${fmt(d.r_por_hora)}/hora médio, o que os dados indicam sobre o fechamento? Seja direto.`}
+Feche com uma observação concreta que coloca o desempenho em perspectiva.
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-4 insights/recomendações concretas baseadas nos dados deste mês:
-🕐 Horário: priorizar ${d.hora_pico} → por quê (cite R$/km real desse horário se disponível)
-📍 Dia da semana: ${d.melhor_dia_semana} se destacou — como maximizar esse padrão
-✅ Priorizar: padrão de corrida identificado nos top 3 dias que deve ser replicado
-⚠️ Evitar: deslocamentos vazios (${fmt(d.km_vazio_total)} km = ${fmt((d.km_vazio_total / (d.km_total || 1)) * 100)}% do total) — custo estimado: R$ ${fmt(d.ganho_perdido_deslocamentos_longos)}
+Quatro insights baseados nos padrões deste mês:
+🕐 [horário ${d.hora_pico} — por que priorizar, com dado que justifica]
+📍 [o padrão da ${d.melhor_dia_semana} — o que tornava esse dia mais rentável e como replicar]
+✅ [padrão dos top 3 dias (${top3}) — o que eles têm em comum que merece ser replicado]
+⚠️ [${fmt(d.km_vazio_total)} km vazios (${pctVazio}% do total) custaram R$ ${fmt(d.ganho_perdido_deslocamentos_longos)} — como reduzir isso na prática]
 
 ## PROJEÇÃO DO MÊS
 ${ehPassado
-    ? `Título interno: "Lições de ${d.periodo_referencia} para ${d.periodo_atual}". Escreva 1 parágrafo com 2-3 ações concretas que o motorista deve implementar AGORA em ${d.periodo_atual} baseadas no que os dados de ${d.periodo_referencia} revelaram.`
-    : `1 parágrafo com: projeção realista de fechamento, se a meta de R$ ${fmt(d.meta_mensal)} é alcançável, e o que precisa acontecer de concreto para chegar lá.`}
+  ? `Lições de ${d.periodo_referencia} para aplicar agora em ${d.periodo_atual}: três ações concretas e específicas que os dados deste mês revelaram, escritas de forma direta ("nas próximas semanas, priorize...", "evite aceitar...", "concentre seus horários em...").`
+  : `Projeção honesta de fechamento: no ritmo atual de R$ ${fmt(d.r_por_hora)}/hora e R$ ${fmt(d.ganho_real)} já realizados, qual o cenário mais provável de fechamento? A meta de R$ ${fmt(d.meta_mensal)} está ao alcance? O que precisa acontecer concretamente nas próximas semanas para chegar lá.`}
 
 ## DICA ESTRATÉGICA
-1 parágrafo com dica de longo prazo baseada no histórico deste mês (não repetir recomendações acima).
-"Sua Análise Personalizada" com os 3 blocos 🔴🟡🟢 em texto fluido com valores exatos fornecidos.
-Última linha: "Ação para amanhã: [1 ação específica e imediatamente executável]."
-
-Máximo 520 palavras. Sem introdução antes do ## RESUMO DO DIA.`;
+Um insight de médio prazo — um padrão que aparece nos dados deste mês que, se ajustado, pode mudar o resultado consistentemente nos próximos meses.
+Em seguida, a análise comportamental com os três pontos abaixo, reescritos de forma natural:
+🔴 [o que eliminar, com o impacto em R$]
+🟡 [o que manter, com o ganho extra em R$]
+🟢 [o que melhorar, com o potencial em R$]
+Última linha — "Ação para amanhã:" seguida de uma ação específica e imediatamente executável.`;
 }
+
+// ─── ORQUESTRAÇÃO ─────────────────────────────────────────────────────────────
 
 function buildPrompt(p: Payload): string {
   if ((p as any).periodo === "semana") return buildPromptSemana(p as PayloadSemana);
@@ -394,6 +387,8 @@ function splitSections(text: string) {
   return sections;
 }
 
+// ─── SERVIDOR ─────────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -409,7 +404,7 @@ Deno.serve(async (req) => {
     }
 
     const payload = (await req.json()) as Payload;
-    const prompt = buildPrompt(payload);
+    const userPrompt = buildPrompt(payload);
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -419,9 +414,12 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
-        temperature: 0.7,
-        max_tokens: 1100,
-        messages: [{ role: "user", content: prompt }],
+        temperature: 0.72,
+        max_tokens: 1600,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
       }),
     });
 
