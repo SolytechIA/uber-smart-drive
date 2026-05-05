@@ -66,6 +66,11 @@ export default function AnaliseIA() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Periodo>("hoje");
   const [selectedMonth, setSelectedMonth] = useState<string>(() => format(nowInTZ(), "yyyy-MM"));
+  const [selectedDay, setSelectedDay] = useState<Date>(() => nowInTZ());
+  // semana selecionada: armazenada como ISO yyyy-MM-dd da segunda-feira
+  const [selectedWeek, setSelectedWeek] = useState<string>(() =>
+    format(getWeekRange(nowInTZ()).from, "yyyy-MM-dd"),
+  );
 
   return (
     <AppLayout>
@@ -96,12 +101,18 @@ export default function AnaliseIA() {
             <TabsTrigger value="mes">Este Mês</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="hoje" className="mt-6">
-            <PainelDia user={user} navigate={navigate} />
+          <TabsContent value="hoje" className="mt-6 space-y-4">
+            <div className="flex items-center justify-end">
+              <SeletorDia value={selectedDay} onChange={setSelectedDay} />
+            </div>
+            <PainelDia user={user} navigate={navigate} selectedDay={selectedDay} />
           </TabsContent>
 
-          <TabsContent value="semana" className="mt-6">
-            <PainelSemana user={user} />
+          <TabsContent value="semana" className="mt-6 space-y-4">
+            <div className="flex items-center justify-end">
+              <SeletorSemana value={selectedWeek} onChange={setSelectedWeek} />
+            </div>
+            <PainelSemana user={user} weekStartISO={selectedWeek} />
           </TabsContent>
 
           <TabsContent value="mes" className="mt-6 space-y-4">
@@ -113,6 +124,58 @@ export default function AnaliseIA() {
         </Tabs>
       </div>
     </AppLayout>
+  );
+}
+
+function SeletorDia({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-[220px] justify-start text-left font-normal">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {format(value, "dd 'de' MMMM yyyy", { locale: ptBR })}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <Calendar
+          mode="single"
+          selected={value}
+          onSelect={(d) => d && onChange(d)}
+          disabled={(d) => d > nowInTZ()}
+          initialFocus
+          className={cn("p-3 pointer-events-auto")}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SeletorSemana({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const opts = useMemo(() => {
+    const arr: Array<{ v: string; label: string }> = [];
+    const now = nowInTZ();
+    for (let i = 0; i < 6; i++) {
+      const d = subWeeks(now, i);
+      const r = getWeekRange(d);
+      const v = format(r.from, "yyyy-MM-dd");
+      const label = i === 0
+        ? `Esta semana (${format(r.from, "dd/MM")})`
+        : i === 1
+        ? `Semana passada (${format(r.from, "dd/MM")})`
+        : `Semana de ${format(r.from, "dd/MM")}`;
+      arr.push({ v, label });
+    }
+    return arr;
+  }, []);
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-[240px]"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {opts.map((o) => (
+          <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
