@@ -53,8 +53,8 @@ export function calcContextoMes(rides: Ride[], from: Date, to: Date): ContextoTe
   const periodoAtual = format(now, "MMMM/yyyy", { locale: ptBR }).replace(/^./, (c) => c.toUpperCase());
   let contexto: ContextoTemporal;
   if (!isCurrent) contexto = "mes_passado";
-  else if (dias < 8) contexto = "mes_atual_iniciante";
-  else if (dias <= 22) contexto = "mes_atual_andamento";
+  else if (dias < 5) contexto = "mes_atual_iniciante";
+  else if (dias < 25) contexto = "mes_atual_andamento";
   else contexto = "mes_atual_concluido";
   return { contexto_temporal: contexto, periodo_referencia: periodoRef, periodo_atual: periodoAtual, dias_com_corridas: dias };
 }
