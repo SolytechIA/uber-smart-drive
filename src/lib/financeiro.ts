@@ -278,10 +278,20 @@ export function buildDailySeries(rides: Ride[], vehicle: Vehicle | null, from: D
   const custoFixoMensal = calcCustoFixoMensal(vehicle);
   const diasTrabMes = Number(vehicle?.dias_trabalhados_mes || 22);
   const custoFixoDia = diasTrabMes > 0 ? custoFixoMensal / diasTrabMes : 0;
+  const todayEnd = endOfDay(nowInTZ());
 
   return days.map((day) => {
     const dStart = startOfDay(day);
     const dEnd = endOfDay(day);
+    // Dia futuro: exibe label mas sem dados
+    if (dStart > todayEnd) {
+      return {
+        date: format(day, "yyyy-MM-dd"),
+        label: format(day, "dd/MM"),
+        ganhoBruto: 0, ganhoReal: 0, custoCombustivel: 0, custoFixo: 0,
+        comissaoUber: 0, numCorridas: 0, horas: 0,
+      };
+    }
     const dayRides = filterRidesInRange(rides, dStart, dEnd);
     const ganhoBruto = dayRides.reduce((s, r) => s + Number(r.valor_bruto || 0), 0);
     const kmTotal = dayRides.reduce((s, r) => s + Number(r.km_total || (Number(r.km_passageiro || 0) + Number(r.km_deslocamento || 0))), 0);
