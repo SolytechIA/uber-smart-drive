@@ -760,7 +760,7 @@ function ResultadoLayout(props: {
           <Card>
             <CardHeader><CardTitle className="text-lg">{titleRecs}</CardTitle></CardHeader>
             <CardContent>
-              <RecomendacoesGrid raw={analysis.recomendacoes} />
+              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.recomendacoes || "—"}</p>
             </CardContent>
           </Card>
 
