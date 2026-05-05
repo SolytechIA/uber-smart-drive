@@ -28,6 +28,9 @@ import { ptBR } from "date-fns/locale";
 import {
   aggregateWeek, aggregateMonth, getWeekRange, getPrevWeekRange, getMonthRange, getPrevMonthRange,
 } from "@/lib/aiAggregations";
+import {
+  calcAnalisePersonalizada, calcContextoDia, calcContextoSemana, calcContextoMes,
+} from "@/lib/aiBehavioral";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
