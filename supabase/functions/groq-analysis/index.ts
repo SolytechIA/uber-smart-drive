@@ -181,7 +181,20 @@ Máximo 380 palavras. Linguagem direta.`;
 
 function buildPromptMes(d: PayloadMes): string {
   const top3 = d.top3_dias.map((t) => `${t.rotulo} (R$ ${fmt(t.valor)})`).join(", ");
-  return `Você é um analista de renda para motoristas Uber. Análise MENSAL profunda.
+  const mesEmInicio = d.dias_trabalhados < 10;
+  const dadosSuficientesParaComparar = d.dias_trabalhados >= 5 && d.mes_anterior.dias_trabalhados >= 5;
+  return `Você é um analista de renda para motoristas Uber. Análise MENSAL.
+
+REGRAS OBRIGATÓRIAS:
+- O motorista escolheu trabalhar com Uber. NUNCA sugira migrar para outras plataformas (delivery, 99, inDriver, outros apps). Foque em otimizar a operação na Uber.
+- Linguagem analítica, motivadora e orientada a ação prática. NUNCA use alarmismo ("queda drástica", "desempenho significativamente abaixo", "preocupante").
+- Recomendações sempre ESPECÍFICAS e ACIONÁVEIS (horário exato, dia da semana, km máximo de deslocamento, valor mínimo de corrida).
+- Termine OBRIGATORIAMENTE com UMA ação concreta para o motorista implementar amanhã.
+${mesEmInicio
+  ? `- ATENÇÃO: o mês está NO COMEÇO (apenas ${d.dias_trabalhados} dias trabalhados). NÃO faça comparativo negativo com o mês anterior. Foque em: ritmo atual, projeção otimista se mantiver/acelerar o ritmo, e recomendações práticas.\n- Frase orientadora obrigatória no resumo: "Você está no começo do mês — veja como está seu ritmo e o que fazer para atingir sua meta."`
+  : dadosSuficientesParaComparar
+    ? `- Há dados suficientes para comparativo com o mês anterior. Use-o de forma equilibrada.`
+    : `- NÃO faça comparativo com o mês anterior (poucos dados em algum dos meses).`}
 
 DADOS DO MÊS (${d.rotulo_periodo}):
 - Dias trabalhados: ${d.dias_trabalhados} | Corridas: ${d.total_corridas}
@@ -194,28 +207,30 @@ DADOS DO MÊS (${d.rotulo_periodo}):
 - Dia da semana mais rentável: ${d.melhor_dia_semana}
 - Estimativa de ganho perdido em deslocamentos longos (>5km): R$ ${fmt(d.ganho_perdido_deslocamentos_longos)}
 
-MÊS ANTERIOR (comparativo):
-- Corridas: ${d.mes_anterior.corridas} | Ganho real: R$ ${fmt(d.mes_anterior.ganho_real)} | R$/h: R$ ${fmt(d.mes_anterior.r_por_hora)} | R$/km: R$ ${fmt(d.mes_anterior.r_por_km)} | Dias trab.: ${d.mes_anterior.dias_trabalhados}
+MÊS ANTERIOR (referência):
+- Corridas: ${d.mes_anterior.corridas} | Ganho real: R$ ${fmt(d.mes_anterior.ganho_real)} | R$/h: R$ ${fmt(d.mes_anterior.r_por_hora)} | R$/km: R$ ${fmt(d.mes_anterior.r_por_km)} | Dias: ${d.mes_anterior.dias_trabalhados}
 
-Gere 4 seções distintas (NÃO repita entre elas):
+Gere 4 seções DISTINTAS (sem repetir):
 
 ## RESUMO DO DIA
-Análise NARRATIVA profunda do mês (2-3 parágrafos). Comece com "Em ${d.rotulo_periodo} você trabalhou ${d.dias_trabalhados} dias realizando ${d.total_corridas} corridas com ganho real total de R$ ${fmt(d.ganho_real)}, representando ${fmt(d.percentual_meta)}% da sua meta mensal." Cite os top 3 dias, o horário lucrativo, o dia da semana mais rentável e o impacto dos deslocamentos longos. Compare com mês anterior.
+${mesEmInicio
+  ? `2 parágrafos. Comece com "Você está no começo do mês — veja como está seu ritmo e o que fazer para atingir sua meta." Depois apresente: ${d.dias_trabalhados} dias trabalhados, ${d.total_corridas} corridas, ganho real R$ ${fmt(d.ganho_real)}. Mostre uma projeção otimista se o ritmo for mantido. Termine com tom motivador.`
+  : `2-3 parágrafos analíticos. Inclua dias trabalhados, corridas, ganho real e % da meta. Cite top 3 dias, horário lucrativo e dia da semana mais rentável. ${dadosSuficientesParaComparar ? "Compare com o mês anterior de forma equilibrada." : "NÃO compare com o mês anterior."} Termine motivador.`}
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-4 insights mensais (Descoberta do mês / Ponto de melhoria / Meta para próximo mês / Padrão a replicar):
-🕐 Descoberta do mês — algo concreto descoberto nos dados
-📍 Ponto de melhoria — ação concreta
-✅ Meta sugerida para o próximo mês — baseada na progressão
-⚠️ Padrão a evitar — algo que reduziu seu ganho
+4 itens específicos e acionáveis (sem repetir):
+🕐 Horário exato a priorizar (baseado em ${d.hora_pico})
+📍 Dia da semana / região a replicar (baseado em ${d.melhor_dia_semana})
+✅ Tipo de corrida a priorizar (R$/km mínimo, ticket mínimo, km máximo de deslocamento)
+⚠️ Comportamento específico a evitar (ex: deslocamentos >X km, corridas abaixo de R$ Y)
 
 ## PROJEÇÃO DO MÊS
-1 parágrafo curto: o que esperar do próximo mês mantendo padrão atual + 1 ajuste recomendado.
+1 parágrafo com projeção realista para fechar o mês + 1 ajuste prático recomendado.
 
 ## DICA ESTRATÉGICA
-1 dica estratégica de longo prazo (não repetir o que já foi dito).
+1 dica nova de longo prazo + UMA ação concreta para implementar AMANHÃ.
 
-Máximo 450 palavras. Linguagem direta e analítica.`;
+Máximo 450 palavras. Tom: analítico, motivador, prático.`;
 }
 
 function buildPrompt(p: Payload): string {
