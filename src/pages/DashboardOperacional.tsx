@@ -308,9 +308,17 @@ export default function DashboardOperacional() {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Carregando…
-            </div>
+            <ul className="space-y-2">
+              {[0,1,2,3].map((i) => (
+                <li key={i} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/30 p-3">
+                  <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-3/4 animate-pulse rounded bg-muted/70" />
+                  </div>
+                </li>
+              ))}
+            </ul>
           ) : rides.length === 0 ? (
             <EmptyState onNew={() => setShowNew(true)} />
           ) : (
@@ -493,15 +501,15 @@ function buildInsight(
 
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="mb-4 rounded-2xl gradient-bg-soft p-5 animate-fade-in">
+    <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+      <div className="mb-4 rounded-2xl gradient-bg-soft p-5 animate-pulse">
         <Car className="h-10 w-10 text-primary" />
       </div>
       <p className="max-w-xs text-sm text-muted-foreground">
-        Nenhuma corrida hoje ainda. Suas corridas Uber aparecem automaticamente aqui.
+        Nenhuma corrida hoje ainda. Que tal registrar a primeira?
       </p>
-      <Button variant="gradient" className="mt-5" onClick={onNew}>
-        <Plus className="mr-2 h-4 w-4" /> Registrar manualmente
+      <Button variant="gradient" className="mt-5 hover-scale" onClick={onNew}>
+        <Plus className="mr-2 h-4 w-4" /> Registrar Corrida
       </Button>
     </div>
   );
