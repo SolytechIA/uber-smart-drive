@@ -388,18 +388,48 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
   };
 
   const isHojeReal = format(selectedDay, "yyyy-MM-dd") === format(nowInTZ(), "yyyy-MM-dd");
+  const rotuloDia = isHojeReal ? "Hoje" : format(selectedDay, "dd/MM");
   return (
-    <ResultadoLayout
-      status={status} analysis={analysis} errorMsg={errorMsg}
-      onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
-      generatedAt={generatedAt} ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
-      emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
-      emptyText={isHojeReal
-        ? "Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
-        : "Nenhuma corrida registrada neste dia."}
-      titleResumo="📊 Resumo do Dia" titleProj="📈 Projeção do Mês" titleDica="💡 Dica Estratégica do Dia" titleRecs="🎯 Recomendações para Amanhã"
-      footerProgress={{ realizado: realizadoMes, meta: metaMensal, pct: progressPct }}
-    />
+    <div className="space-y-4">
+      {resumo && resumo.cur.corridas > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resumo do Dia — {format(selectedDay, "dd 'de' MMMM", { locale: ptBR })}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Mini label="Corridas" value={String(resumo.cur.corridas)} />
+            <Mini label="Ganho real" value={fmtBRL(resumo.cur.ganho_real)} />
+            <Mini label="R$/hora" value={fmtBRL(resumo.cur.r_por_hora)} />
+            <Mini label="R$/km" value={fmtBRL(resumo.cur.r_por_km)} />
+            <Mini label="% meta" value={`${resumo.pct.toFixed(0)}%`} />
+          </CardContent>
+        </Card>
+      )}
+
+      {resumo && resumo.cur.corridas > 0 && resumo.hasPrev && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">{rotuloDia} vs. dia anterior</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Compare label="Corridas" cur={resumo.cur.corridas} prev={resumo.prev.corridas} />
+            <Compare label="Ganho real" cur={resumo.cur.ganho_real} prev={resumo.prev.ganho_real} money />
+            <Compare label="R$/hora" cur={resumo.cur.r_por_hora} prev={resumo.prev.r_por_hora} money />
+            <Compare label="R$/km" cur={resumo.cur.r_por_km} prev={resumo.prev.r_por_km} money />
+          </CardContent>
+        </Card>
+      )}
+
+      <ResultadoLayout
+        status={status} analysis={analysis} errorMsg={errorMsg}
+        onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
+        generatedAt={generatedAt} ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
+        emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
+        emptyText={isHojeReal
+          ? "Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+          : "Nenhuma corrida registrada neste dia."}
+        titleResumo="📊 Resumo do Dia" titleProj="📈 Projeção do Mês" titleDica="💡 Dica Estratégica do Dia" titleRecs="🎯 Recomendações para Amanhã"
+        footerProgress={{ realizado: realizadoMes, meta: metaMensal, pct: progressPct }}
+      />
+    </div>
   );
 }
 
