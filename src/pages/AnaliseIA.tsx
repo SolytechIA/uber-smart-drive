@@ -217,6 +217,7 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
   const [now, setNow] = useState<number>(Date.now());
 
   useEffect(() => {
+    setStatus("idle"); setAnalysis(null); setGeneratedAt(null);
     const c = loadCache(cacheKey);
     if (c?.analysis) {
       setAnalysis(c.analysis);
@@ -226,7 +227,7 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       setMetaMensal(c.meta?.metaMensal || 0);
       setStatus("ok");
     }
-  }, []);
+  }, [cacheKey]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
