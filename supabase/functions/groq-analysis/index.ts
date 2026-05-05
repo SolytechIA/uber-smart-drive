@@ -151,7 +151,15 @@ Máximo 380 palavras totais. Linguagem direta e motivadora.`;
 }
 
 function buildPromptSemana(d: PayloadSemana): string {
+  const semDadosComparativo = d.semana_anterior.corridas < 5;
   return `Você é um analista de renda para motoristas Uber. Análise SEMANAL.
+
+REGRAS OBRIGATÓRIAS:
+- NUNCA sugira migrar para outras plataformas. Foque em otimizar a Uber.
+- Recomendações ESPECÍFICAS e ACIONÁVEIS (horário, dia, km, valor).
+- Termine com UMA ação concreta para implementar amanhã.
+- Linguagem motivadora, sem alarmismo.
+${semDadosComparativo ? "- NÃO faça comparativo com a semana anterior (poucos dados)." : "- Comparativo com semana anterior é permitido."}
 
 DADOS DA SEMANA (${d.rotulo_periodo}):
 - Corridas: ${d.total_corridas} | Ganho real: R$ ${fmt(d.ganho_real)} | Ganho bruto: R$ ${fmt(d.ganho_bruto)}
