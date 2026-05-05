@@ -108,7 +108,13 @@ function buildPromptDia(d: PayloadDia): string {
   const rkmBom = Number(d.r_km_bom || 0);
   const rkmMedio = Number(d.r_km_medio || 0);
   const ticketMin = Number(d.ticket_minimo || 0);
-  return `Você é um analista especializado em renda para motoristas de aplicativo no Brasil. Com base nos dados abaixo, gere uma análise CONCISA e SEM REPETIÇÕES entre as seções.
+  return `Você é um analista especializado em renda para motoristas Uber no Brasil. Gere análise CONCISA e SEM REPETIÇÕES.
+
+REGRAS OBRIGATÓRIAS:
+- O motorista escolheu trabalhar com Uber. NUNCA sugira migrar para outras plataformas (delivery, 99, inDriver). Foque em otimizar a operação na Uber.
+- Recomendações sempre ESPECÍFICAS e ACIONÁVEIS (horário exato, bairro, km máximo de deslocamento, valor mínimo de corrida).
+- Termine OBRIGATORIAMENTE com UMA ação concreta para implementar amanhã.
+- Linguagem motivadora, sem alarmismo.
 
 DADOS:
 - Data: ${d.data_hoje}
