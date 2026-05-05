@@ -182,7 +182,25 @@ export interface PeriodMetrics {
   ganhoBrutoPorKm: number;
 }
 
+/** Limita uma data ao fim do dia atual em SP, para evitar contar dias futuros. */
+export function clampToTodayTZ(to: Date): Date {
+  const todayEnd = endOfDay(nowInTZ());
+  return to > todayEnd ? todayEnd : to;
+}
+
 export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: Date, to: Date): PeriodMetrics {
+  const toClamped = clampToTodayTZ(to);
+  // Se o período ainda não começou, retorna zeros
+  if (from > toClamped) {
+    return {
+      ganhoBruto: 0, comissaoUber: 0, ganhoLiquido: 0, custoCombustivel: 0,
+      custoFixoProporcional: 0, custoTotal: 0, ganhoReal: 0, kmTotal: 0,
+      kmPassageiro: 0, kmDeslocamento: 0, horasTrabalhadas: 0, numCorridas: 0,
+      diasNoPeriodo: 0, custoFixoDiario: 0, custoCombustivelDiario: 0,
+      pontoEquilibrioDiario: 0, ganhoBrutoPorHora: 0, ganhoBrutoPorKm: 0,
+    };
+  }
+  to = toClamped;
   const inRange = filterRidesInRange(rides, from, to);
   const ganhoBruto = inRange.reduce((s, r) => s + Number(r.valor_bruto || 0), 0);
   // Decisão do usuário: bruto = líquido (sem comissão por corrida)
