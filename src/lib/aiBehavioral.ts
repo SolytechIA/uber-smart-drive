@@ -53,8 +53,8 @@ export function calcContextoMes(rides: Ride[], from: Date, to: Date): ContextoTe
   const periodoAtual = format(now, "MMMM/yyyy", { locale: ptBR }).replace(/^./, (c) => c.toUpperCase());
   let contexto: ContextoTemporal;
   if (!isCurrent) contexto = "mes_passado";
-  else if (dias < 8) contexto = "mes_atual_iniciante";
-  else if (dias <= 22) contexto = "mes_atual_andamento";
+  else if (dias < 5) contexto = "mes_atual_iniciante";
+  else if (dias < 25) contexto = "mes_atual_andamento";
   else contexto = "mes_atual_concluido";
   return { contexto_temporal: contexto, periodo_referencia: periodoRef, periodo_atual: periodoAtual, dias_com_corridas: dias };
 }
@@ -208,15 +208,18 @@ function calcMelhorar(rides: Ride[]): BlocoComportamental {
   };
 }
 
-/** Calcula os 3 blocos usando todo o histórico relevante (últimos 60 dias por padrão). */
+/** Calcula os 3 blocos. Se from/to forem informados, usa apenas as corridas do período. */
 export function calcAnalisePersonalizada(
   rides: Ride[],
   vehicle: Vehicle | null,
   goals: Goals | null,
+  from?: Date,
+  to?: Date,
 ): AnalisePersonalizada {
+  const scoped = from && to ? ridesNoPeriodo(rides, from, to) : rides;
   return {
-    eliminar: calcEliminar(rides, vehicle, goals),
-    manter: calcManter(rides, vehicle),
-    melhorar: calcMelhorar(rides),
+    eliminar: calcEliminar(scoped, vehicle, goals),
+    manter: calcManter(scoped, vehicle),
+    melhorar: calcMelhorar(scoped),
   };
 }

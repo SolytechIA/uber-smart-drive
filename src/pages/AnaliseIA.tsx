@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, Clock, MapPin, Check, AlertCircle, TrendingUp,
+  Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -317,7 +317,7 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
         ...calcContextoDia(rides, selectedDay),
-        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
@@ -415,7 +415,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ...calcContextoSemana(rides, cur.from, cur.to),
-        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, cur.from, cur.to),
       };
 
       const newMeta = { aCur, aPrev, metaSemanal, pct };
@@ -536,7 +536,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ...calcContextoMes(rides, cur.from, cur.to),
-        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, cur.from, cur.to),
       };
 
       const newMeta = { aCur, aPrev, metaMensal, pct };
@@ -760,7 +760,7 @@ function ResultadoLayout(props: {
           <Card>
             <CardHeader><CardTitle className="text-lg">{titleRecs}</CardTitle></CardHeader>
             <CardContent>
-              <RecomendacoesGrid raw={analysis.recomendacoes} />
+              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.recomendacoes || "—"}</p>
             </CardContent>
           </Card>
 
@@ -816,30 +816,3 @@ function ResultadoLayout(props: {
   );
 }
 
-function RecomendacoesGrid({ raw }: { raw: string }) {
-  const grab = (emoji: string) => {
-    const re = new RegExp(`${emoji}([^\\n🕐📍✅⚠️]*(?:\\n(?!🕐|📍|✅|⚠️)[^\\n]*)*)`, "u");
-    const m = raw.match(re);
-    return m ? m[1].replace(/^[\s:.-]*/, "").trim() : "";
-  };
-  const items = [
-    { icon: <Clock className="h-4 w-4" />, emoji: "🕐", title: "Horários", text: grab("🕐") },
-    { icon: <MapPin className="h-4 w-4" />, emoji: "📍", title: "Padrão / Região", text: grab("📍") },
-    { icon: <Check className="h-4 w-4 text-emerald-500" />, emoji: "✅", title: "Priorize", text: grab("✅") },
-    { icon: <AlertTriangle className="h-4 w-4 text-orange-500" />, emoji: "⚠️", title: "Evite", text: grab("⚠️") },
-  ];
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {items.map((it) => (
-        <div key={it.emoji} className="rounded-lg border border-border/60 bg-muted/30 p-3">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            {it.icon}<span>{it.title}</span>
-          </div>
-          <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
-            {it.text || "—"}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
