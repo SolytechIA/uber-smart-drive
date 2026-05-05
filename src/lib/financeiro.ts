@@ -288,8 +288,9 @@ export function buildDailySeries(rides: Ride[], vehicle: Vehicle | null, from: D
       return {
         date: format(day, "yyyy-MM-dd"),
         label: format(day, "dd/MM"),
-        ganhoBruto: 0, ganhoReal: 0, custoCombustivel: 0, custoFixo: 0,
-        comissaoUber: 0, numCorridas: 0, horas: 0,
+        ganhoBruto: null as any, ganhoReal: null as any,
+        custoCombustivel: null as any, custoFixo: null as any,
+        comissaoUber: null as any, numCorridas: 0, horas: 0,
       };
     }
     const dayRides = filterRidesInRange(rides, dStart, dEnd);
