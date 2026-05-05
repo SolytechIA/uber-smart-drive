@@ -1,32 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, Clock, MapPin, Check, AlertCircle } from "lucide-react";
+import {
+  Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, Clock, MapPin, Check, AlertCircle, TrendingUp,
+} from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
+} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
-  calcPeriodMetrics,
-  resolveGoals,
-  fmtBRL,
-  fmtInTZ,
-  nowInTZ,
-  projecaoMensal,
-  type Ride,
-  type Vehicle,
-  type Goals,
+  calcPeriodMetrics, resolveGoals, fmtBRL, fmtInTZ, nowInTZ, projecaoMensal,
+  type Ride, type Vehicle, type Goals,
 } from "@/lib/financeiro";
 import {
-  getStartOfTodaySP,
-  getEndOfTodaySP,
-  getStartOfMonthSP,
-  getEndOfMonthSP,
+  getStartOfTodaySP, getEndOfTodaySP, getStartOfMonthSP, getEndOfMonthSP,
 } from "@/lib/dateUtils";
-import { endOfMonth, startOfMonth } from "date-fns";
+import { endOfMonth, format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  aggregateWeek, aggregateMonth, getWeekRange, getPrevWeekRange, getMonthRange, getPrevMonthRange,
+} from "@/lib/aiAggregations";
 
 interface Analysis {
   resumo_dia: string;
@@ -34,245 +35,49 @@ interface Analysis {
   projecao_mes: string;
   dica_estrategica: string;
 }
-
 type Status = "idle" | "loading" | "ok" | "error" | "empty";
 
-const STORAGE_ANALYSIS = "driveIA_ultima_analise";
-const STORAGE_TIMESTAMP = "driveIA_ultima_geracao";
-const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hora
+const STORAGE_PREFIX = "driveIA_analise_";
+const RATE_LIMIT_MS = 60 * 60 * 1000;
+
+type Periodo = "hoje" | "semana" | "mes";
+
+interface CachedState {
+  analysis: Analysis;
+  generatedAt: number;
+  meta?: any;
+}
+
+function loadCache(key: string): CachedState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveCache(key: string, state: CachedState) {
+  try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state)); } catch { /* noop */ }
+}
 
 export default function AnaliseIA() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<Status>("idle");
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
-  const [progressPct, setProgressPct] = useState(0);
-  const [realizadoMes, setRealizadoMes] = useState(0);
-  const [metaMensal, setMetaMensal] = useState(0);
-  const [errorMsg, setErrorMsg] = useState<string>("");
-  const [now, setNow] = useState<number>(Date.now());
-
-  // Carrega análise salva ao montar
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_ANALYSIS);
-      const ts = localStorage.getItem(STORAGE_TIMESTAMP);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.analysis) {
-          setAnalysis(parsed.analysis);
-          setGeneratedAt(ts ? new Date(Number(ts)) : new Date(parsed.generatedAt));
-          setProgressPct(parsed.progressPct || 0);
-          setRealizadoMes(parsed.realizadoMes || 0);
-          setMetaMensal(parsed.metaMensal || 0);
-          setStatus("ok");
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // Tick para countdown
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const lastGenTs = (() => {
-    const v = localStorage.getItem(STORAGE_TIMESTAMP);
-    return v ? Number(v) : 0;
-  })();
-  const msSinceLast = now - lastGenTs;
-  const rateLimited = lastGenTs > 0 && msSinceLast < RATE_LIMIT_MS;
-  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - msSinceLast) / 60_000) : 0;
-  const nextAvailableTime = rateLimited
-    ? new Date(lastGenTs + RATE_LIMIT_MS).toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "America/Sao_Paulo",
-      })
-    : "";
-
-  // Aviso se análise é de outro dia
-  const isFromAnotherDay = (() => {
-    if (!generatedAt) return false;
-    const todayStr = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-    const genStr = generatedAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-    return todayStr !== genStr;
-  })();
-
-  const handleGenerate = async () => {
-    if (!user) return;
-    if (rateLimited) return;
-    setStatus("loading");
-    setErrorMsg("");
-
-    try {
-      // Carrega dados em paralelo
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
-        supabase.from("rides").select("*").eq("user_id", user.id),
-        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
-      ]);
-
-      const rides = (ridesRes.data || []) as Ride[];
-      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
-      const goals = (goalsRes.data as Goals | null) ?? null;
-
-      const fromHoje = getStartOfTodaySP();
-      const toHoje = getEndOfTodaySP();
-      const fromMes = getStartOfMonthSP();
-      const toMes = getEndOfMonthSP();
-
-      const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
-      const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes);
-
-      if (mHoje.numCorridas === 0) {
-        setStatus("empty");
-        return;
-      }
-
-      const { diaria: metaDiaria, mensal: metaMensalCfg } = resolveGoals(goals, vehicle);
-      const percentualMeta = metaDiaria > 0 ? (mHoje.ganhoReal / metaDiaria) * 100 : 0;
-
-      // Filtra corridas de hoje para extras
-      const isHoje = (r: Ride) => {
-        if (r.data_corrida) {
-          const ref = new Date(r.data_corrida + "T12:00:00");
-          return ref >= fromHoje && ref <= toHoje;
-        }
-        if (r.horario_inicio) {
-          const sp = new Date(new Date(r.horario_inicio).toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-          return sp >= fromHoje && sp <= toHoje;
-        }
-        return false;
-      };
-      const ridesHoje = rides.filter(isHoje);
-
-      const ticketMedio = ridesHoje.length > 0 ? mHoje.ganhoBruto / ridesHoje.length : 0;
-      const nBoas = ridesHoje.filter((r) => r.classificacao === "boa").length;
-      const nMedias = ridesHoje.filter((r) => r.classificacao === "media").length;
-      const nRuins = ridesHoje.filter((r) => r.classificacao === "ruim").length;
-
-      const horarios = ridesHoje
-        .map((r) => r.horario_inicio)
-        .filter((x): x is string => !!x)
-        .sort();
-      const horaInicio = horarios.length ? fmtInTZ(horarios[0]) : "—";
-      const horarios_fim = ridesHoje
-        .map((r) => r.horario_fim || r.horario_inicio)
-        .filter((x): x is string => !!x)
-        .sort();
-      const horaFim = horarios_fim.length ? fmtInTZ(horarios_fim[horarios_fim.length - 1]) : "—";
-
-      const sortedByValor = [...ridesHoje].sort(
-        (a, b) => Number(b.valor_bruto || 0) - Number(a.valor_bruto || 0),
-      );
-      const melhor = sortedByValor[0];
-      const pior = sortedByValor[sortedByValor.length - 1];
-
-      const refRide = (r: Ride | undefined) => ({
-        valor: Number(r?.valor_bruto || 0),
-        km: Number(r?.km_passageiro || 0) + Number(r?.km_deslocamento || 0),
-        origem: r?.bairro_origem || "—",
-        destino: r?.bairro_destino || "—",
-      });
-
-      // Projeção mensal
-      const now = nowInTZ();
-      const diaAtual = now.getDate();
-      const ultimoDia = endOfMonth(now).getDate();
-      const projMes = projecaoMensal(mMes.ganhoReal, diaAtual, ultimoDia, mMes.numCorridas) ?? mMes.ganhoReal;
-      const diasRestantes = Math.max(0, ultimoDia - diaAtual);
-      const valorFaltante = Math.max(0, metaMensalCfg - mMes.ganhoReal);
-      const valorPorDia = diasRestantes > 0 ? valorFaltante / diasRestantes : valorFaltante;
-
-      const dataHoje = now.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-
-      const payload = {
-        total_corridas: mHoje.numCorridas,
-        ganho_bruto: mHoje.ganhoBruto,
-        custo_total: mHoje.custoTotal,
-        ganho_real: mHoje.ganhoReal,
-        meta_diaria: metaDiaria,
-        percentual_meta: percentualMeta,
-        km_total: mHoje.kmTotal,
-        km_deslocamento_total: mHoje.kmDeslocamento,
-        horas: mHoje.horasTrabalhadas,
-        r_por_hora: mHoje.horasTrabalhadas > 0 ? mHoje.ganhoReal / mHoje.horasTrabalhadas : 0,
-        r_por_km: mHoje.kmTotal > 0 ? mHoje.ganhoReal / mHoje.kmTotal : 0,
-        ticket_medio: ticketMedio,
-        n_boas: nBoas,
-        n_medias: nMedias,
-        n_ruins: nRuins,
-        hora_inicio: horaInicio,
-        hora_fim: horaFim,
-        data_hoje: dataHoje,
-        corrida_melhor: refRide(melhor),
-        corrida_pior: refRide(pior),
-        projecao_mensal: projMes,
-        meta_mensal: metaMensalCfg,
-        dias_restantes_mes: diasRestantes,
-        valor_faltante_meta: valorFaltante,
-        valor_necessario_por_dia: valorPorDia,
-        r_km_bom: Number((goals as any)?.r_km_bom || (goals as any)?.r_por_km_minimo || 0),
-        r_km_medio: Number((goals as any)?.r_km_medio || 0),
-        ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
-      };
-
-      setRealizadoMes(mMes.ganhoReal);
-      setMetaMensal(metaMensalCfg);
-      setProgressPct(metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0);
-
-      const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
-      if (error) throw error;
-      if (!data || (data as any).error) throw new Error((data as any)?.error || "Erro desconhecido");
-
-      const result = data as Analysis;
-      const ts = Date.now();
-      setAnalysis(result);
-      setGeneratedAt(new Date(ts));
-      setStatus("ok");
-      try {
-        localStorage.setItem(
-          STORAGE_ANALYSIS,
-          JSON.stringify({
-            analysis: result,
-            generatedAt: ts,
-            progressPct: metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0,
-            realizadoMes: mMes.ganhoReal,
-            metaMensal: metaMensalCfg,
-          }),
-        );
-        localStorage.setItem(STORAGE_TIMESTAMP, String(ts));
-        setNow(ts);
-      } catch {
-        // ignore storage errors
-      }
-    } catch (e) {
-      console.error("Erro análise IA:", e);
-      setErrorMsg((e as Error).message || "Erro inesperado");
-      setStatus("error");
-    }
-  };
+  const [tab, setTab] = useState<Periodo>("hoje");
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => format(nowInTZ(), "yyyy-MM"));
 
   return (
     <AppLayout>
       <div className="container mx-auto max-w-5xl space-y-6 p-4 md:p-6">
         {/* Header */}
         <header
-          className="relative overflow-hidden rounded-2xl border border-border/50 p-8 text-center"
+          className="relative overflow-hidden rounded-2xl border border-border/50 p-6 text-center md:p-8"
           style={{
-            background:
-              "linear-gradient(135deg, hsl(270 80% 30% / 0.55), hsl(180 80% 30% / 0.55))",
+            background: "linear-gradient(135deg, hsl(270 80% 30% / 0.55), hsl(180 80% 30% / 0.55))",
           }}
         >
           <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(circle_at_50%_0%,white,transparent_60%)]" />
           <div className="relative">
-            <div className="mx-auto mb-3 inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur animate-pulse shadow-[0_0_30px_rgba(168,85,247,0.6)]">
-              <Brain className="h-9 w-9 text-white drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]" />
+            <div className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-white/10 backdrop-blur animate-pulse shadow-[0_0_30px_rgba(168,85,247,0.6)] md:h-16 md:w-16">
+              <Brain className="h-8 w-8 text-white drop-shadow-[0_0_12px_rgba(168,85,247,0.9)] md:h-9 md:w-9" />
             </div>
             <h1 className="text-2xl font-bold md:text-3xl">Análise Inteligente</h1>
             <p className="mt-1 text-sm text-white/80">
@@ -281,212 +86,674 @@ export default function AnaliseIA() {
           </div>
         </header>
 
-        {/* Botão gerar (visível também quando há análise antiga, ao lado do "nova análise") */}
-        {status !== "ok" && (
-          <div className="flex flex-col items-center gap-2">
-            <Button
-              size="lg"
-              onClick={handleGenerate}
-              disabled={status === "loading" || rateLimited}
-              className={cn(
-                "group relative overflow-hidden px-8 py-6 text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]",
-                rateLimited && "opacity-60 grayscale",
-              )}
-              style={
-                rateLimited
-                  ? { background: "hsl(var(--muted))" }
-                  : { background: "linear-gradient(135deg, hsl(270 80% 50%), hsl(180 80% 45%))" }
-              }
-            >
-              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <Sparkles className="mr-2 h-5 w-5" />
-              {status === "loading"
-                ? "Analisando..."
-                : rateLimited
-                ? `Disponível em ${minutesLeft} min`
-                : "Gerar Análise do Dia"}
-            </Button>
-            {rateLimited && (
-              <p className="text-xs text-muted-foreground">
-                Próxima análise disponível às {nextAvailableTime}
-              </p>
-            )}
-          </div>
-        )}
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Periodo)}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="hoje">Hoje</TabsTrigger>
+            <TabsTrigger value="semana">Esta Semana</TabsTrigger>
+            <TabsTrigger value="mes">Este Mês</TabsTrigger>
+          </TabsList>
 
-        {/* Loading */}
-        {status === "loading" && (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
-              <div className="flex gap-2">
-                <span className="h-3 w-3 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
-                <span className="h-3 w-3 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
-                <span className="h-3 w-3 animate-bounce rounded-full bg-primary" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Analisando suas corridas com IA...
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="hoje" className="mt-6">
+            <PainelDia user={user} navigate={navigate} />
+          </TabsContent>
 
-        {/* Empty: sem corridas hoje */}
-        {status === "empty" && (
-          <Card className="border-orange-500/40 bg-orange-500/5">
-            <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-              <AlertTriangle className="h-10 w-10 text-orange-500" />
-              <p className="text-sm text-muted-foreground">
-                Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada.
-              </p>
-              <Button onClick={() => navigate("/dashboard/operacional")}>
-                Registrar Corrida
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="semana" className="mt-6">
+            <PainelSemana user={user} />
+          </TabsContent>
 
-        {/* Error */}
-        {status === "error" && (
-          <Card className="border-destructive/40 bg-destructive/5">
-            <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-              <AlertCircle className="h-10 w-10 text-destructive" />
-              <div>
-                <p className="font-medium">Não foi possível gerar a análise no momento.</p>
-                <p className="text-sm text-muted-foreground">Tente novamente em alguns instantes.</p>
-                {errorMsg && <p className="mt-2 text-xs text-muted-foreground/70">{errorMsg}</p>}
-              </div>
-              <Button onClick={handleGenerate} variant="outline">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Tentar novamente
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Resultado */}
-        {status === "ok" && analysis && (
-          <div className="space-y-5">
-            {/* CARD 1 — Resumo */}
-            <div className="rounded-xl p-[2px] [background:linear-gradient(135deg,hsl(270_80%_55%),hsl(180_80%_50%),hsl(270_80%_55%))] [background-size:200%_200%] animate-[shimmer_4s_linear_infinite]">
-              <Card className="rounded-[10px] bg-card/95">
-                <CardHeader>
-                  <CardTitle className="text-lg">📊 Resumo do Dia</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
-                  {analysis.resumo_dia || "—"}
-                </CardContent>
-              </Card>
+          <TabsContent value="mes" className="mt-6 space-y-4">
+            <div className="flex items-center justify-end">
+              <SeletorMes value={selectedMonth} onChange={setSelectedMonth} />
             </div>
-
-            {/* CARD 2 — Recomendações */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">🎯 Recomendações para Amanhã</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RecomendacoesGrid raw={analysis.recomendacoes} />
-              </CardContent>
-            </Card>
-
-            {/* CARD 3 — Projeção Mensal */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">📈 Projeção do Mês</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Realizado: <strong className="text-foreground">{fmtBRL(realizadoMes)}</strong></span>
-                  <span className="text-muted-foreground">Meta: <strong className="text-foreground">{fmtBRL(metaMensal)}</strong></span>
-                </div>
-                <Progress value={progressPct} className="h-3" />
-                <div className="text-right text-xs text-muted-foreground">{progressPct.toFixed(1)}% atingido</div>
-                <p className="whitespace-pre-line pt-2 text-sm leading-relaxed">{analysis.projecao_mes || "—"}</p>
-              </CardContent>
-            </Card>
-
-            {/* CARD 4 — Dica Estratégica */}
-            <Card className="border-amber-500/40 bg-amber-500/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Lightbulb className="h-5 w-5 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-                  💡 Dica Estratégica do Dia
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.dica_estrategica || "—"}</p>
-              </CardContent>
-            </Card>
-
-            {/* Aviso se análise é de outro dia */}
-            {isFromAnotherDay && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
-                Esta análise é de {generatedAt?.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}. Gere uma nova análise para ver os dados de hoje.
-              </div>
-            )}
-
-            {/* Footer badge */}
-            <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
-              <Badge variant="secondary" className="gap-1.5">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                ✨ Gerado por Drive IA
-              </Badge>
-              {generatedAt && (
-                <span className="text-xs text-muted-foreground">
-                  {`Gerado ${
-                    new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) ===
-                    generatedAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-                      ? "hoje"
-                      : `em ${generatedAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
-                  } às ${generatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}`}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={handleGenerate}
-                disabled={rateLimited}
-                className={cn(rateLimited && "opacity-60")}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
-              </Button>
-              {rateLimited && (
-                <p className="text-xs text-muted-foreground">
-                  Próxima análise disponível às {nextAvailableTime}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
+            <PainelMes user={user} mesYYYYMM={selectedMonth} />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
 }
 
+function SeletorMes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const opts = useMemo(() => {
+    const arr: Array<{ v: string; label: string }> = [];
+    const now = nowInTZ();
+    for (let i = 0; i < 6; i++) {
+      const d = subMonths(now, i);
+      arr.push({
+        v: format(d, "yyyy-MM"),
+        label: format(d, "MMMM yyyy", { locale: ptBR }).replace(/^./, (c) => c.toUpperCase()),
+      });
+    }
+    return arr;
+  }, []);
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {opts.map((o) => (
+          <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/* ======================== Painel HOJE (lógica original) ======================== */
+function PainelDia({ user, navigate }: { user: any; navigate: ReturnType<typeof useNavigate> }) {
+  const cacheKey = "dia";
+  const [status, setStatus] = useState<Status>("idle");
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+  const [progressPct, setProgressPct] = useState(0);
+  const [realizadoMes, setRealizadoMes] = useState(0);
+  const [metaMensal, setMetaMensal] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const c = loadCache(cacheKey);
+    if (c?.analysis) {
+      setAnalysis(c.analysis);
+      setGeneratedAt(new Date(c.generatedAt));
+      setProgressPct(c.meta?.progressPct || 0);
+      setRealizadoMes(c.meta?.realizadoMes || 0);
+      setMetaMensal(c.meta?.metaMensal || 0);
+      setStatus("ok");
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const lastTs = generatedAt?.getTime() || 0;
+  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
+  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+
+  const handleGenerate = async () => {
+    if (!user || rateLimited) return;
+    setStatus("loading"); setErrorMsg("");
+    try {
+      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+        supabase.from("rides").select("*").eq("user_id", user.id),
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      const rides = (ridesRes.data || []) as Ride[];
+      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
+      const goals = (goalsRes.data as Goals | null) ?? null;
+
+      const fromHoje = getStartOfTodaySP();
+      const toHoje = getEndOfTodaySP();
+      const fromMes = getStartOfMonthSP();
+      const toMes = getEndOfMonthSP();
+      const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
+      const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes);
+
+      if (mHoje.numCorridas === 0) { setStatus("empty"); return; }
+
+      const { diaria: metaDiaria, mensal: metaMensalCfg } = resolveGoals(goals, vehicle);
+      const percentualMeta = metaDiaria > 0 ? (mHoje.ganhoReal / metaDiaria) * 100 : 0;
+
+      const isHoje = (r: Ride) => {
+        if (r.data_corrida) {
+          const ref = new Date(r.data_corrida + "T12:00:00");
+          return ref >= fromHoje && ref <= toHoje;
+        }
+        return false;
+      };
+      const ridesHoje = rides.filter(isHoje);
+      const ticketMedio = ridesHoje.length > 0 ? mHoje.ganhoBruto / ridesHoje.length : 0;
+      const nBoas = ridesHoje.filter((r) => r.classificacao === "BOA" || r.classificacao === "boa").length;
+      const nMedias = ridesHoje.filter((r) => r.classificacao === "MEDIA" || r.classificacao === "media").length;
+      const nRuins = ridesHoje.filter((r) => r.classificacao === "RUIM" || r.classificacao === "ruim").length;
+      const horarios = ridesHoje.map((r) => r.horario_inicio).filter((x): x is string => !!x).sort();
+      const horaInicio = horarios.length ? fmtInTZ(horarios[0]) : "—";
+      const horarios_fim = ridesHoje.map((r) => r.horario_fim || r.horario_inicio).filter((x): x is string => !!x).sort();
+      const horaFim = horarios_fim.length ? fmtInTZ(horarios_fim[horarios_fim.length - 1]) : "—";
+      const sortedByValor = [...ridesHoje].sort((a, b) => Number(b.valor_bruto || 0) - Number(a.valor_bruto || 0));
+      const melhor = sortedByValor[0], pior = sortedByValor[sortedByValor.length - 1];
+      const refRide = (r: Ride | undefined) => ({
+        valor: Number(r?.valor_bruto || 0),
+        km: Number(r?.km_passageiro || 0) + Number(r?.km_deslocamento || 0),
+        origem: r?.bairro_origem || "—",
+        destino: r?.bairro_destino || "—",
+      });
+      const nowD = nowInTZ();
+      const diaAtual = nowD.getDate();
+      const ultimoDia = endOfMonth(nowD).getDate();
+      const projMes = projecaoMensal(mMes.ganhoReal, diaAtual, ultimoDia, mMes.numCorridas) ?? mMes.ganhoReal;
+      const diasRestantes = Math.max(0, ultimoDia - diaAtual);
+      const valorFaltante = Math.max(0, metaMensalCfg - mMes.ganhoReal);
+      const valorPorDia = diasRestantes > 0 ? valorFaltante / diasRestantes : valorFaltante;
+
+      const payload = {
+        periodo: "dia" as const,
+        total_corridas: mHoje.numCorridas,
+        ganho_bruto: mHoje.ganhoBruto, custo_total: mHoje.custoTotal, ganho_real: mHoje.ganhoReal,
+        meta_diaria: metaDiaria, percentual_meta: percentualMeta,
+        km_total: mHoje.kmTotal, km_deslocamento_total: mHoje.kmDeslocamento, horas: mHoje.horasTrabalhadas,
+        r_por_hora: mHoje.horasTrabalhadas > 0 ? mHoje.ganhoReal / mHoje.horasTrabalhadas : 0,
+        r_por_km: mHoje.kmTotal > 0 ? mHoje.ganhoReal / mHoje.kmTotal : 0,
+        ticket_medio: ticketMedio, n_boas: nBoas, n_medias: nMedias, n_ruins: nRuins,
+        hora_inicio: horaInicio, hora_fim: horaFim,
+        data_hoje: nowD.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+        corrida_melhor: refRide(melhor), corrida_pior: refRide(pior),
+        projecao_mensal: projMes, meta_mensal: metaMensalCfg,
+        dias_restantes_mes: diasRestantes, valor_faltante_meta: valorFaltante,
+        valor_necessario_por_dia: valorPorDia,
+        r_km_bom: Number((goals as any)?.r_km_bom || (goals as any)?.r_por_km_minimo || 0),
+        r_km_medio: Number((goals as any)?.r_km_medio || 0),
+        ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
+      };
+
+      const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
+      setRealizadoMes(mMes.ganhoReal); setMetaMensal(metaMensalCfg); setProgressPct(pct);
+
+      const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
+      if (error) throw error;
+      if (!data || (data as any).error) throw new Error((data as any)?.error || "Erro desconhecido");
+      const result = data as Analysis;
+      const ts = Date.now();
+      setAnalysis(result); setGeneratedAt(new Date(ts)); setStatus("ok");
+      saveCache(cacheKey, { analysis: result, generatedAt: ts, meta: { progressPct: pct, realizadoMes: mMes.ganhoReal, metaMensal: metaMensalCfg } });
+    } catch (e) {
+      console.error(e); setErrorMsg((e as Error).message); setStatus("error");
+    }
+  };
+
+  return (
+    <ResultadoLayout
+      status={status} analysis={analysis} errorMsg={errorMsg}
+      onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
+      generatedAt={generatedAt} ctaLabel="Gerar Análise do Dia"
+      emptyAction={() => navigate("/dashboard/operacional")}
+      emptyText="Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+      titleResumo="📊 Resumo do Dia" titleProj="📈 Projeção do Mês" titleDica="💡 Dica Estratégica do Dia" titleRecs="🎯 Recomendações para Amanhã"
+      footerProgress={{ realizado: realizadoMes, meta: metaMensal, pct: progressPct }}
+    />
+  );
+}
+
+/* ======================== Painel SEMANA ======================== */
+function PainelSemana({ user }: { user: any }) {
+  const cacheKey = "semana";
+  const [status, setStatus] = useState<Status>("idle");
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [meta, setMeta] = useState<any>(null);
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const c = loadCache(cacheKey);
+    if (c?.analysis) {
+      setAnalysis(c.analysis); setGeneratedAt(new Date(c.generatedAt));
+      setMeta(c.meta); setStatus("ok");
+    }
+  }, []);
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
+  const lastTs = generatedAt?.getTime() || 0;
+  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
+  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+
+  const handleGenerate = async () => {
+    if (!user || rateLimited) return;
+    setStatus("loading"); setErrorMsg("");
+    try {
+      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+        supabase.from("rides").select("*").eq("user_id", user.id),
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      const rides = (ridesRes.data || []) as Ride[];
+      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
+      const goals = (goalsRes.data as Goals | null) ?? null;
+
+      const nowD = nowInTZ();
+      const cur = getWeekRange(nowD);
+      const prev = getPrevWeekRange(nowD);
+      const aCur = aggregateWeek(rides, vehicle, cur.from, cur.to);
+      const aPrev = aggregateWeek(rides, vehicle, prev.from, prev.to);
+      if (aCur.total_corridas === 0) { setStatus("empty"); return; }
+
+      const { semanal: metaSemanal } = resolveGoals(goals, vehicle);
+      const pct = metaSemanal > 0 ? (aCur.ganho_real / metaSemanal) * 100 : 0;
+
+      const payload = {
+        periodo: "semana" as const,
+        rotulo_periodo: aCur.rotulo,
+        total_corridas: aCur.total_corridas,
+        ganho_bruto: aCur.ganho_bruto, ganho_real: aCur.ganho_real,
+        r_por_hora: aCur.r_por_hora, r_por_km: aCur.r_por_km,
+        km_total: aCur.km_total, horas: aCur.horas,
+        meta_semanal: metaSemanal, percentual_meta: pct,
+        melhor_dia: aCur.melhor_dia, pior_dia: aCur.pior_dia,
+        hora_pico: aCur.hora_pico, rkm_hora_pico: aCur.rkm_hora_pico,
+        semana_anterior: {
+          corridas: aPrev.total_corridas, ganho_real: aPrev.ganho_real,
+          r_por_hora: aPrev.r_por_hora, r_por_km: aPrev.r_por_km,
+        },
+        projecao_semanal: aCur.projecao_semanal,
+        r_km_bom: Number((goals as any)?.r_km_bom || 0),
+        r_km_medio: Number((goals as any)?.r_km_medio || 0),
+      };
+
+      const newMeta = { aCur, aPrev, metaSemanal, pct };
+      setMeta(newMeta);
+
+      const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const result = data as Analysis;
+      const ts = Date.now();
+      setAnalysis(result); setGeneratedAt(new Date(ts)); setStatus("ok");
+      saveCache(cacheKey, { analysis: result, generatedAt: ts, meta: newMeta });
+    } catch (e) {
+      console.error(e); setErrorMsg((e as Error).message); setStatus("error");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {meta && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Análise da Semana — {meta.aCur.rotulo}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Mini label="Corridas" value={String(meta.aCur.total_corridas)} />
+            <Mini label="Ganho real" value={fmtBRL(meta.aCur.ganho_real)} />
+            <Mini label="R$/hora" value={fmtBRL(meta.aCur.r_por_hora)} />
+            <Mini label="R$/km" value={fmtBRL(meta.aCur.r_por_km)} />
+            <Mini label="% meta" value={`${meta.pct.toFixed(0)}%`} />
+          </CardContent>
+        </Card>
+      )}
+
+      {meta && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Esta semana vs. semana passada</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Compare label="Corridas" cur={meta.aCur.total_corridas} prev={meta.aPrev.total_corridas} />
+            <Compare label="Ganho real" cur={meta.aCur.ganho_real} prev={meta.aPrev.ganho_real} money />
+            <Compare label="R$/hora" cur={meta.aCur.r_por_hora} prev={meta.aPrev.r_por_hora} money />
+            <Compare label="R$/km" cur={meta.aCur.r_por_km} prev={meta.aPrev.r_por_km} money />
+          </CardContent>
+        </Card>
+      )}
+
+      <ResultadoLayout
+        status={status} analysis={analysis} errorMsg={errorMsg}
+        onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
+        generatedAt={generatedAt} ctaLabel="Gerar Análise da Semana"
+        emptyText="Sem corridas nesta semana ainda. Registre algumas corridas para liberar a análise."
+        titleResumo="📊 Resumo da Semana" titleProj="📈 Projeção Semanal" titleDica="💡 Dica para Próxima Semana" titleRecs="🎯 Recomendações para a Próxima Semana"
+      />
+    </div>
+  );
+}
+
+/* ======================== Painel MES ======================== */
+function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
+  const cacheKey = `mes_${mesYYYYMM}`;
+  const [status, setStatus] = useState<Status>("idle");
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [meta, setMeta] = useState<any>(null);
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    setAnalysis(null); setGeneratedAt(null); setMeta(null); setStatus("idle");
+    const c = loadCache(cacheKey);
+    if (c?.analysis) { setAnalysis(c.analysis); setGeneratedAt(new Date(c.generatedAt)); setMeta(c.meta); setStatus("ok"); }
+  }, [cacheKey]);
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
+  const lastTs = generatedAt?.getTime() || 0;
+  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
+  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+
+  const handleGenerate = async () => {
+    if (!user || rateLimited) return;
+    setStatus("loading"); setErrorMsg("");
+    try {
+      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+        supabase.from("rides").select("*").eq("user_id", user.id),
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      const rides = (ridesRes.data || []) as Ride[];
+      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
+      const goals = (goalsRes.data as Goals | null) ?? null;
+
+      const refDate = new Date(mesYYYYMM + "-15T12:00:00");
+      const cur = getMonthRange(refDate);
+      const prev = getPrevMonthRange(refDate);
+      const aCur = aggregateMonth(rides, vehicle, cur.from, cur.to);
+      const aPrev = aggregateMonth(rides, vehicle, prev.from, prev.to);
+      if (aCur.total_corridas === 0) { setStatus("empty"); return; }
+
+      const { mensal: metaMensal } = resolveGoals(goals, vehicle);
+      const pct = metaMensal > 0 ? (aCur.ganho_real / metaMensal) * 100 : 0;
+
+      const payload = {
+        periodo: "mes" as const,
+        rotulo_periodo: aCur.rotulo,
+        total_corridas: aCur.total_corridas,
+        ganho_bruto: aCur.ganho_bruto, ganho_real: aCur.ganho_real,
+        r_por_hora: aCur.r_por_hora, r_por_km: aCur.r_por_km,
+        percentual_meta: pct, meta_mensal: metaMensal,
+        dias_trabalhados: aCur.dias_trabalhados,
+        top3_dias: aCur.top3_dias.map((t) => ({ rotulo: t.rotulo, valor: t.valor })),
+        hora_pico: aCur.hora_pico, melhor_dia_semana: aCur.melhor_dia_semana,
+        km_total: aCur.km_total, km_vazio_total: aCur.km_vazio_total,
+        ganho_perdido_deslocamentos_longos: aCur.ganho_perdido_deslocamentos_longos,
+        mes_anterior: {
+          corridas: aPrev.total_corridas, ganho_real: aPrev.ganho_real,
+          r_por_hora: aPrev.r_por_hora, r_por_km: aPrev.r_por_km,
+          dias_trabalhados: aPrev.dias_trabalhados,
+        },
+        r_km_bom: Number((goals as any)?.r_km_bom || 0),
+        r_km_medio: Number((goals as any)?.r_km_medio || 0),
+      };
+
+      const newMeta = { aCur, aPrev, metaMensal, pct };
+      setMeta(newMeta);
+
+      const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const result = data as Analysis;
+      const ts = Date.now();
+      setAnalysis(result); setGeneratedAt(new Date(ts)); setStatus("ok");
+      saveCache(cacheKey, { analysis: result, generatedAt: ts, meta: newMeta });
+    } catch (e) {
+      console.error(e); setErrorMsg((e as Error).message); setStatus("error");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {meta && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Análise do Mês — {meta.aCur.rotulo}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Mini label="Corridas" value={String(meta.aCur.total_corridas)} />
+            <Mini label="Ganho bruto" value={fmtBRL(meta.aCur.ganho_bruto)} />
+            <Mini label="Ganho real" value={fmtBRL(meta.aCur.ganho_real)} />
+            <Mini label="R$/hora" value={fmtBRL(meta.aCur.r_por_hora)} />
+            <Mini label="% meta" value={`${meta.pct.toFixed(0)}%`} />
+          </CardContent>
+        </Card>
+      )}
+
+      {meta && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Evolução diária do ganho real</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={meta.aCur.serie_diaria}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} formatter={(v: number) => fmtBRL(v)} />
+                    <Line type="monotone" dataKey="ganho_real" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Ganho real médio por dia da semana</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={meta.aCur.serie_dia_semana}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="dia" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} formatter={(v: number) => fmtBRL(v)} />
+                    <Bar dataKey="ganho_real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {meta && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Mês atual vs. mês anterior</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Compare label="Ganho real" cur={meta.aCur.ganho_real} prev={meta.aPrev.ganho_real} money />
+            <Compare label="Corridas" cur={meta.aCur.total_corridas} prev={meta.aPrev.total_corridas} />
+            <Compare label="R$/hora" cur={meta.aCur.r_por_hora} prev={meta.aPrev.r_por_hora} money />
+            <Compare label="R$/km" cur={meta.aCur.r_por_km} prev={meta.aPrev.r_por_km} money />
+            <Compare label="Dias trab." cur={meta.aCur.dias_trabalhados} prev={meta.aPrev.dias_trabalhados} />
+          </CardContent>
+        </Card>
+      )}
+
+      <ResultadoLayout
+        status={status} analysis={analysis} errorMsg={errorMsg}
+        onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
+        generatedAt={generatedAt} ctaLabel="Gerar Análise do Mês"
+        emptyText="Sem corridas neste mês. Selecione outro mês ou registre corridas."
+        titleResumo="📊 Resumo do Mês" titleProj="📈 Próximo Mês" titleDica="💡 Estratégia de Longo Prazo" titleRecs="🎯 Insights do Mês"
+      />
+    </div>
+  );
+}
+
+/* ======================== Subcomponentes ======================== */
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-center">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-base font-bold sm:text-lg">{value}</p>
+    </div>
+  );
+}
+
+function Compare({ label, cur, prev, money }: { label: string; cur: number; prev: number; money?: boolean }) {
+  const diff = cur - prev;
+  const pct = prev !== 0 ? (diff / Math.abs(prev)) * 100 : 0;
+  const up = diff > 0;
+  const color = diff === 0 ? "text-muted-foreground" : up ? "text-success" : "text-destructive";
+  const fmt = (n: number) => money ? fmtBRL(n) : (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-base font-bold sm:text-lg">{fmt(cur)}</p>
+      <p className={cn("mt-0.5 text-xs", color)}>
+        {diff === 0 ? "—" : `${up ? "▲" : "▼"} ${Math.abs(pct).toFixed(0)}%`}
+        <span className="ml-1 text-muted-foreground">vs {fmt(prev)}</span>
+      </p>
+    </div>
+  );
+}
+
+function ResultadoLayout(props: {
+  status: Status;
+  analysis: Analysis | null;
+  errorMsg: string;
+  onGenerate: () => void;
+  rateLimited: boolean;
+  minutesLeft: number;
+  generatedAt: Date | null;
+  ctaLabel: string;
+  emptyText: string;
+  emptyAction?: () => void;
+  titleResumo: string;
+  titleProj: string;
+  titleDica: string;
+  titleRecs: string;
+  footerProgress?: { realizado: number; meta: number; pct: number };
+}) {
+  const { status, analysis, errorMsg, onGenerate, rateLimited, minutesLeft, generatedAt, ctaLabel, emptyText, emptyAction, titleResumo, titleProj, titleDica, titleRecs, footerProgress } = props;
+  return (
+    <div className="space-y-5">
+      {status !== "ok" && (
+        <div className="flex flex-col items-center gap-2">
+          <Button
+            size="lg"
+            onClick={onGenerate}
+            disabled={status === "loading" || rateLimited}
+            className={cn(
+              "group relative overflow-hidden px-8 py-6 text-base font-semibold text-white shadow-lg transition-all hover:scale-[1.02]",
+              rateLimited && "opacity-60 grayscale",
+            )}
+            style={
+              rateLimited
+                ? { background: "hsl(var(--muted))" }
+                : { background: "linear-gradient(135deg, hsl(270 80% 50%), hsl(180 80% 45%))" }
+            }
+          >
+            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            <Sparkles className="mr-2 h-5 w-5" />
+            {status === "loading"
+              ? "Analisando..."
+              : rateLimited
+              ? `Disponível em ${minutesLeft} min`
+              : ctaLabel}
+          </Button>
+        </div>
+      )}
+
+      {status === "loading" && (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <div className="flex gap-2">
+              <span className="h-3 w-3 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+              <span className="h-3 w-3 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+              <span className="h-3 w-3 animate-bounce rounded-full bg-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground">Analisando suas corridas com IA...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {status === "empty" && (
+        <Card className="border-orange-500/40 bg-orange-500/5">
+          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+            <AlertTriangle className="h-10 w-10 text-orange-500" />
+            <p className="text-sm text-muted-foreground">{emptyText}</p>
+            {emptyAction && <Button onClick={emptyAction}>Registrar Corrida</Button>}
+          </CardContent>
+        </Card>
+      )}
+
+      {status === "error" && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+            <div>
+              <p className="font-medium">Não foi possível gerar a análise no momento.</p>
+              {errorMsg && <p className="mt-2 text-xs text-muted-foreground/70">{errorMsg}</p>}
+            </div>
+            <Button onClick={onGenerate} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {status === "ok" && analysis && (
+        <div className="space-y-5">
+          <div className="rounded-xl p-[2px] [background:linear-gradient(135deg,hsl(270_80%_55%),hsl(180_80%_50%),hsl(270_80%_55%))] [background-size:200%_200%] animate-[shimmer_4s_linear_infinite]">
+            <Card className="rounded-[10px] bg-card/95">
+              <CardHeader><CardTitle className="text-lg">{titleResumo}</CardTitle></CardHeader>
+              <CardContent className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
+                {analysis.resumo_dia || "—"}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle className="text-lg">{titleRecs}</CardTitle></CardHeader>
+            <CardContent>
+              <RecomendacoesGrid raw={analysis.recomendacoes} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-lg">{titleProj}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {footerProgress && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Realizado: <strong className="text-foreground">{fmtBRL(footerProgress.realizado)}</strong></span>
+                    <span className="text-muted-foreground">Meta: <strong className="text-foreground">{fmtBRL(footerProgress.meta)}</strong></span>
+                  </div>
+                  <Progress value={footerProgress.pct} className="h-3" />
+                </>
+              )}
+              <p className="whitespace-pre-line pt-2 text-sm leading-relaxed">{analysis.projecao_mes || "—"}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-amber-500/40 bg-amber-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Lightbulb className="h-5 w-5 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                {titleDica}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.dica_estrategica || "—"}</p>
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
+            <Badge variant="secondary" className="gap-1.5">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              ✨ Gerado por Drive IA
+            </Badge>
+            {generatedAt && (
+              <span className="text-xs text-muted-foreground">
+                Gerado em {generatedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col items-center gap-2 pt-2">
+            <Button variant="outline" onClick={onGenerate} disabled={rateLimited}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RecomendacoesGrid({ raw }: { raw: string }) {
-  // Extrai cada bloco a partir dos emojis
   const grab = (emoji: string) => {
     const re = new RegExp(`${emoji}([^\\n🕐📍✅⚠️]*(?:\\n(?!🕐|📍|✅|⚠️)[^\\n]*)*)`, "u");
     const m = raw.match(re);
     return m ? m[1].replace(/^[\s:.-]*/, "").trim() : "";
   };
-
   const items = [
-    { icon: <Clock className="h-4 w-4" />, emoji: "🕐", title: "Melhores Horários", text: grab("🕐") },
-    { icon: <MapPin className="h-4 w-4" />, emoji: "📍", title: "Regiões a Priorizar", text: grab("📍") },
+    { icon: <Clock className="h-4 w-4" />, emoji: "🕐", title: "Horários", text: grab("🕐") },
+    { icon: <MapPin className="h-4 w-4" />, emoji: "📍", title: "Padrão / Região", text: grab("📍") },
     { icon: <Check className="h-4 w-4 text-emerald-500" />, emoji: "✅", title: "Priorize", text: grab("✅") },
     { icon: <AlertTriangle className="h-4 w-4 text-orange-500" />, emoji: "⚠️", title: "Evite", text: grab("⚠️") },
   ];
-
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {items.map((it) => (
         <div key={it.emoji} className="rounded-lg border border-border/60 bg-muted/30 p-3">
           <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            {it.icon}
-            <span>{it.title}</span>
+            {it.icon}<span>{it.title}</span>
           </div>
           <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
             {it.text || "—"}
