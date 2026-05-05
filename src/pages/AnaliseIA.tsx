@@ -357,12 +357,13 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
   const [now, setNow] = useState<number>(Date.now());
 
   useEffect(() => {
+    setStatus("idle"); setAnalysis(null); setGeneratedAt(null); setMeta(null);
     const c = loadCache(cacheKey);
     if (c?.analysis) {
       setAnalysis(c.analysis); setGeneratedAt(new Date(c.generatedAt));
       setMeta(c.meta); setStatus("ok");
     }
-  }, []);
+  }, [cacheKey]);
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
   const lastTs = generatedAt?.getTime() || 0;
   const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
@@ -381,9 +382,9 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
 
-      const nowD = nowInTZ();
-      const cur = getWeekRange(nowD);
-      const prev = getPrevWeekRange(nowD);
+      const refDate = new Date(weekStartISO + "T12:00:00");
+      const cur = getWeekRange(refDate);
+      const prev = getPrevWeekRange(refDate);
       const aCur = aggregateWeek(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateWeek(rides, vehicle, prev.from, prev.to);
       if (aCur.total_corridas === 0) { setStatus("empty"); return; }
