@@ -330,13 +330,16 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
     }
   };
 
+  const isHojeReal = format(selectedDay, "yyyy-MM-dd") === format(nowInTZ(), "yyyy-MM-dd");
   return (
     <ResultadoLayout
       status={status} analysis={analysis} errorMsg={errorMsg}
       onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
-      generatedAt={generatedAt} ctaLabel="Gerar Análise do Dia"
-      emptyAction={() => navigate("/dashboard/operacional")}
-      emptyText="Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+      generatedAt={generatedAt} ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
+      emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
+      emptyText={isHojeReal
+        ? "Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+        : "Nenhuma corrida registrada neste dia."}
       titleResumo="📊 Resumo do Dia" titleProj="📈 Projeção do Mês" titleDica="💡 Dica Estratégica do Dia" titleRecs="🎯 Recomendações para Amanhã"
       footerProgress={{ realizado: realizadoMes, meta: metaMensal, pct: progressPct }}
     />
@@ -344,8 +347,8 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
 }
 
 /* ======================== Painel SEMANA ======================== */
-function PainelSemana({ user }: { user: any }) {
-  const cacheKey = "semana";
+function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string }) {
+  const cacheKey = `semana_${weekStartISO}`;
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
