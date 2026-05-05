@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.seed-demo]
 verify_jwt = false
+
+[functions.seed-demo2]
+verify_jwt = false
