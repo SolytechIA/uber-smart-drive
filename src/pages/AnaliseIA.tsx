@@ -251,8 +251,8 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
 
-      const fromHoje = getStartOfTodaySP();
-      const toHoje = getEndOfTodaySP();
+      const fromHoje = startOfDay(selectedDay);
+      const toHoje = endOfDay(selectedDay);
       const fromMes = getStartOfMonthSP();
       const toMes = getEndOfMonthSP();
       const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
