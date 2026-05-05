@@ -415,7 +415,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ...calcContextoSemana(rides, cur.from, cur.to),
-        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals),
+        analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, cur.from, cur.to),
       };
 
       const newMeta = { aCur, aPrev, metaSemanal, pct };
