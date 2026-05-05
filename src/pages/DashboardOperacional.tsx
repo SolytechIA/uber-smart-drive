@@ -6,7 +6,7 @@ import {
   Car,
   Clock,
   Eye,
-  Loader2,
+  
   Pencil,
   Plus,
   Route,
