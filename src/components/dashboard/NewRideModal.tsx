@@ -220,6 +220,14 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
       return;
     }
 
+    if (classificacao === "BOA") {
+      toast.success("🏆 Ótima corrida! Acima da sua meta de R$/km.", {
+        className: "bg-emerald-500/15 border-emerald-500/30",
+      });
+    } else {
+      toast.success("✅ Corrida registrada com sucesso!");
+    }
+
     setResultado(classificacao);
     setTimeout(() => {
       onSaved();

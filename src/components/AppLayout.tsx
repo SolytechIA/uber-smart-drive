@@ -15,6 +15,8 @@ import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { TrialBanner } from "./TrialBanner";
+import { OnlineIndicator } from "./OnlineIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlanStatus } from "@/hooks/usePlanStatus";
 import { cn } from "@/lib/utils";
@@ -50,6 +52,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      <TrialBanner />
+      <OnlineIndicator />
       {/* Desktop Sidebar */}
       <aside
         className={cn(

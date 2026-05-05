@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.sync-rides]
 verify_jwt = false
+
+[functions.seed-demo]
+verify_jwt = false

@@ -11,7 +11,8 @@ interface RideRef {
   destino: string;
 }
 
-interface Payload {
+interface PayloadDia {
+  periodo?: "dia";
   total_corridas: number;
   ganho_bruto: number;
   custo_total: number;
@@ -37,16 +38,73 @@ interface Payload {
   dias_restantes_mes: number;
   valor_faltante_meta: number;
   valor_necessario_por_dia: number;
-  // Metas configuradas pelo motorista
   r_km_bom?: number;
   r_km_medio?: number;
   ticket_minimo?: number;
 }
 
+interface PayloadSemana {
+  periodo: "semana";
+  rotulo_periodo: string; // ex: "28/04 a 04/05"
+  total_corridas: number;
+  ganho_bruto: number;
+  ganho_real: number;
+  r_por_hora: number;
+  r_por_km: number;
+  km_total: number;
+  horas: number;
+  meta_semanal: number;
+  percentual_meta: number;
+  melhor_dia: { rotulo: string; valor: number };
+  pior_dia: { rotulo: string; valor: number };
+  hora_pico: string; // ex: "18h-20h"
+  rkm_hora_pico: number;
+  // comparativo
+  semana_anterior: {
+    corridas: number;
+    ganho_real: number;
+    r_por_hora: number;
+    r_por_km: number;
+  };
+  projecao_semanal: number;
+  r_km_bom?: number;
+  r_km_medio?: number;
+}
+
+interface PayloadMes {
+  periodo: "mes";
+  rotulo_periodo: string; // "Abril 2026"
+  total_corridas: number;
+  ganho_bruto: number;
+  ganho_real: number;
+  r_por_hora: number;
+  r_por_km: number;
+  percentual_meta: number;
+  meta_mensal: number;
+  dias_trabalhados: number;
+  top3_dias: Array<{ rotulo: string; valor: number }>;
+  hora_pico: string;
+  melhor_dia_semana: string; // ex: "Sexta"
+  km_total: number;
+  km_vazio_total: number;
+  ganho_perdido_deslocamentos_longos: number;
+  mes_anterior: {
+    corridas: number;
+    ganho_real: number;
+    r_por_hora: number;
+    r_por_km: number;
+    dias_trabalhados: number;
+  };
+  r_km_bom?: number;
+  r_km_medio?: number;
+}
+
+type Payload = PayloadDia | PayloadSemana | PayloadMes;
+
 const fmt = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function buildPrompt(d: Payload): string {
+function buildPromptDia(d: PayloadDia): string {
   const rkmBom = Number(d.r_km_bom || 0);
   const rkmMedio = Number(d.r_km_medio || 0);
   const ticketMin = Number(d.ticket_minimo || 0);
@@ -84,6 +142,86 @@ Apenas números e projeção — não repetir análise do dia. 1 parágrafo com 
 1 dica NOVA não mencionada nas seções anteriores, específica e aplicável amanhã.
 
 Máximo 380 palavras totais. Linguagem direta e motivadora.`;
+}
+
+function buildPromptSemana(d: PayloadSemana): string {
+  return `Você é um analista de renda para motoristas Uber. Análise SEMANAL.
+
+DADOS DA SEMANA (${d.rotulo_periodo}):
+- Corridas: ${d.total_corridas} | Ganho real: R$ ${fmt(d.ganho_real)} | Ganho bruto: R$ ${fmt(d.ganho_bruto)}
+- R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Horas: ${fmt(d.horas)}h | Km: ${fmt(d.km_total)}
+- Meta semanal: R$ ${fmt(d.meta_semanal)} (${fmt(d.percentual_meta)}%)
+- Melhor dia: ${d.melhor_dia.rotulo} (R$ ${fmt(d.melhor_dia.valor)}) | Pior dia: ${d.pior_dia.rotulo} (R$ ${fmt(d.pior_dia.valor)})
+- Horário mais rentável: ${d.hora_pico} (R$ ${fmt(d.rkm_hora_pico)}/km real)
+- Projeção se mantiver ritmo: R$ ${fmt(d.projecao_semanal)}
+
+SEMANA ANTERIOR (comparativo):
+- Corridas: ${d.semana_anterior.corridas} | Ganho real: R$ ${fmt(d.semana_anterior.ganho_real)} | R$/h: R$ ${fmt(d.semana_anterior.r_por_hora)} | R$/km: R$ ${fmt(d.semana_anterior.r_por_km)}
+
+Gere 4 seções distintas (NÃO repita entre elas):
+
+## RESUMO DO DIA
+Resumo NARRATIVO da semana (2 parágrafos). Comece com "Nesta semana você realizou ${d.total_corridas} corridas com ganho real de R$ ${fmt(d.ganho_real)}." Cite o melhor dia, o horário pico e um padrão observado nos dados. Compare com a semana anterior (cresceu/caiu em qual métrica). Termine com insight motivacional.
+
+## RECOMENDAÇÕES PARA AMANHÃ
+Exatamente 4 itens para a PRÓXIMA SEMANA:
+🕐 [horários específicos a priorizar — baseado em ${d.hora_pico}]
+📍 [padrão de dia da semana a replicar — baseado em ${d.melhor_dia.rotulo}]
+✅ [padrão a manter — baseado no que funcionou]
+⚠️ [comportamento a evitar — baseado no pior dia ou métrica caída]
+
+## PROJEÇÃO DO MÊS
+1 parágrafo: projeção semanal R$ ${fmt(d.projecao_semanal)} e ação concreta. Não repita análise da semana.
+
+## DICA ESTRATÉGICA
+1 dica nova específica para próxima semana.
+
+Máximo 380 palavras. Linguagem direta.`;
+}
+
+function buildPromptMes(d: PayloadMes): string {
+  const top3 = d.top3_dias.map((t) => `${t.rotulo} (R$ ${fmt(t.valor)})`).join(", ");
+  return `Você é um analista de renda para motoristas Uber. Análise MENSAL profunda.
+
+DADOS DO MÊS (${d.rotulo_periodo}):
+- Dias trabalhados: ${d.dias_trabalhados} | Corridas: ${d.total_corridas}
+- Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
+- Meta mensal: R$ ${fmt(d.meta_mensal)} (${fmt(d.percentual_meta)}%)
+- R$/hora médio: R$ ${fmt(d.r_por_hora)} | R$/km médio: R$ ${fmt(d.r_por_km)}
+- Km total: ${fmt(d.km_total)} (vazio: ${fmt(d.km_vazio_total)})
+- Top 3 melhores dias: ${top3}
+- Horário mais lucrativo: ${d.hora_pico}
+- Dia da semana mais rentável: ${d.melhor_dia_semana}
+- Estimativa de ganho perdido em deslocamentos longos (>5km): R$ ${fmt(d.ganho_perdido_deslocamentos_longos)}
+
+MÊS ANTERIOR (comparativo):
+- Corridas: ${d.mes_anterior.corridas} | Ganho real: R$ ${fmt(d.mes_anterior.ganho_real)} | R$/h: R$ ${fmt(d.mes_anterior.r_por_hora)} | R$/km: R$ ${fmt(d.mes_anterior.r_por_km)} | Dias trab.: ${d.mes_anterior.dias_trabalhados}
+
+Gere 4 seções distintas (NÃO repita entre elas):
+
+## RESUMO DO DIA
+Análise NARRATIVA profunda do mês (2-3 parágrafos). Comece com "Em ${d.rotulo_periodo} você trabalhou ${d.dias_trabalhados} dias realizando ${d.total_corridas} corridas com ganho real total de R$ ${fmt(d.ganho_real)}, representando ${fmt(d.percentual_meta)}% da sua meta mensal." Cite os top 3 dias, o horário lucrativo, o dia da semana mais rentável e o impacto dos deslocamentos longos. Compare com mês anterior.
+
+## RECOMENDAÇÕES PARA AMANHÃ
+4 insights mensais (Descoberta do mês / Ponto de melhoria / Meta para próximo mês / Padrão a replicar):
+🕐 Descoberta do mês — algo concreto descoberto nos dados
+📍 Ponto de melhoria — ação concreta
+✅ Meta sugerida para o próximo mês — baseada na progressão
+⚠️ Padrão a evitar — algo que reduziu seu ganho
+
+## PROJEÇÃO DO MÊS
+1 parágrafo curto: o que esperar do próximo mês mantendo padrão atual + 1 ajuste recomendado.
+
+## DICA ESTRATÉGICA
+1 dica estratégica de longo prazo (não repetir o que já foi dito).
+
+Máximo 450 palavras. Linguagem direta e analítica.`;
+}
+
+function buildPrompt(p: Payload): string {
+  if ((p as any).periodo === "semana") return buildPromptSemana(p as PayloadSemana);
+  if ((p as any).periodo === "mes") return buildPromptMes(p as PayloadMes);
+  return buildPromptDia(p as PayloadDia);
 }
 
 function splitSections(text: string) {
@@ -134,7 +272,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
         temperature: 0.7,
-        max_tokens: 700,
+        max_tokens: 900,
         messages: [{ role: "user", content: prompt }],
       }),
     });
