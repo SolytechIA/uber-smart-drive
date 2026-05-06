@@ -202,8 +202,8 @@ function AbaDiario({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehicl
   const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to), [rides, vehicle, from, to]);
   const dayRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
 
-  const rPorHora = m.horasTrabalhadas > 0 ? m.ganhoReal / m.horasTrabalhadas : 0;
-  const rPorKm = m.kmTotal > 0 ? m.ganhoReal / m.kmTotal : 0;
+  const rPorHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
+  const rPorKm = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
 
   const counts = useMemo(() => {
     const out = { BOA: 0, MEDIA: 0, RUIM: 0 } as Record<string, number>;
