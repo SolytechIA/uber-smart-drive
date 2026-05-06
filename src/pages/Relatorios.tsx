@@ -921,8 +921,8 @@ function AbaAcumulado({ rides, vehicle, goals, loading }: { rides: Ride[]; vehic
 
   const m = useMemo(() => calcPeriodMetrics(rides, vehicle, fromAll, toAll), [rides, vehicle, fromAll, toAll]);
   const ticket = m.numCorridas > 0 ? m.ganhoBruto / m.numCorridas : 0;
-  const rHora = m.horasTrabalhadas > 0 ? m.ganhoReal / m.horasTrabalhadas : 0;
-  const rKm = m.kmTotal > 0 ? m.ganhoReal / m.kmTotal : 0;
+  const rHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
+  const rKm = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
 
   // Recordes
   const ridesByDay = useMemo(() => {
