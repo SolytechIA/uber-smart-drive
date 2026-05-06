@@ -202,8 +202,8 @@ function AbaDiario({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehicl
   const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to), [rides, vehicle, from, to]);
   const dayRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
 
-  const rPorHora = m.horasTrabalhadas > 0 ? m.ganhoReal / m.horasTrabalhadas : 0;
-  const rPorKm = m.kmTotal > 0 ? m.ganhoReal / m.kmTotal : 0;
+  const rPorHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
+  const rPorKm = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
 
   const counts = useMemo(() => {
     const out = { BOA: 0, MEDIA: 0, RUIM: 0 } as Record<string, number>;
@@ -440,7 +440,7 @@ function AbaSemanal({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehic
       const dEnd = endOfDay(day);
       const dm = calcPeriodMetrics(rides, vehicle, dStart, dEnd);
       const ticket = dm.numCorridas > 0 ? dm.ganhoBruto / dm.numCorridas : 0;
-      const rHora = dm.horasTrabalhadas > 0 ? dm.ganhoReal / dm.horasTrabalhadas : 0;
+      const rHora = dm.horasTrabalhadas > 0 ? dm.ganhoBruto / dm.horasTrabalhadas : 0;
       return {
         date: day,
         label: format(day, "dd/MM (EEE)", { locale: ptBR }),
@@ -488,12 +488,25 @@ function AbaSemanal({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehic
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Ganho real semana" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
-        <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
-        <ResumoCard label="Corridas" value={String(m.numCorridas)} />
-        <ResumoCard label="Média diária" value={fmtBRL(mediaDiariaGanho)} />
-      </div>
+      {(() => {
+        const rH = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
+        const rK = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
+        const wkRides = filterRidesInRange(rides, from, to);
+        const boas = wkRides.filter((r) => (r.classificacao || "").toUpperCase() === "BOA").length;
+        const pctBoas = wkRides.length > 0 ? (boas / wkRides.length) * 100 : 0;
+        return (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <ResumoCard label="Ganho bruto" value={fmtBRL(m.ganhoBruto)} />
+            <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
+            <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+            <ResumoCard label="Corridas" value={String(m.numCorridas)} />
+            <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+            <ResumoCard label="R$/hora" value={fmtBRL(rH)} />
+            <ResumoCard label="R$/km" value={fmtBRL(rK)} />
+            <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
+          </div>
+        );
+      })()}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -740,12 +753,25 @@ function AbaMensal({ rides, vehicle, goals, loading }: { rides: Ride[]; vehicle:
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
-        <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
-        <ResumoCard label="Corridas" value={String(m.numCorridas)} />
-        <ResumoCard label="Horas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
-      </div>
+      {(() => {
+        const rH = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
+        const rK = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
+        const mRides = filterRidesInRange(rides, from, to);
+        const boas = mRides.filter((r) => (r.classificacao || "").toUpperCase() === "BOA").length;
+        const pctBoas = mRides.length > 0 ? (boas / mRides.length) * 100 : 0;
+        return (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <ResumoCard label="Ganho bruto" value={fmtBRL(m.ganhoBruto)} />
+            <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
+            <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+            <ResumoCard label="Corridas" value={String(m.numCorridas)} />
+            <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+            <ResumoCard label="R$/hora" value={fmtBRL(rH)} />
+            <ResumoCard label="R$/km" value={fmtBRL(rK)} />
+            <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
+          </div>
+        );
+      })()}
 
       <Card>
         <CardHeader>
@@ -921,8 +947,8 @@ function AbaAcumulado({ rides, vehicle, goals, loading }: { rides: Ride[]; vehic
 
   const m = useMemo(() => calcPeriodMetrics(rides, vehicle, fromAll, toAll), [rides, vehicle, fromAll, toAll]);
   const ticket = m.numCorridas > 0 ? m.ganhoBruto / m.numCorridas : 0;
-  const rHora = m.horasTrabalhadas > 0 ? m.ganhoReal / m.horasTrabalhadas : 0;
-  const rKm = m.kmTotal > 0 ? m.ganhoReal / m.kmTotal : 0;
+  const rHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
+  const rKm = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
 
   // Recordes
   const ridesByDay = useMemo(() => {
@@ -1034,16 +1060,16 @@ function AbaAcumulado({ rides, vehicle, goals, loading }: { rides: Ride[]; vehic
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Total corridas" value={String(m.numCorridas)} />
+        <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
+        <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
         <ResumoCard label="Total km" value={`${fmtNumber(m.kmTotal, 1)} km`} />
         <ResumoCard label="Total horas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
-        <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
         <ResumoCard label="Ticket médio" value={fmtBRL(ticket)} />
         <ResumoCard label="R$/hora histórico" value={fmtBRL(rHora)} />
         <ResumoCard label="R$/km histórico" value={fmtBRL(rKm)} />
+        <ResumoCard label="Total corridas" value={String(m.numCorridas)} />
       </div>
 
       {/* Recordes */}
@@ -1137,7 +1163,7 @@ function AbaAcumulado({ rides, vehicle, goals, loading }: { rides: Ride[]; vehic
             </TableHeader>
             <TableBody>
               {monthlySeries.map((s) => {
-                const rh = s.horas > 0 ? s.ganhoReal / s.horas : 0;
+                const rh = s.horas > 0 ? s.ganhoBruto / s.horas : 0;
                 const metaPct = metas.mensal > 0 ? (s.ganhoReal / metas.mensal) * 100 : null;
                 return (
                   <TableRow key={s.label}>

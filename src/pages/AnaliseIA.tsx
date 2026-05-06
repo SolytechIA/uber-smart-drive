@@ -64,6 +64,18 @@ function saveCache(key: string, state: CachedState) {
   try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state)); } catch { /* noop */ }
 }
 
+async function getNomeMotorista(user: any): Promise<string> {
+  try {
+    const { data } = await supabase.from("users").select("nome").eq("id", user.id).maybeSingle();
+    const dbNome = (data as any)?.nome?.trim();
+    if (dbNome) return dbNome.split(" ")[0];
+  } catch { /* noop */ }
+  const meta = user?.user_metadata?.full_name || user?.user_metadata?.nome;
+  if (meta) return String(meta).split(" ")[0];
+  if (user?.email) return String(user.email).split("@")[0];
+  return "";
+}
+
 export default function AnaliseIA() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -268,14 +280,14 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         cur: {
           corridas: mCur.numCorridas,
           ganho_real: mCur.ganhoReal,
-          r_por_hora: mCur.horasTrabalhadas > 0 ? mCur.ganhoReal / mCur.horasTrabalhadas : 0,
-          r_por_km: mCur.kmTotal > 0 ? mCur.ganhoReal / mCur.kmTotal : 0,
+          r_por_hora: mCur.horasTrabalhadas > 0 ? mCur.ganhoBruto / mCur.horasTrabalhadas : 0,
+          r_por_km: mCur.kmTotal > 0 ? mCur.ganhoBruto / mCur.kmTotal : 0,
         },
         prev: {
           corridas: mPrev.numCorridas,
           ganho_real: mPrev.ganhoReal,
-          r_por_hora: mPrev.horasTrabalhadas > 0 ? mPrev.ganhoReal / mPrev.horasTrabalhadas : 0,
-          r_por_km: mPrev.kmTotal > 0 ? mPrev.ganhoReal / mPrev.kmTotal : 0,
+          r_por_hora: mPrev.horasTrabalhadas > 0 ? mPrev.ganhoBruto / mPrev.horasTrabalhadas : 0,
+          r_por_km: mPrev.kmTotal > 0 ? mPrev.ganhoBruto / mPrev.kmTotal : 0,
         },
         pct,
         hasPrev: mPrev.numCorridas > 0,
@@ -356,8 +368,8 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         ganho_bruto: mHoje.ganhoBruto, custo_total: mHoje.custoTotal, ganho_real: mHoje.ganhoReal,
         meta_diaria: metaDiaria, percentual_meta: percentualMeta,
         km_total: mHoje.kmTotal, km_deslocamento_total: mHoje.kmDeslocamento, horas: mHoje.horasTrabalhadas,
-        r_por_hora: mHoje.horasTrabalhadas > 0 ? mHoje.ganhoReal / mHoje.horasTrabalhadas : 0,
-        r_por_km: mHoje.kmTotal > 0 ? mHoje.ganhoReal / mHoje.kmTotal : 0,
+        r_por_hora: mHoje.horasTrabalhadas > 0 ? mHoje.ganhoBruto / mHoje.horasTrabalhadas : 0,
+        r_por_km: mHoje.kmTotal > 0 ? mHoje.ganhoBruto / mHoje.kmTotal : 0,
         ticket_medio: ticketMedio, n_boas: nBoas, n_medias: nMedias, n_ruins: nRuins,
         hora_inicio: horaInicio, hora_fim: horaFim,
         data_hoje: nowD.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
@@ -370,6 +382,7 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
         ...calcContextoDia(rides, selectedDay),
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
+        nome_motorista: await getNomeMotorista(user),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
@@ -498,6 +511,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ...calcContextoSemana(rides, cur.from, cur.to),
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, cur.from, cur.to),
+        nome_motorista: await getNomeMotorista(user),
       };
 
       const newMeta = { aCur, aPrev, metaSemanal, pct };
@@ -619,6 +633,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ...calcContextoMes(rides, cur.from, cur.to),
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, cur.from, cur.to),
+        nome_motorista: await getNomeMotorista(user),
       };
 
       const newMeta = { aCur, aPrev, metaMensal, pct };

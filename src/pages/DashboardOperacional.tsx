@@ -12,6 +12,7 @@ import {
   Route,
   Trash2,
   TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
@@ -191,7 +192,8 @@ export default function DashboardOperacional() {
     const horas = minutos / 60;
     const boas = rides.filter((r) => r.classificacao === "BOA").length;
     const pctBoas = total > 0 ? (boas / total) * 100 : 0;
-    return { total, km, horas, pctBoas };
+    const ganhoBruto = rides.reduce((sum, r) => sum + (Number(r.valor_bruto) || 0), 0);
+    return { total, km, horas, pctBoas, ganhoBruto };
   }, [rides]);
 
   const variacao = stats.total - yesterdayCount;
@@ -224,7 +226,12 @@ export default function DashboardOperacional() {
         </div>
 
         {/* Cards de resumo */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+          <SummaryCard
+            icon={DollarSign}
+            label={isToday ? "Bruto hoje" : "Bruto no dia"}
+            value={fmtBRL(stats.ganhoBruto)}
+          />
           <SummaryCard
             icon={Car}
             label={isToday ? "Corridas hoje" : "Corridas no dia"}
