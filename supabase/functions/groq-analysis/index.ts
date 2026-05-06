@@ -31,6 +31,7 @@ interface ContextoBase {
   periodo_atual?: string;
   dias_com_corridas?: number;
   analise_personalizada?: AnalisePersonalizada;
+  nome_motorista?: string;
 }
 
 interface PayloadDia extends ContextoBase {
@@ -130,36 +131,37 @@ const fmt = (n: number) =>
 
 // ─── SYSTEM PROMPT ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Você é o Drive IA — copiloto financeiro de motoristas Uber no Brasil.
+const SYSTEM_PROMPT = `Você é o Drive IA — o copiloto financeiro de motoristas de aplicativo no Brasil.
 
-Sua única função é revelar o que o motorista não consegue ver sozinho. Ele passou o dia inteiro dirigindo e já sabe quanto ganhou, quantas corridas fez e em qual horário trabalhou. Se você repetir isso, você não vale nada para ele.
+PROPÓSITO REAL:
+O motorista passou horas no volante hoje. Ele já sabe quanto ganhou. O que ele não sabe — e o que vai fazer ele abrir o app toda noite antes de dormir — é o que VOCÊ vai revelar sobre o dia dele. Sua análise precisa ser a coisa mais interessante que ele vai ler hoje. Não um relatório. Uma descoberta.
 
-O que ele não sabe — e você precisa descobrir nos dados:
-→ Por que esse dia foi financeiramente diferente dos outros? Qual fator específico explica o resultado?
-→ Existe algum padrão silencioso nos dados que está custando dinheiro sem ele perceber?
-→ Há alguma combinação de horário + região + tipo de corrida que está gerando resultado desproporcional?
-→ O que o número que ele acha bom pode estar escondendo de ruim? E o que o número ruim pode estar escondendo de bom?
-→ Se ele repetir exatamente o mesmo comportamento de hoje amanhã, ganhará mais ou menos? Por quê?
+Pense assim: se o motorista fechar a análise pensando "nossa, não tinha percebido isso", você acertou. Se ele fechar pensando "já sabia disso", você falhou.
 
 IDENTIDADE E TOM:
-Você é analítico como um gestor financeiro, direto como um amigo que entende de números e empático como alguém que já ficou parado no trânsito às 23h esperando uma corrida que não vinha. Não escreva relatório — escreva como alguém que realmente analisou os dados e tem algo relevante a dizer.
+Você é direto como um amigo que entende de número, curioso como um analista que adora achar padrão escondido, e fala como gente — não como sistema corporativo. Use o nome do motorista naturalmente, não em todo parágrafo, mas onde soar genuíno. Sem formalidade excessiva. Sem "prezado motorista". Sem relatório.
 
-ANTI-PADRÕES ABSOLUTOS — se você escrever qualquer uma das frases abaixo, o motorista vai cancelar a assinatura:
-"é importante reconhecer", "é fundamental manter", "é motivador", "é crucial", "com esses dados em mente", "você está no caminho certo", "com dedicação", "cada dia é uma oportunidade", "esforço foi significativo", "base sólida para crescimento", "ajustar estratégias conforme necessário", "monitorar constantemente", "otimizar o uso do tempo", "maximizar seus ganhos", "é notável", "demonstra eficiência".
+Fale como alguém que olhou os dados e encontrou algo que vale contar.
 
-REGRAS DE QUALIDADE:
-— Cada seção deve revelar uma descoberta diferente. Se duas seções comunicam a mesma coisa com palavras diferentes, você falhou.
-— Nunca use o dado bruto como insight. "Você fez 26 corridas" não é análise. "Das 26 corridas, as 4 feitas acima de R$ 2,00/km responderam por 31% do ganho do dia" é análise.
-— Quando mencionar valores em R$, horários ou locais, use EXCLUSIVAMENTE os dados fornecidos.
-— A análise comportamental (🔴🟡🟢) usa os valores exatos fornecidos — nunca invente ou arredonde.
-— Nunca sugira apps concorrentes, delivery ou mudança de profissão.
-— Nunca mencione "meta" como pressão negativa — trate como bússola, não como cobrança.
+ANTI-PADRÕES ABSOLUTOS — proibido usar qualquer uma dessas expressões:
+"é importante reconhecer", "é fundamental", "é motivador", "é crucial", "com esses dados em mente", "você está no caminho certo", "com dedicação", "cada dia é uma oportunidade", "esforço foi significativo", "base sólida", "ajustar estratégias conforme necessário", "monitorar constantemente", "otimizar o uso do tempo", "maximizar seus ganhos", "é notável", "demonstra eficiência", "desempenho razoável", "desempenho consistente", "bom sinal", "isso sugere que", "é recomendável", "poderia ter sido evitado", "isso pode ser alcançado", "é necessário aumentar".
 
-FORMATO DE SAÍDA — use exatamente estes 4 cabeçalhos, nesta ordem:
-## RESUMO DO DIA
-## RECOMENDAÇÕES PARA AMANHÃ
-## PROJEÇÃO DO MÊS
-## DICA ESTRATÉGICA`;
+REGRAS DE QUALIDADE — sem exceção:
+— Nunca use dado bruto como insight. "Você fez 20 corridas" não é análise. "Das 20 corridas, as 9 classificadas como BOA responderam por X% do ganho" é análise.
+— Cada seção deve revelar algo diferente. Se duas seções dizem a mesma coisa com palavras diferentes, você repetiu.
+— Os valores em R$, horários e locais devem vir EXCLUSIVAMENTE dos dados fornecidos. Nunca invente ou estime sem base.
+— A análise comportamental (🔴🟡🟢) deve usar os valores exatos do payload — nunca arredondar, nunca inventar.
+— Nunca sugira apps concorrentes, delivery ou troca de profissão.
+— "Meta" é bússola, não cobrança. Nunca use como pressão negativa.
+
+O QUE O MOTORISTA NÃO VÊ — é isso que você precisa encontrar:
+→ Por que esse dia foi financeiramente diferente dos outros? O que especificamente explica o resultado?
+→ Existe um padrão silencioso custando dinheiro sem ele perceber?
+→ Alguma combinação de horário + região + tipo de corrida está gerando resultado desproporcional?
+→ O que o número bom está escondendo de ruim? O que o número ruim está escondendo de bom?
+→ Se ele repetir exatamente o mesmo comportamento amanhã, vai ganhar mais ou menos? Por quê?
+
+FORMATO DE SAÍDA — use exatamente os 4 cabeçalhos que o prompt de cada período indicar. Nunca invente cabeçalhos diferentes dos fornecidos no prompt.`;
 
 // ─── CONTEXTO TEMPORAL ───────────────────────────────────────────────────────
 
@@ -222,11 +224,12 @@ Use passado para ${periodo_ref}. Na seção PROJEÇÃO DO MÊS, o acumulado é a
 function blocoAnalisePersonalizada(ap?: AnalisePersonalizada): string {
   if (!ap) return "";
   return `
-ANÁLISE COMPORTAMENTAL CALCULADA — na seção DICA ESTRATÉGICA, use EXATAMENTE estes valores (nunca invente outros):
-🔴 ${ap.eliminar.titulo}: ${ap.eliminar.descricao} → impacto financeiro: R$ ${fmt(ap.eliminar.impacto_rs)}
-🟡 ${ap.manter.titulo}: ${ap.manter.descricao} → ganho extra identificado: R$ ${fmt(ap.manter.impacto_rs)}
-🟢 ${ap.melhorar.titulo}: ${ap.melhorar.descricao} → potencial de ganho: R$ ${fmt(ap.melhorar.impacto_rs)}
-Instrução: reescreva cada ponto como uma descoberta surpreendente, NÃO como lista de instrução. O motorista deve sentir que a IA encontrou algo que ele não veria sozinho. Use os valores em R$ como prova, não como título.`;
+DADOS COMPORTAMENTAIS CALCULADOS — use na seção DICA ESTRATÉGICA:
+Comportamento a eliminar: "${ap.eliminar.titulo}" — ${ap.eliminar.descricao} — impacto nos dados: R$ ${fmt(ap.eliminar.impacto_rs)}
+Comportamento que está funcionando: "${ap.manter.titulo}" — ${ap.manter.descricao} — diferença identificada: R$ ${fmt(ap.manter.impacto_rs)}
+Oportunidade não aproveitada: "${ap.melhorar.titulo}" — ${ap.melhorar.descricao} — potencial calculado: R$ ${fmt(ap.melhorar.impacto_rs)}
+
+INSTRUÇÃO PARA OS 3 BLOCOS: NÃO escreva como lista de tarefas ou instruções. Escreva cada um como uma descoberta — algo que o motorista não percebeu e que os dados revelam. O valor em R$ é a evidência, não o título. A frase deve fazer o motorista pensar "caramba, não tinha notado isso".`;
 }
 
 // ─── PROMPTS ─────────────────────────────────────────────────────────────────
@@ -244,7 +247,10 @@ function buildPromptDia(d: PayloadDia): string {
     d.periodo_atual || d.data_hoje
   );
 
+  const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
+
   return `${ctx}
+NOME DO MOTORISTA: ${nomeMotorista} — use o nome naturalmente na análise, onde soar genuíno. Não em toda frase.
 
 DADOS BRUTOS DO DIA — ${d.data_hoje}:
 Corridas: ${d.total_corridas} (BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: ${d.n_ruins})
@@ -275,22 +281,23 @@ Perguntas que devem guiar sua análise (responda as que os dados permitirem):
 Escreva 2 parágrafos densos de análise. Cada frase deve conter uma descoberta, não uma descrição.
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-Quatro recomendações — cada uma deve ser uma conclusão dos dados de HOJE, não um conselho genérico. Se a recomendação fizer sentido para qualquer motorista em qualquer dia, ela está errada. Deve fazer sentido APENAS para quem viveu exatamente este dia:
-🕐 [descoberta sobre horário — baseada em como o R$/hora ou R$/km variou dentro da janela ${d.hora_inicio}→${d.hora_fim}]
-📍 [descoberta sobre origem/destino — a corrida ${d.corrida_melhor.origem}→${d.corrida_melhor.destino} de R$ ${fmt(d.corrida_melhor.valor)} revela o quê sobre onde estar amanhã?]
-✅ [o que, nos dados de hoje, indica um comportamento que gerou retorno acima da média e deve ser repetido]
-⚠️ [o que, nos dados de hoje, indica um vazamento silencioso de dinheiro — com o valor estimado do impacto]
+Quatro recomendações concretas para amanhã — cada uma precisa ser uma conclusão direta dos dados de HOJE.
+Se fizer sentido para qualquer motorista em qualquer dia, está errada.
+Deve fazer sentido APENAS para quem viveu exatamente este dia.
+Use os dados: janela ${d.hora_inicio}→${d.hora_fim}, melhor corrida ${d.corrida_melhor.origem}→${d.corrida_melhor.destino} de R$ ${fmt(d.corrida_melhor.valor)}, proporção BOA/MÉDIA/RUIM ${d.n_boas}/${d.n_medias}/${d.n_ruins}, km vazio ${pctVazio}%.
 
 ## PROJEÇÃO DO MÊS
-Não repita a projeção que o motorista já vê na tela. Responda: dado o que hoje revelou sobre o comportamento dele, a projeção de R$ ${fmt(d.projecao_mensal)} é otimista, realista ou conservadora? O que precisaria ser diferente para os R$ ${fmt(d.valor_necessario_por_dia)}/dia restantes serem alcançáveis — e isso é consistente com o que ele demonstrou hoje? Seja honesto sem ser alarmista.
+Não repita a projeção R$ ${fmt(d.projecao_mensal)} que o motorista já vê na tela.
+Dado o que hoje revelou sobre o comportamento dele, essa projeção é otimista, realista ou conservadora?
+O que precisaria mudar nos próximos ${d.dias_restantes_mes} dias para os R$ ${fmt(d.valor_necessario_por_dia)}/dia serem alcançáveis — e o que ele demonstrou hoje indica que isso é possível?
+Seja honesto, sem drama.
 
 ## DICA ESTRATÉGICA
-Um insight que o motorista definitivamente não chegaria sozinho olhando para os números. Pode ser uma relação entre dois dados que parecem não ter conexão, um padrão que só aparece quando você cruza km vazio com horário, ou uma implicação financeira que ele não calculou.
+Um insight que o motorista definitivamente não chegaria sozinho. 
+Pode ser uma relação entre dois dados que parecem não ter conexão, um padrão no cruzamento de km vazio com horário, ou uma implicação financeira que ele não calculou. 
+Seja específico — use os números do dia como evidência.
 
-Em seguida, a análise comportamental — escreva como descobertas, não como lista de tarefas:
-🔴 [reescreva como uma descoberta surpreendente sobre o custo oculto, com R$ ${fmt(d.analise_personalizada?.eliminar.impacto_rs ?? 0)} como evidência]
-🟡 [reescreva como uma descoberta sobre o que está funcionando melhor do que parece, com R$ ${fmt(d.analise_personalizada?.manter.impacto_rs ?? 0)} como prova]
-🟢 [reescreva como uma oportunidade escondida nos dados, com R$ ${fmt(d.analise_personalizada?.melhorar.impacto_rs ?? 0)} como potencial]
+${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 Última linha — "Ação para amanhã:" seguida de UMA ação hiper-específica que só faz sentido após ler esta análise.`;
 }
@@ -308,8 +315,10 @@ function buildPromptSemana(d: PayloadSemana): string {
     d.periodo_atual || "esta semana",
     d.dias_com_corridas || 0
   );
+  const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
 
   return `${ctx}
+NOME DO MOTORISTA: ${nomeMotorista} — use o nome naturalmente na análise, onde soar genuíno. Não em toda frase.
 
 DADOS BRUTOS DA SEMANA — ${d.rotulo_periodo}:
 Corridas: ${d.total_corridas} | Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
@@ -327,34 +336,24 @@ ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 MISSÃO: O motorista já viu os cards com os números desta semana. Ele sabe que fez ${d.total_corridas} corridas e ganhou R$ ${fmt(d.ganho_real)}. O que ele ainda NÃO sabe — e você precisa encontrar nos dados?
 
-## RESUMO DO DIA
-Não liste o que aconteceu. Explique o que os dados revelam sobre COMO a semana foi construída.
+## RESUMO DA SEMANA
+Não liste o que aconteceu. Explique o que os dados revelam sobre COMO esta semana foi construída. 
+O que fez o ${d.melhor_dia.rotulo} (R$ ${fmt(d.melhor_dia.valor)}) ser tão diferente do ${d.pior_dia.rotulo} (R$ ${fmt(d.pior_dia.valor)}) — diferença de R$ ${fmt(d.melhor_dia.valor - d.pior_dia.valor)}? 
+O horário ${d.hora_pico} rendeu R$ ${fmt(d.rkm_hora_pico)}/km contra uma média de R$ ${fmt(d.r_por_km)}/km — esse diferencial foi aproveitado ou desperdiçado? ${!semDadosComparativo ? `Mais ${Math.abs(difCorridas)} corridas que a semana passada geraram ${diferencaGanho >= 0 ? "mais" : "menos"} R$ ${fmt(Math.abs(diferencaGanho))} — o que isso diz sobre eficiência real?` : ""} Dois parágrafos densos. Cada frase deve ser uma análise, não uma descrição.
 
-Perguntas analíticas que devem guiar os dois parágrafos:
-— A diferença de R$ ${fmt(d.melhor_dia.valor - d.pior_dia.valor)} entre ${d.melhor_dia.rotulo} e ${d.pior_dia.rotulo} — o que explica essa variação? É estrutural (dia da semana tem mais demanda) ou comportamental (o motorista trabalhou diferente)?
-— O horário ${d.hora_pico} rendeu R$ ${fmt(d.rkm_hora_pico)}/km enquanto a média da semana foi R$ ${fmt(d.r_por_km)}/km. Isso é ${fmt(((d.rkm_hora_pico - d.r_por_km) / (d.r_por_km || 1)) * 100)}% acima — esse diferencial estava sendo aproveitado ou desperdiçado?
-${!semDadosComparativo ? `— Comparando com a semana passada: ${difCorridas >= 0 ? "mais" : "menos"} ${Math.abs(difCorridas)} corridas geraram ${diferencaGanho >= 0 ? "mais" : "menos"} R$ ${fmt(Math.abs(diferencaGanho))}. O que isso diz sobre eficiência — mais volume está gerando retorno proporcional?` : ""}
-— Se a semana toda fosse no ritmo do ${d.melhor_dia.rotulo}, qual seria o ganho projetado?
-
-Dois parágrafos densos. Cada sentença deve ser uma análise, não uma descrição.
-
-## RECOMENDAÇÕES PARA AMANHÃ
-Quatro recomendações para a próxima semana — cada uma deve ser uma conclusão direta dos dados desta semana. Genérico não serve:
-🕐 [o que o dado do horário ${d.hora_pico} (R$ ${fmt(d.rkm_hora_pico)}/km) sugere que mude na distribuição de horas da próxima semana — com estimativa de impacto em R$]
-📍 [o que o padrão do ${d.melhor_dia.rotulo} (R$ ${fmt(d.melhor_dia.valor)}) sugere sobre posicionamento — e o que fazer diferente nos dias que se parecem com ${d.pior_dia.rotulo}]
-✅ [um comportamento desta semana que os dados indicam estar gerando resultado acima do esperado — mesmo que não pareça óbvio]
-⚠️ [um padrão que os dados desta semana revelam estar consumindo eficiência — com o custo estimado em R$]
+## RECOMENDAÇÕES PARA A PRÓXIMA SEMANA
+Quatro recomendações diretas dos padrões desta semana — genérico não serve. 
+Use os dados: horário pico ${d.hora_pico} a R$ ${fmt(d.rkm_hora_pico)}/km, melhor dia ${d.melhor_dia.rotulo}, pior dia ${d.pior_dia.rotulo}, diferença entre eles R$ ${fmt(d.melhor_dia.valor - d.pior_dia.valor)}.
 
 ## PROJEÇÃO DO MÊS
-Não repita os números que o motorista já vê. Responda: no ritmo desta semana, o mês vai fechar onde? Mas mais importante: qual variável específica desta semana tem mais poder de mudar essa projeção? Se ele replicar o padrão do ${d.melhor_dia.rotulo} mais vezes nas próximas semanas, quanto isso muda o fechamento do mês? Termine com uma ação para os próximos 3 dias.
+No ritmo desta semana, onde o mês vai fechar? Qual variável específica tem mais poder de mudar essa projeção? Se o padrão do ${d.melhor_dia.rotulo} for replicado mais vezes, quanto muda o fechamento? 
+Termine com uma ação para os próximos 3 dias.
 
 ## DICA ESTRATÉGICA
-Um insight que cruza dois dados que parecem não ter relação direta — algo que só aparece quando você olha para a semana inteira e não para dias isolados.
+Um insight que só aparece quando você olha para a semana inteira — não para dias isolados. 
+Algo que cruza dois dados que parecem não ter relação direta.
 
-A análise comportamental — escreva como descobertas da semana, não instruções:
-🔴 [descoberta sobre custo oculto semanal, com R$ ${fmt(d.analise_personalizada?.eliminar.impacto_rs ?? 0)} como evidência]
-🟡 [descoberta sobre o padrão que está funcionando melhor do que o motorista percebe, com R$ ${fmt(d.analise_personalizada?.manter.impacto_rs ?? 0)}]
-🟢 [oportunidade escondida nos dados da semana, com R$ ${fmt(d.analise_personalizada?.melhorar.impacto_rs ?? 0)} de potencial]
+${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 Última linha — "Ação para esta semana:" seguida de UMA ação específica que só faz sentido após ler esta análise semanal.`;
 }
@@ -373,8 +372,10 @@ function buildPromptMes(d: PayloadMes): string {
     d.periodo_atual || "este mês",
     d.dias_com_corridas || d.dias_trabalhados
   );
+  const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
 
   return `${ctx}
+NOME DO MOTORISTA: ${nomeMotorista} — use o nome naturalmente na análise, onde soar genuíno. Não em toda frase.
 
 DADOS BRUTOS DO MÊS — ${d.rotulo_periodo}:
 Dias trabalhados: ${d.dias_trabalhados} | Corridas: ${d.total_corridas} | Média: ${fmt(d.total_corridas / (d.dias_trabalhados || 1))} corridas/dia
@@ -391,36 +392,25 @@ ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 MISSÃO: O motorista passou o mês inteiro trabalhando e já viu os totais. O que os dados deste mês revelam que ele não conseguiria descobrir sozinho? Qual é o padrão que ficou escondido no meio de 30 dias de rotina?
 
-## RESUMO DO DIA
-Não resuma o mês — interprete-o. O que os números revelam sobre como este mês foi construído?
+## RESUMO DO MÊS
+Não resuma — interprete. O que os números revelam sobre como este mês foi construído? 
+Os top 3 dias (${top3}) respondem por quanto % do ganho total? A média diária de R$ ${fmt(d.ganho_real / (d.dias_trabalhados || 1))} vs a média dos top 3 (R$ ${fmt(mediaTop3)}) — qual é o teto real deste motorista e quantos dias chegaram perto? 
+O ${d.melhor_dia_semana} como melhor dia da semana é estrutural ou comportamental? ${ehPassado ? `R$/km ${fmt(d.r_por_km)} vs mês anterior ${fmt(d.mes_anterior.r_por_km)} — eficiência melhorou ou piorou?` : `No ritmo atual de R$ ${fmt(d.r_por_hora)}/hora em ${d.dias_trabalhados} dias, onde fecha o mês?`} Dois ou três parágrafos densos.
 
-Perguntas analíticas que devem guiar os parágrafos:
-— Os top 3 dias (${top3}) respondem por quanto % do ganho total do mês? O que isso diz sobre a distribuição — o resultado dependeu de poucos dias excepcionais ou foi construído de forma consistente?
-— A média diária de R$ ${fmt(d.ganho_real / (d.dias_trabalhados || 1))} vs a média dos top 3 dias (R$ ${fmt(mediaTop3)}) — qual é o "teto real" deste motorista e quantos dias do mês chegaram perto dele?
-— O ${d.melhor_dia_semana} como melhor dia da semana — isso é estrutural (mercado tem mais demanda) ou comportamental?
-— ${ehPassado ? `Como ${d.periodo_referencia} se compara ao mês anterior em R$/km (${fmt(d.r_por_km)} vs ${fmt(d.mes_anterior.r_por_km)}) — a eficiência por km melhorou ou piorou, e o que isso indica?` : `O ritmo atual de R$ ${fmt(d.r_por_hora)}/hora em ${d.dias_trabalhados} dias — se mantido até o fim do mês, onde fechará?`}
-
-Dois ou três parágrafos densos. Cada frase deve conter uma descoberta.
-
-## RECOMENDAÇÕES PARA AMANHÃ
-Quatro insights baseados nos padrões deste mês — não valem conselhos que qualquer motorista já conhece:
-🕐 [o que o horário ${d.hora_pico} revela em comparação com o R$/km médio do mês — quantas horas foram desperdiçadas fora desse horário e qual o custo estimado?]
-📍 [o que o padrão do ${d.melhor_dia_semana} revela — é replicável nos outros dias ou depende de condições específicas? Como extrair mais desses dias?]
-✅ [o que os top 3 dias (${top3}) têm em comum que o distingue dos dias comuns — esse padrão pode ser criado intencionalmente?]
-⚠️ [os ${fmt(d.km_vazio_total)} km vazios (${pctVazio}% do total) e R$ ${fmt(d.ganho_perdido_deslocamentos_longos)} perdidos em deslocamentos longos — qual comportamento específico está gerando isso e como seria diferente na prática?]
+## INSIGHTS DO MÊS
+Quatro insights baseados nos padrões deste mês — não valem conselhos que qualquer motorista já conhece. 
+Use os dados: horário pico ${d.hora_pico}, melhor dia da semana ${d.melhor_dia_semana}, top 3 dias ${top3}, km vazio ${pctVazio}% do total, R$ ${fmt(d.ganho_perdido_deslocamentos_longos)} perdidos em deslocamentos longos.
 
 ## PROJEÇÃO DO MÊS
 ${ehPassado
-  ? `O que ${d.periodo_referencia} revelou que muda o comportamento em ${d.periodo_atual}: não conselhos genéricos, mas descobertas específicas extraídas dos dados — padrões que ficaram escondidos no mês, custos que passaram despercebidos, e oportunidades que não foram aproveitadas. Escreva como alguém que leu 30 dias de dados e encontrou 3 coisas que o motorista não viu.`
-  : `Projeção honesta: com R$ ${fmt(d.ganho_real)} em ${d.dias_trabalhados} dias (R$ ${fmt(d.ganho_real / (d.dias_trabalhados || 1))}/dia médio), o fechamento mais provável é quanto? A meta de R$ ${fmt(d.meta_mensal)} está ao alcance no ritmo atual? Qual variável específica — não esforço genérico — tem mais poder de mudar essa projeção antes do fechamento?`}
+  ? `O que ${d.periodo_referencia} revelou que muda o comportamento em ${d.periodo_atual}: descobertas específicas extraídas dos dados — padrões escondidos, custos que passaram despercebidos, oportunidades não aproveitadas. Três coisas concretas que o motorista não viu.`
+  : `Com R$ ${fmt(d.ganho_real)} em ${d.dias_trabalhados} dias (R$ ${fmt(d.ganho_real / (d.dias_trabalhados || 1))}/dia médio), o fechamento mais provável é quanto? A meta de R$ ${fmt(d.meta_mensal)} está ao alcance no ritmo atual? Qual variável específica tem mais poder de mudar essa projeção?`}
 
 ## DICA ESTRATÉGICA
-Um padrão que só aparece quando você olha para o mês inteiro — não para dias isolados. Algo que o motorista não perceberia sem cruzar dados de semanas diferentes, como a relação entre volume de corridas e eficiência por km, ou como os dias após os melhores dias tendem a performar.
+Um padrão que só aparece quando você olha o mês inteiro — não dias isolados. 
+Algo que o motorista não perceberia sem cruzar dados de semanas diferentes.
 
-A análise comportamental — como descobertas mensais, não instruções:
-🔴 [descoberta sobre custo oculto do mês, com R$ ${fmt(d.analise_personalizada?.eliminar.impacto_rs ?? 0)} como evidência concreta]
-🟡 [descoberta sobre o padrão mais rentável do mês que merece ser expandido, com R$ ${fmt(d.analise_personalizada?.manter.impacto_rs ?? 0)} como prova]
-🟢 [oportunidade identificada nos dados do mês que ficou subaproveitada, com R$ ${fmt(d.analise_personalizada?.melhorar.impacto_rs ?? 0)} de potencial]
+${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 Última linha — "Ação para amanhã:" seguida de UMA ação concreta que só faz sentido após ler esta análise mensal.`;
 }
@@ -442,10 +432,22 @@ function splitSections(text: string) {
   };
 
   const patterns: Array<[keyof typeof sections, RegExp]> = [
-    ["resumo_dia", new RegExp("##\\s*RESUMO DO DIA\\s*([\\s\\S]*?)(?=##\\s*RECOMENDA|$)", "i")],
-    ["recomendacoes", new RegExp("##\\s*RECOMENDA[\\u00C7C][\\u00D5O]ES PARA AMANH[\\u00C3A]\\s*([\\s\\S]*?)(?=##\\s*PROJE|$)", "i")],
-    ["projecao_mes", new RegExp("##\\s*PROJE[\\u00C7C][\\u00C3A]O DO M[\\u00CAE]S\\s*([\\s\\S]*?)(?=##\\s*DICA|$)", "i")],
-    ["dica_estrategica", new RegExp("##\\s*DICA ESTRAT[\\u00C9E]GICA(?:\\s+DO DIA)?\\s*([\\s\\S]*?)$", "i")],
+    ["resumo_dia", new RegExp(
+      "##\\s*RESUMO\\s+(?:DO\\s+DIA|DA\\s+SEMANA|DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*RECOMENDA|##\\s*INSIGHTS|$)",
+      "i"
+    )],
+    ["recomendacoes", new RegExp(
+      "##\\s*(?:RECOMENDA(?:ÇÕES|COES|[\\u00C7C][\\u00D5O]ES)\\s+PARA\\s+(?:AMANH[\\u00C3A]|A\\s+PR[\\u00D3O]XIMA\\s+SEMANA)|INSIGHTS\\s+DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*PROJE|##\\s*DICA|$)",
+      "i"
+    )],
+    ["projecao_mes", new RegExp(
+      "##\\s*PROJE[\\u00C7C][\\u00C3A]O\\s+DO\\s+M[\\u00CAE]S\\s*([\\s\\S]*?)(?=##\\s*DICA|$)",
+      "i"
+    )],
+    ["dica_estrategica", new RegExp(
+      "##\\s*DICA\\s+ESTRAT[\\u00C9E]GICA(?:\\s+DO\\s+DIA)?\\s*([\\s\\S]*?)$",
+      "i"
+    )],
   ];
 
   for (const [key, re] of patterns) {
@@ -483,7 +485,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
         temperature: 0.85,
-        max_tokens: 1800,
+        max_tokens: 3000,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
