@@ -165,12 +165,7 @@ FORMATO DE SAÍDA — use exatamente os 4 cabeçalhos que o prompt de cada perí
 
 // ─── CONTEXTO TEMPORAL ───────────────────────────────────────────────────────
 
-function instrucaoContextoMes(
-  ctx: string,
-  periodo_ref: string,
-  periodo_atual: string,
-  dias: number
-): string {
+function instrucaoContextoMes(ctx: string, periodo_ref: string, periodo_atual: string, dias: number): string {
   if (ctx === "mes_passado") {
     return `CONTEXTO TEMPORAL: ${periodo_ref} está COMPLETAMENTE ENCERRADO. Use apenas linguagem de passado para ele.
 O mês atual é ${periodo_atual}. Qualquer recomendação de ação futura deve referenciar ${periodo_atual} explicitamente.
@@ -191,12 +186,7 @@ Análise de fechamento: o que o mês inteiro revelou? Na seção PROJEÇÃO DO M
   return `CONTEXTO TEMPORAL: Análise do mês ${periodo_ref}.`;
 }
 
-function instrucaoContextoSemana(
-  ctx: string,
-  periodo_ref: string,
-  periodo_atual: string,
-  dias: number
-): string {
+function instrucaoContextoSemana(ctx: string, periodo_ref: string, periodo_atual: string, dias: number): string {
   if (ctx === "semana_passada") {
     return `CONTEXTO TEMPORAL: A semana ${periodo_ref} encerrou. A semana atual é ${periodo_atual}.
 Use passado para ${periodo_ref}. O que essa semana revelou que muda o comportamento a partir de hoje?`;
@@ -207,11 +197,7 @@ Use passado para ${periodo_ref}. O que essa semana revelou que muda o comportame
   return `CONTEXTO TEMPORAL: Semana em andamento — ${dias} dias. O que os dados já mostram sobre como esta semana vai fechar?`;
 }
 
-function instrucaoContextoDia(
-  ctx: string,
-  periodo_ref: string,
-  periodo_atual: string
-): string {
+function instrucaoContextoDia(ctx: string, periodo_ref: string, periodo_atual: string): string {
   if (ctx === "dia_passado") {
     return `CONTEXTO TEMPORAL: Você está analisando ${periodo_ref}, dia já encerrado. Hoje é ${periodo_atual}.
 Use passado para ${periodo_ref}. Na seção PROJEÇÃO DO MÊS, o acumulado é até ${periodo_atual}.`;
@@ -238,13 +224,11 @@ function buildPromptDia(d: PayloadDia): string {
   const rkmBom = Number(d.r_km_bom || 0);
   const rkmMedio = Number(d.r_km_medio || 0);
   const ticketMin = Number(d.ticket_minimo || 0);
-  const pctVazio = d.km_total > 0
-    ? fmt((d.km_deslocamento_total / d.km_total) * 100)
-    : "0,00";
+  const pctVazio = d.km_total > 0 ? fmt((d.km_deslocamento_total / d.km_total) * 100) : "0,00";
   const ctx = instrucaoContextoDia(
     d.contexto_temporal || "dia_atual",
     d.periodo_referencia || d.data_hoje,
-    d.periodo_atual || d.data_hoje
+    d.periodo_atual || d.data_hoje,
   );
 
   const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
@@ -305,15 +289,14 @@ ${blocoAnalisePersonalizada(d.analise_personalizada)}
 function buildPromptSemana(d: PayloadSemana): string {
   const semDadosComparativo = d.semana_anterior.corridas < 5;
   const diferencaGanho = d.ganho_real - d.semana_anterior.ganho_real;
-  const pctVariacao = d.semana_anterior.ganho_real > 0
-    ? fmt(((diferencaGanho) / d.semana_anterior.ganho_real) * 100)
-    : "N/A";
+  const pctVariacao =
+    d.semana_anterior.ganho_real > 0 ? fmt((diferencaGanho / d.semana_anterior.ganho_real) * 100) : "N/A";
   const difCorridas = d.total_corridas - d.semana_anterior.corridas;
   const ctx = instrucaoContextoSemana(
     d.contexto_temporal || "semana_atual_andamento",
     d.periodo_referencia || d.rotulo_periodo,
     d.periodo_atual || "esta semana",
-    d.dias_com_corridas || 0
+    d.dias_com_corridas || 0,
   );
   const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
 
@@ -328,10 +311,12 @@ Melhor dia: ${d.melhor_dia.rotulo} — R$ ${fmt(d.melhor_dia.valor)}
 Pior dia: ${d.pior_dia.rotulo} — R$ ${fmt(d.pior_dia.valor)}
 Diferença melhor/pior dia: R$ ${fmt(d.melhor_dia.valor - d.pior_dia.valor)}
 Horário mais rentável: ${d.hora_pico} → R$ ${fmt(d.rkm_hora_pico)}/km
-${!semDadosComparativo
-  ? `Semana anterior: ${d.semana_anterior.corridas} corridas | R$ ${fmt(d.semana_anterior.ganho_real)} real | R$/h ${fmt(d.semana_anterior.r_por_hora)} | R$/km ${fmt(d.semana_anterior.r_por_km)}
+${
+  !semDadosComparativo
+    ? `Semana anterior: ${d.semana_anterior.corridas} corridas | R$ ${fmt(d.semana_anterior.ganho_real)} real | R$/h ${fmt(d.semana_anterior.r_por_hora)} | R$/km ${fmt(d.semana_anterior.r_por_km)}
 Variação no ganho real: ${diferencaGanho >= 0 ? "+" : ""}R$ ${fmt(diferencaGanho)} (${pctVariacao}%) | Corridas a mais/menos: ${difCorridas >= 0 ? "+" : ""}${difCorridas}`
-  : "Semana anterior: dados insuficientes para comparativo."}
+    : "Semana anterior: dados insuficientes para comparativo."
+}
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 MISSÃO: O motorista já viu os cards com os números desta semana. Ele sabe que fez ${d.total_corridas} corridas e ganhou R$ ${fmt(d.ganho_real)}. O que ele ainda NÃO sabe — e você precisa encontrar nos dados?
@@ -361,16 +346,14 @@ ${blocoAnalisePersonalizada(d.analise_personalizada)}
 function buildPromptMes(d: PayloadMes): string {
   const top3 = d.top3_dias.map((t) => `${t.rotulo} (R$ ${fmt(t.valor)})`).join(", ");
   const pctVazio = fmt((d.km_vazio_total / (d.km_total || 1)) * 100);
-  const mediaTop3 = d.top3_dias.length > 0
-    ? d.top3_dias.reduce((s, t) => s + t.valor, 0) / d.top3_dias.length
-    : 0;
+  const mediaTop3 = d.top3_dias.length > 0 ? d.top3_dias.reduce((s, t) => s + t.valor, 0) / d.top3_dias.length : 0;
   const diferencaMesAnterior = d.ganho_real - d.mes_anterior.ganho_real;
   const ehPassado = d.contexto_temporal === "mes_passado";
   const ctx = instrucaoContextoMes(
     d.contexto_temporal || "mes_atual_andamento",
     d.periodo_referencia || d.rotulo_periodo,
     d.periodo_atual || "este mês",
-    d.dias_com_corridas || d.dias_trabalhados
+    d.dias_com_corridas || d.dias_trabalhados,
   );
   const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
 
@@ -402,9 +385,11 @@ Quatro insights baseados nos padrões deste mês — não valem conselhos que qu
 Use os dados: horário pico ${d.hora_pico}, melhor dia da semana ${d.melhor_dia_semana}, top 3 dias ${top3}, km vazio ${pctVazio}% do total, R$ ${fmt(d.ganho_perdido_deslocamentos_longos)} perdidos em deslocamentos longos.
 
 ## PROJEÇÃO DO MÊS
-${ehPassado
-  ? `O que ${d.periodo_referencia} revelou que muda o comportamento em ${d.periodo_atual}: descobertas específicas extraídas dos dados — padrões escondidos, custos que passaram despercebidos, oportunidades não aproveitadas. Três coisas concretas que o motorista não viu.`
-  : `Com R$ ${fmt(d.ganho_real)} em ${d.dias_trabalhados} dias (R$ ${fmt(d.ganho_real / (d.dias_trabalhados || 1))}/dia médio), o fechamento mais provável é quanto? A meta de R$ ${fmt(d.meta_mensal)} está ao alcance no ritmo atual? Qual variável específica tem mais poder de mudar essa projeção?`}
+${
+  ehPassado
+    ? `O que ${d.periodo_referencia} revelou que muda o comportamento em ${d.periodo_atual}: descobertas específicas extraídas dos dados — padrões escondidos, custos que passaram despercebidos, oportunidades não aproveitadas. Três coisas concretas que o motorista não viu.`
+    : `Com R$ ${fmt(d.ganho_real)} em ${d.dias_trabalhados} dias (R$ ${fmt(d.ganho_real / (d.dias_trabalhados || 1))}/dia médio), o fechamento mais provável é quanto? A meta de R$ ${fmt(d.meta_mensal)} está ao alcance no ritmo atual? Qual variável específica tem mais poder de mudar essa projeção?`
+}
 
 ## DICA ESTRATÉGICA
 Um padrão que só aparece quando você olha o mês inteiro — não dias isolados. 
@@ -432,22 +417,25 @@ function splitSections(text: string) {
   };
 
   const patterns: Array<[keyof typeof sections, RegExp]> = [
-    ["resumo_dia", new RegExp(
-      "##\\s*RESUMO\\s+(?:DO\\s+DIA|DA\\s+SEMANA|DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*RECOMENDA|##\\s*INSIGHTS|$)",
-      "i"
-    )],
-    ["recomendacoes", new RegExp(
-      "##\\s*(?:RECOMENDA(?:ÇÕES|COES|[\\u00C7C][\\u00D5O]ES)\\s+PARA\\s+(?:AMANH[\\u00C3A]|A\\s+PR[\\u00D3O]XIMA\\s+SEMANA)|INSIGHTS\\s+DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*PROJE|##\\s*DICA|$)",
-      "i"
-    )],
-    ["projecao_mes", new RegExp(
-      "##\\s*PROJE[\\u00C7C][\\u00C3A]O\\s+DO\\s+M[\\u00CAE]S\\s*([\\s\\S]*?)(?=##\\s*DICA|$)",
-      "i"
-    )],
-    ["dica_estrategica", new RegExp(
-      "##\\s*DICA\\s+ESTRAT[\\u00C9E]GICA(?:\\s+DO\\s+DIA)?\\s*([\\s\\S]*?)$",
-      "i"
-    )],
+    [
+      "resumo_dia",
+      new RegExp(
+        "##\\s*RESUMO\\s+(?:DO\\s+DIA|DA\\s+SEMANA|DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*RECOMENDA|##\\s*INSIGHTS|$)",
+        "i",
+      ),
+    ],
+    [
+      "recomendacoes",
+      new RegExp(
+        "##\\s*(?:RECOMENDA(?:ÇÕES|COES|[\\u00C7C][\\u00D5O]ES)\\s+PARA\\s+(?:AMANH[\\u00C3A]|A\\s+PR[\\u00D3O]XIMA\\s+SEMANA)|INSIGHTS\\s+DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*PROJE|##\\s*DICA|$)",
+        "i",
+      ),
+    ],
+    [
+      "projecao_mes",
+      new RegExp("##\\s*PROJE[\\u00C7C][\\u00C3A]O\\s+DO\\s+M[\\u00CAE]S\\s*([\\s\\S]*?)(?=##\\s*DICA|$)", "i"),
+    ],
+    ["dica_estrategica", new RegExp("##\\s*DICA\\s+ESTRAT[\\u00C9E]GICA(?:\\s+DO\\s+DIA)?\\s*([\\s\\S]*?)$", "i")],
   ];
 
   for (const [key, re] of patterns) {
@@ -467,10 +455,10 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("GROQ_API_KEY");
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "GROQ_API_KEY não configurada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "GROQ_API_KEY não configurada" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const payload = (await req.json()) as Payload;
@@ -496,10 +484,10 @@ Deno.serve(async (req) => {
     if (!groqRes.ok) {
       const errText = await groqRes.text();
       console.error("Groq error:", groqRes.status, errText);
-      return new Response(
-        JSON.stringify({ error: "Falha ao chamar Groq", details: errText }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Falha ao chamar Groq", details: errText }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await groqRes.json();
@@ -512,9 +500,9 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("groq-analysis error:", e);
-    return new Response(
-      JSON.stringify({ error: (e as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
