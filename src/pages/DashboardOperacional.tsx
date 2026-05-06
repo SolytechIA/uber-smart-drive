@@ -192,7 +192,8 @@ export default function DashboardOperacional() {
     const horas = minutos / 60;
     const boas = rides.filter((r) => r.classificacao === "BOA").length;
     const pctBoas = total > 0 ? (boas / total) * 100 : 0;
-    return { total, km, horas, pctBoas };
+    const ganhoBruto = rides.reduce((sum, r) => sum + (Number(r.valor_bruto) || 0), 0);
+    return { total, km, horas, pctBoas, ganhoBruto };
   }, [rides]);
 
   const variacao = stats.total - yesterdayCount;
