@@ -12,6 +12,7 @@ import {
   Route,
   Trash2,
   TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
