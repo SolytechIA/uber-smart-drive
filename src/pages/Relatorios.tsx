@@ -1137,7 +1137,7 @@ function AbaAcumulado({ rides, vehicle, goals, loading }: { rides: Ride[]; vehic
             </TableHeader>
             <TableBody>
               {monthlySeries.map((s) => {
-                const rh = s.horas > 0 ? s.ganhoReal / s.horas : 0;
+                const rh = s.horas > 0 ? s.ganhoBruto / s.horas : 0;
                 const metaPct = metas.mensal > 0 ? (s.ganhoReal / metas.mensal) * 100 : null;
                 return (
                   <TableRow key={s.label}>
