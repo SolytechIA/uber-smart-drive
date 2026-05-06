@@ -268,14 +268,14 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         cur: {
           corridas: mCur.numCorridas,
           ganho_real: mCur.ganhoReal,
-          r_por_hora: mCur.horasTrabalhadas > 0 ? mCur.ganhoReal / mCur.horasTrabalhadas : 0,
-          r_por_km: mCur.kmTotal > 0 ? mCur.ganhoReal / mCur.kmTotal : 0,
+          r_por_hora: mCur.horasTrabalhadas > 0 ? mCur.ganhoBruto / mCur.horasTrabalhadas : 0,
+          r_por_km: mCur.kmTotal > 0 ? mCur.ganhoBruto / mCur.kmTotal : 0,
         },
         prev: {
           corridas: mPrev.numCorridas,
           ganho_real: mPrev.ganhoReal,
-          r_por_hora: mPrev.horasTrabalhadas > 0 ? mPrev.ganhoReal / mPrev.horasTrabalhadas : 0,
-          r_por_km: mPrev.kmTotal > 0 ? mPrev.ganhoReal / mPrev.kmTotal : 0,
+          r_por_hora: mPrev.horasTrabalhadas > 0 ? mPrev.ganhoBruto / mPrev.horasTrabalhadas : 0,
+          r_por_km: mPrev.kmTotal > 0 ? mPrev.ganhoBruto / mPrev.kmTotal : 0,
         },
         pct,
         hasPrev: mPrev.numCorridas > 0,
