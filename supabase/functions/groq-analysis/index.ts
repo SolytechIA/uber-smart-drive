@@ -442,10 +442,10 @@ function splitSections(text: string) {
   };
 
   const patterns: Array<[keyof typeof sections, RegExp]> = [
-    ["resumo_dia", /##\s*RESUMO DO DIA\s*([\s\S]*?)(?=##\s*RECOMENDA|$)/i],
-    ["recomendacoes", /##\s*RECOMENDA[ÇC][ÕO]ES PARA AMANH[ÃA]\s*([\s\S]*?)(?=##\s*PROJE|$)/i],
-    ["projecao_mes", /##\s*PROJE[ÇC][ÃA]O DO M[ÊE]S\s*([\s\S]*?)(?=##\s*DICA|$)/i],
-    ["dica_estrategica", /##\s*DICA ESTRAT[ÉE]GICA(?:\s+DO DIA)?\s*([\s\S]*?)$/i],
+    ["resumo_dia", new RegExp("##\\s*RESUMO DO DIA\\s*([\\s\\S]*?)(?=##\\s*RECOMENDA|$)", "i")],
+    ["recomendacoes", new RegExp("##\\s*RECOMENDA[\\u00C7C][\\u00D5O]ES PARA AMANH[\\u00C3A]\\s*([\\s\\S]*?)(?=##\\s*PROJE|$)", "i")],
+    ["projecao_mes", new RegExp("##\\s*PROJE[\\u00C7C][\\u00C3A]O DO M[\\u00CAE]S\\s*([\\s\\S]*?)(?=##\\s*DICA|$)", "i")],
+    ["dica_estrategica", new RegExp("##\\s*DICA ESTRAT[\\u00C9E]GICA(?:\\s+DO DIA)?\\s*([\\s\\S]*?)$", "i")],
   ];
 
   for (const [key, re] of patterns) {
