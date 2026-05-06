@@ -440,7 +440,7 @@ function AbaSemanal({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehic
       const dEnd = endOfDay(day);
       const dm = calcPeriodMetrics(rides, vehicle, dStart, dEnd);
       const ticket = dm.numCorridas > 0 ? dm.ganhoBruto / dm.numCorridas : 0;
-      const rHora = dm.horasTrabalhadas > 0 ? dm.ganhoReal / dm.horasTrabalhadas : 0;
+      const rHora = dm.horasTrabalhadas > 0 ? dm.ganhoBruto / dm.horasTrabalhadas : 0;
       return {
         date: day,
         label: format(day, "dd/MM (EEE)", { locale: ptBR }),
