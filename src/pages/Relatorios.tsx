@@ -1060,16 +1060,16 @@ function AbaAcumulado({ rides, vehicle, goals, loading }: { rides: Ride[]; vehic
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Total corridas" value={String(m.numCorridas)} />
+        <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
+        <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
         <ResumoCard label="Total km" value={`${fmtNumber(m.kmTotal, 1)} km`} />
         <ResumoCard label="Total horas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
-        <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
         <ResumoCard label="Ticket médio" value={fmtBRL(ticket)} />
         <ResumoCard label="R$/hora histórico" value={fmtBRL(rHora)} />
         <ResumoCard label="R$/km histórico" value={fmtBRL(rKm)} />
+        <ResumoCard label="Total corridas" value={String(m.numCorridas)} />
       </div>
 
       {/* Recordes */}
