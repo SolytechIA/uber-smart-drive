@@ -64,6 +64,18 @@ function saveCache(key: string, state: CachedState) {
   try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state)); } catch { /* noop */ }
 }
 
+async function getNomeMotorista(user: any): Promise<string> {
+  try {
+    const { data } = await supabase.from("users").select("nome").eq("id", user.id).maybeSingle();
+    const dbNome = (data as any)?.nome?.trim();
+    if (dbNome) return dbNome.split(" ")[0];
+  } catch { /* noop */ }
+  const meta = user?.user_metadata?.full_name || user?.user_metadata?.nome;
+  if (meta) return String(meta).split(" ")[0];
+  if (user?.email) return String(user.email).split("@")[0];
+  return "";
+}
+
 export default function AnaliseIA() {
   const { user } = useAuth();
   const navigate = useNavigate();
