@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle,
-} from "lucide-react";
+import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,26 +9,42 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RTooltip,
+  CartesianGrid,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
-  calcPeriodMetrics, resolveGoals, fmtBRL, fmtInTZ, nowInTZ, projecaoMensal,
-  type Ride, type Vehicle, type Goals,
+  calcPeriodMetrics,
+  resolveGoals,
+  fmtBRL,
+  fmtInTZ,
+  nowInTZ,
+  projecaoMensal,
+  type Ride,
+  type Vehicle,
+  type Goals,
 } from "@/lib/financeiro";
-import {
-  getStartOfTodaySP, getEndOfTodaySP, getStartOfMonthSP, getEndOfMonthSP,
-} from "@/lib/dateUtils";
+import { getStartOfTodaySP, getEndOfTodaySP, getStartOfMonthSP, getEndOfMonthSP } from "@/lib/dateUtils";
 import { endOfMonth, format, subMonths, subWeeks, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  aggregateWeek, aggregateMonth, getWeekRange, getPrevWeekRange, getMonthRange, getPrevMonthRange,
+  aggregateWeek,
+  aggregateMonth,
+  getWeekRange,
+  getPrevWeekRange,
+  getMonthRange,
+  getPrevMonthRange,
 } from "@/lib/aiAggregations";
-import {
-  calcAnalisePersonalizada, calcContextoDia, calcContextoSemana, calcContextoMes,
-} from "@/lib/aiBehavioral";
+import { calcAnalisePersonalizada, calcContextoDia, calcContextoSemana, calcContextoMes } from "@/lib/aiBehavioral";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -58,10 +72,16 @@ function loadCache(key: string): CachedState | null {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 function saveCache(key: string, state: CachedState) {
-  try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state)); } catch { /* noop */ }
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state));
+  } catch {
+    /* noop */
+  }
 }
 
 async function getNomeMotorista(user: any): Promise<string> {
@@ -69,7 +89,9 @@ async function getNomeMotorista(user: any): Promise<string> {
     const { data } = await supabase.from("users").select("nome").eq("id", user.id).maybeSingle();
     const dbNome = (data as any)?.nome?.trim();
     if (dbNome) return dbNome.split(" ")[0];
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
   const meta = user?.user_metadata?.full_name || user?.user_metadata?.nome;
   if (meta) return String(meta).split(" ")[0];
   if (user?.email) return String(user.email).split("@")[0];
@@ -83,9 +105,7 @@ export default function AnaliseIA() {
   const [selectedMonth, setSelectedMonth] = useState<string>(() => format(nowInTZ(), "yyyy-MM"));
   const [selectedDay, setSelectedDay] = useState<Date>(() => nowInTZ());
   // semana selecionada: armazenada como ISO yyyy-MM-dd da segunda-feira
-  const [selectedWeek, setSelectedWeek] = useState<string>(() =>
-    format(getWeekRange(nowInTZ()).from, "yyyy-MM-dd"),
-  );
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => format(getWeekRange(nowInTZ()).from, "yyyy-MM-dd"));
 
   return (
     <AppLayout>
@@ -103,9 +123,7 @@ export default function AnaliseIA() {
               <Brain className="h-8 w-8 text-white drop-shadow-[0_0_12px_rgba(168,85,247,0.9)] md:h-9 md:w-9" />
             </div>
             <h1 className="text-2xl font-bold md:text-3xl">Análise Inteligente</h1>
-            <p className="mt-1 text-sm text-white/80">
-              Análise personalizada baseada no seu histórico
-            </p>
+            <p className="mt-1 text-sm text-white/80">Análise personalizada baseada no seu histórico</p>
           </div>
         </header>
 
@@ -173,21 +191,26 @@ function SeletorSemana({ value, onChange }: { value: string; onChange: (v: strin
       const d = subWeeks(now, i);
       const r = getWeekRange(d);
       const v = format(r.from, "yyyy-MM-dd");
-      const label = i === 0
-        ? `Esta semana (${format(r.from, "dd/MM")})`
-        : i === 1
-        ? `Semana passada (${format(r.from, "dd/MM")})`
-        : `Semana de ${format(r.from, "dd/MM")}`;
+      const label =
+        i === 0
+          ? `Esta semana (${format(r.from, "dd/MM")})`
+          : i === 1
+            ? `Semana passada (${format(r.from, "dd/MM")})`
+            : `Semana de ${format(r.from, "dd/MM")}`;
       arr.push({ v, label });
     }
     return arr;
   }, []);
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[240px]"><SelectValue /></SelectTrigger>
+      <SelectTrigger className="w-[240px]">
+        <SelectValue />
+      </SelectTrigger>
       <SelectContent>
         {opts.map((o) => (
-          <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>
+          <SelectItem key={o.v} value={o.v}>
+            {o.label}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -209,10 +232,14 @@ function SeletorMes({ value, onChange }: { value: string; onChange: (v: string) 
   }, []);
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+      <SelectTrigger className="w-[200px]">
+        <SelectValue />
+      </SelectTrigger>
       <SelectContent>
         {opts.map((o) => (
-          <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>
+          <SelectItem key={o.v} value={o.v}>
+            {o.label}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -220,7 +247,15 @@ function SeletorMes({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 /* ======================== Painel HOJE (lógica original) ======================== */
-function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: ReturnType<typeof useNavigate>; selectedDay: Date }) {
+function PainelDia({
+  user,
+  navigate,
+  selectedDay,
+}: {
+  user: any;
+  navigate: ReturnType<typeof useNavigate>;
+  selectedDay: Date;
+}) {
   const cacheKey = `dia_${format(selectedDay, "yyyy-MM-dd")}`;
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -237,17 +272,12 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
     hasPrev: boolean;
   } | null>(null);
 
+  // Reset ao trocar dia/semana/mês
   useEffect(() => {
-    setStatus("idle"); setAnalysis(null); setGeneratedAt(null); setResumo(null);
-    const c = loadCache(cacheKey);
-    if (c?.analysis) {
-      setAnalysis(c.analysis);
-      setGeneratedAt(new Date(c.generatedAt));
-      setProgressPct(c.meta?.progressPct || 0);
-      setRealizadoMes(c.meta?.realizadoMes || 0);
-      setMetaMensal(c.meta?.metaMensal || 0);
-      setStatus("ok");
-    }
+    setStatus("idle");
+    setAnalysis(null);
+    setGeneratedAt(null);
+    setResumo(null);
   }, [cacheKey]);
 
   // Carrega resumo do dia (KPIs e comparação) independentemente da IA
@@ -267,7 +297,8 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
 
       const fromCur = startOfDay(selectedDay);
       const toCur = endOfDay(selectedDay);
-      const prevDate = new Date(selectedDay); prevDate.setDate(prevDate.getDate() - 1);
+      const prevDate = new Date(selectedDay);
+      prevDate.setDate(prevDate.getDate() - 1);
       const fromPrev = startOfDay(prevDate);
       const toPrev = endOfDay(prevDate);
 
@@ -293,7 +324,9 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
         hasPrev: mPrev.numCorridas > 0,
       });
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, selectedDay]);
 
   useEffect(() => {
@@ -307,7 +340,8 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
-    setStatus("loading"); setErrorMsg("");
+    setStatus("loading");
+    setErrorMsg("");
     try {
       const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
@@ -325,7 +359,10 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
       const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes);
 
-      if (mHoje.numCorridas === 0) { setStatus("empty"); return; }
+      if (mHoje.numCorridas === 0) {
+        setStatus("empty");
+        return;
+      }
 
       const { diaria: metaDiaria, mensal: metaMensalCfg } = resolveGoals(goals, vehicle);
       const percentualMeta = metaDiaria > 0 ? (mHoje.ganhoReal / metaDiaria) * 100 : 0;
@@ -342,12 +379,19 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       const nBoas = ridesHoje.filter((r) => r.classificacao === "BOA" || r.classificacao === "boa").length;
       const nMedias = ridesHoje.filter((r) => r.classificacao === "MEDIA" || r.classificacao === "media").length;
       const nRuins = ridesHoje.filter((r) => r.classificacao === "RUIM" || r.classificacao === "ruim").length;
-      const horarios = ridesHoje.map((r) => r.horario_inicio).filter((x): x is string => !!x).sort();
+      const horarios = ridesHoje
+        .map((r) => r.horario_inicio)
+        .filter((x): x is string => !!x)
+        .sort();
       const horaInicio = horarios.length ? fmtInTZ(horarios[0]) : "—";
-      const horarios_fim = ridesHoje.map((r) => r.horario_fim || r.horario_inicio).filter((x): x is string => !!x).sort();
+      const horarios_fim = ridesHoje
+        .map((r) => r.horario_fim || r.horario_inicio)
+        .filter((x): x is string => !!x)
+        .sort();
       const horaFim = horarios_fim.length ? fmtInTZ(horarios_fim[horarios_fim.length - 1]) : "—";
       const sortedByValor = [...ridesHoje].sort((a, b) => Number(b.valor_bruto || 0) - Number(a.valor_bruto || 0));
-      const melhor = sortedByValor[0], pior = sortedByValor[sortedByValor.length - 1];
+      const melhor = sortedByValor[0],
+        pior = sortedByValor[sortedByValor.length - 1];
       const refRide = (r: Ride | undefined) => ({
         valor: Number(r?.valor_bruto || 0),
         km: Number(r?.km_passageiro || 0) + Number(r?.km_deslocamento || 0),
@@ -365,17 +409,29 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       const payload = {
         periodo: "dia" as const,
         total_corridas: mHoje.numCorridas,
-        ganho_bruto: mHoje.ganhoBruto, custo_total: mHoje.custoTotal, ganho_real: mHoje.ganhoReal,
-        meta_diaria: metaDiaria, percentual_meta: percentualMeta,
-        km_total: mHoje.kmTotal, km_deslocamento_total: mHoje.kmDeslocamento, horas: mHoje.horasTrabalhadas,
+        ganho_bruto: mHoje.ganhoBruto,
+        custo_total: mHoje.custoTotal,
+        ganho_real: mHoje.ganhoReal,
+        meta_diaria: metaDiaria,
+        percentual_meta: percentualMeta,
+        km_total: mHoje.kmTotal,
+        km_deslocamento_total: mHoje.kmDeslocamento,
+        horas: mHoje.horasTrabalhadas,
         r_por_hora: mHoje.horasTrabalhadas > 0 ? mHoje.ganhoBruto / mHoje.horasTrabalhadas : 0,
         r_por_km: mHoje.kmTotal > 0 ? mHoje.ganhoBruto / mHoje.kmTotal : 0,
-        ticket_medio: ticketMedio, n_boas: nBoas, n_medias: nMedias, n_ruins: nRuins,
-        hora_inicio: horaInicio, hora_fim: horaFim,
+        ticket_medio: ticketMedio,
+        n_boas: nBoas,
+        n_medias: nMedias,
+        n_ruins: nRuins,
+        hora_inicio: horaInicio,
+        hora_fim: horaFim,
         data_hoje: nowD.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
-        corrida_melhor: refRide(melhor), corrida_pior: refRide(pior),
-        projecao_mensal: projMes, meta_mensal: metaMensalCfg,
-        dias_restantes_mes: diasRestantes, valor_faltante_meta: valorFaltante,
+        corrida_melhor: refRide(melhor),
+        corrida_pior: refRide(pior),
+        projecao_mensal: projMes,
+        meta_mensal: metaMensalCfg,
+        dias_restantes_mes: diasRestantes,
+        valor_faltante_meta: valorFaltante,
         valor_necessario_por_dia: valorPorDia,
         r_km_bom: Number((goals as any)?.r_km_bom || (goals as any)?.r_por_km_minimo || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
@@ -386,17 +442,22 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
-      setRealizadoMes(mMes.ganhoReal); setMetaMensal(metaMensalCfg); setProgressPct(pct);
+      setRealizadoMes(mMes.ganhoReal);
+      setMetaMensal(metaMensalCfg);
+      setProgressPct(pct);
 
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if (!data || (data as any).error) throw new Error((data as any)?.error || "Erro desconhecido");
       const result = data as Analysis;
       const ts = Date.now();
-      setAnalysis(result); setGeneratedAt(new Date(ts)); setStatus("ok");
-      saveCache(cacheKey, { analysis: result, generatedAt: ts, meta: { progressPct: pct, realizadoMes: mMes.ganhoReal, metaMensal: metaMensalCfg } });
+      setAnalysis(result);
+      setGeneratedAt(new Date(ts));
+      setStatus("ok");
     } catch (e) {
-      console.error(e); setErrorMsg((e as Error).message); setStatus("error");
+      console.error(e);
+      setErrorMsg((e as Error).message);
+      setStatus("error");
     }
   };
 
@@ -407,7 +468,9 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       {resumo && resumo.cur.corridas > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Resumo do Dia — {format(selectedDay, "dd 'de' MMMM", { locale: ptBR })}</CardTitle>
+            <CardTitle className="text-base">
+              Resumo do Dia — {format(selectedDay, "dd 'de' MMMM", { locale: ptBR })}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <Mini label="Corridas" value={String(resumo.cur.corridas)} />
@@ -421,7 +484,9 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
 
       {resumo && resumo.cur.corridas > 0 && resumo.hasPrev && (
         <Card>
-          <CardHeader><CardTitle className="text-base">{rotuloDia} vs. dia anterior</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">{rotuloDia} vs. dia anterior</CardTitle>
+          </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Compare label="Corridas" cur={resumo.cur.corridas} prev={resumo.prev.corridas} />
             <Compare label="Ganho real" cur={resumo.cur.ganho_real} prev={resumo.prev.ganho_real} money />
@@ -432,14 +497,24 @@ function PainelDia({ user, navigate, selectedDay }: { user: any; navigate: Retur
       )}
 
       <ResultadoLayout
-        status={status} analysis={analysis} errorMsg={errorMsg}
-        onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
-        generatedAt={generatedAt} ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
+        status={status}
+        analysis={analysis}
+        errorMsg={errorMsg}
+        onGenerate={handleGenerate}
+        rateLimited={rateLimited}
+        minutesLeft={minutesLeft}
+        generatedAt={generatedAt}
+        ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
         emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
-        emptyText={isHojeReal
-          ? "Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
-          : "Nenhuma corrida registrada neste dia."}
-        titleResumo="📊 Resumo do Dia" titleProj="📈 Projeção do Mês" titleDica="💡 Dica Estratégica do Dia" titleRecs="🎯 Recomendações para Amanhã"
+        emptyText={
+          isHojeReal
+            ? "Nenhuma corrida registrada hoje. Registre pelo menos uma corrida para gerar sua análise personalizada."
+            : "Nenhuma corrida registrada neste dia."
+        }
+        titleResumo="📊 Resumo do Dia"
+        titleProj="📈 Projeção do Mês"
+        titleDica="💡 Dica Estratégica do Dia"
+        titleRecs="🎯 Recomendações para Amanhã"
         footerProgress={{ realizado: realizadoMes, meta: metaMensal, pct: progressPct }}
       />
     </div>
@@ -456,22 +531,25 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
   const [meta, setMeta] = useState<any>(null);
   const [now, setNow] = useState<number>(Date.now());
 
+  // Reset ao trocar dia/semana/mês
   useEffect(() => {
-    setStatus("idle"); setAnalysis(null); setGeneratedAt(null); setMeta(null);
-    const c = loadCache(cacheKey);
-    if (c?.analysis) {
-      setAnalysis(c.analysis); setGeneratedAt(new Date(c.generatedAt));
-      setMeta(c.meta); setStatus("ok");
-    }
+    setStatus("idle");
+    setAnalysis(null);
+    setGeneratedAt(null);
   }, [cacheKey]);
-  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const lastTs = generatedAt?.getTime() || 0;
   const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
   const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
-    setStatus("loading"); setErrorMsg("");
+    setStatus("loading");
+    setErrorMsg("");
     try {
       const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
@@ -487,7 +565,10 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
       const prev = getPrevWeekRange(refDate);
       const aCur = aggregateWeek(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateWeek(rides, vehicle, prev.from, prev.to);
-      if (aCur.total_corridas === 0) { setStatus("empty"); return; }
+      if (aCur.total_corridas === 0) {
+        setStatus("empty");
+        return;
+      }
 
       const { semanal: metaSemanal } = resolveGoals(goals, vehicle);
       const pct = metaSemanal > 0 ? (aCur.ganho_real / metaSemanal) * 100 : 0;
@@ -496,15 +577,23 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         periodo: "semana" as const,
         rotulo_periodo: aCur.rotulo,
         total_corridas: aCur.total_corridas,
-        ganho_bruto: aCur.ganho_bruto, ganho_real: aCur.ganho_real,
-        r_por_hora: aCur.r_por_hora, r_por_km: aCur.r_por_km,
-        km_total: aCur.km_total, horas: aCur.horas,
-        meta_semanal: metaSemanal, percentual_meta: pct,
-        melhor_dia: aCur.melhor_dia, pior_dia: aCur.pior_dia,
-        hora_pico: aCur.hora_pico, rkm_hora_pico: aCur.rkm_hora_pico,
+        ganho_bruto: aCur.ganho_bruto,
+        ganho_real: aCur.ganho_real,
+        r_por_hora: aCur.r_por_hora,
+        r_por_km: aCur.r_por_km,
+        km_total: aCur.km_total,
+        horas: aCur.horas,
+        meta_semanal: metaSemanal,
+        percentual_meta: pct,
+        melhor_dia: aCur.melhor_dia,
+        pior_dia: aCur.pior_dia,
+        hora_pico: aCur.hora_pico,
+        rkm_hora_pico: aCur.rkm_hora_pico,
         semana_anterior: {
-          corridas: aPrev.total_corridas, ganho_real: aPrev.ganho_real,
-          r_por_hora: aPrev.r_por_hora, r_por_km: aPrev.r_por_km,
+          corridas: aPrev.total_corridas,
+          ganho_real: aPrev.ganho_real,
+          r_por_hora: aPrev.r_por_hora,
+          r_por_km: aPrev.r_por_km,
         },
         projecao_semanal: aCur.projecao_semanal,
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
@@ -522,10 +611,13 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
       if ((data as any)?.error) throw new Error((data as any).error);
       const result = data as Analysis;
       const ts = Date.now();
-      setAnalysis(result); setGeneratedAt(new Date(ts)); setStatus("ok");
-      saveCache(cacheKey, { analysis: result, generatedAt: ts, meta: newMeta });
+      setAnalysis(result);
+      setGeneratedAt(new Date(ts));
+      setStatus("ok");
     } catch (e) {
-      console.error(e); setErrorMsg((e as Error).message); setStatus("error");
+      console.error(e);
+      setErrorMsg((e as Error).message);
+      setStatus("error");
     }
   };
 
@@ -548,7 +640,9 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
 
       {meta && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Esta semana vs. semana passada</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Esta semana vs. semana passada</CardTitle>
+          </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Compare label="Corridas" cur={meta.aCur.total_corridas} prev={meta.aPrev.total_corridas} />
             <Compare label="Ganho real" cur={meta.aCur.ganho_real} prev={meta.aPrev.ganho_real} money />
@@ -559,11 +653,19 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
       )}
 
       <ResultadoLayout
-        status={status} analysis={analysis} errorMsg={errorMsg}
-        onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
-        generatedAt={generatedAt} ctaLabel="Gerar Análise da Semana"
+        status={status}
+        analysis={analysis}
+        errorMsg={errorMsg}
+        onGenerate={handleGenerate}
+        rateLimited={rateLimited}
+        minutesLeft={minutesLeft}
+        generatedAt={generatedAt}
+        ctaLabel="Gerar Análise da Semana"
         emptyText="Sem corridas nesta semana ainda. Registre algumas corridas para liberar a análise."
-        titleResumo="📊 Resumo da Semana" titleProj="📈 Projeção Semanal" titleDica="💡 Dica para Próxima Semana" titleRecs="🎯 Recomendações para a Próxima Semana"
+        titleResumo="📊 Resumo da Semana"
+        titleProj="📈 Projeção Semanal"
+        titleDica="💡 Dica para Próxima Semana"
+        titleRecs="🎯 Recomendações para a Próxima Semana"
       />
     </div>
   );
@@ -579,19 +681,25 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
   const [meta, setMeta] = useState<any>(null);
   const [now, setNow] = useState<number>(Date.now());
 
+  // Reset ao trocar dia/semana/mês
   useEffect(() => {
-    setAnalysis(null); setGeneratedAt(null); setMeta(null); setStatus("idle");
-    const c = loadCache(cacheKey);
-    if (c?.analysis) { setAnalysis(c.analysis); setGeneratedAt(new Date(c.generatedAt)); setMeta(c.meta); setStatus("ok"); }
+    setStatus("idle");
+    setAnalysis(null);
+    setGeneratedAt(null);
   }, [cacheKey]);
-  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const lastTs = generatedAt?.getTime() || 0;
   const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
   const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
-    setStatus("loading"); setErrorMsg("");
+    setStatus("loading");
+    setErrorMsg("");
     try {
       const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
@@ -607,7 +715,10 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       const prev = getPrevMonthRange(refDate);
       const aCur = aggregateMonth(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateMonth(rides, vehicle, prev.from, prev.to);
-      if (aCur.total_corridas === 0) { setStatus("empty"); return; }
+      if (aCur.total_corridas === 0) {
+        setStatus("empty");
+        return;
+      }
 
       const { mensal: metaMensal } = resolveGoals(goals, vehicle);
       const pct = metaMensal > 0 ? (aCur.ganho_real / metaMensal) * 100 : 0;
@@ -616,17 +727,24 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         periodo: "mes" as const,
         rotulo_periodo: aCur.rotulo,
         total_corridas: aCur.total_corridas,
-        ganho_bruto: aCur.ganho_bruto, ganho_real: aCur.ganho_real,
-        r_por_hora: aCur.r_por_hora, r_por_km: aCur.r_por_km,
-        percentual_meta: pct, meta_mensal: metaMensal,
+        ganho_bruto: aCur.ganho_bruto,
+        ganho_real: aCur.ganho_real,
+        r_por_hora: aCur.r_por_hora,
+        r_por_km: aCur.r_por_km,
+        percentual_meta: pct,
+        meta_mensal: metaMensal,
         dias_trabalhados: aCur.dias_trabalhados,
         top3_dias: aCur.top3_dias.map((t) => ({ rotulo: t.rotulo, valor: t.valor })),
-        hora_pico: aCur.hora_pico, melhor_dia_semana: aCur.melhor_dia_semana,
-        km_total: aCur.km_total, km_vazio_total: aCur.km_vazio_total,
+        hora_pico: aCur.hora_pico,
+        melhor_dia_semana: aCur.melhor_dia_semana,
+        km_total: aCur.km_total,
+        km_vazio_total: aCur.km_vazio_total,
         ganho_perdido_deslocamentos_longos: aCur.ganho_perdido_deslocamentos_longos,
         mes_anterior: {
-          corridas: aPrev.total_corridas, ganho_real: aPrev.ganho_real,
-          r_por_hora: aPrev.r_por_hora, r_por_km: aPrev.r_por_km,
+          corridas: aPrev.total_corridas,
+          ganho_real: aPrev.ganho_real,
+          r_por_hora: aPrev.r_por_hora,
+          r_por_km: aPrev.r_por_km,
           dias_trabalhados: aPrev.dias_trabalhados,
         },
         r_km_bom: Number((goals as any)?.r_km_bom || 0),
@@ -644,10 +762,13 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       if ((data as any)?.error) throw new Error((data as any).error);
       const result = data as Analysis;
       const ts = Date.now();
-      setAnalysis(result); setGeneratedAt(new Date(ts)); setStatus("ok");
-      saveCache(cacheKey, { analysis: result, generatedAt: ts, meta: newMeta });
+      setAnalysis(result);
+      setGeneratedAt(new Date(ts));
+      setStatus("ok");
     } catch (e) {
-      console.error(e); setErrorMsg((e as Error).message); setStatus("error");
+      console.error(e);
+      setErrorMsg((e as Error).message);
+      setStatus("error");
     }
   };
 
@@ -671,7 +792,9 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       {meta && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader><CardTitle className="text-base">Evolução diária do ganho real</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Evolução diária do ganho real</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -679,8 +802,17 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} formatter={(v: number) => fmtBRL(v)} />
-                    <Line type="monotone" dataKey="ganho_real" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                    <RTooltip
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      formatter={(v: number) => fmtBRL(v)}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ganho_real"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -688,7 +820,9 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Ganho real médio por dia da semana</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Ganho real médio por dia da semana</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -696,7 +830,10 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="dia" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} formatter={(v: number) => fmtBRL(v)} />
+                    <RTooltip
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      formatter={(v: number) => fmtBRL(v)}
+                    />
                     <Bar dataKey="ganho_real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -708,7 +845,9 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
 
       {meta && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Mês atual vs. mês anterior</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Mês atual vs. mês anterior</CardTitle>
+          </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <Compare label="Ganho real" cur={meta.aCur.ganho_real} prev={meta.aPrev.ganho_real} money />
             <Compare label="Corridas" cur={meta.aCur.total_corridas} prev={meta.aPrev.total_corridas} />
@@ -720,11 +859,19 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       )}
 
       <ResultadoLayout
-        status={status} analysis={analysis} errorMsg={errorMsg}
-        onGenerate={handleGenerate} rateLimited={rateLimited} minutesLeft={minutesLeft}
-        generatedAt={generatedAt} ctaLabel="Gerar Análise do Mês"
+        status={status}
+        analysis={analysis}
+        errorMsg={errorMsg}
+        onGenerate={handleGenerate}
+        rateLimited={rateLimited}
+        minutesLeft={minutesLeft}
+        generatedAt={generatedAt}
+        ctaLabel="Gerar Análise do Mês"
         emptyText="Sem corridas neste mês. Selecione outro mês ou registre corridas."
-        titleResumo="📊 Resumo do Mês" titleProj="📈 Próximo Mês" titleDica="💡 Estratégia de Longo Prazo" titleRecs="🎯 Insights do Mês"
+        titleResumo="📊 Resumo do Mês"
+        titleProj="📈 Próximo Mês"
+        titleDica="💡 Estratégia de Longo Prazo"
+        titleRecs="🎯 Insights do Mês"
       />
     </div>
   );
@@ -745,7 +892,7 @@ function Compare({ label, cur, prev, money }: { label: string; cur: number; prev
   const pct = prev !== 0 ? (diff / Math.abs(prev)) * 100 : 0;
   const up = diff > 0;
   const color = diff === 0 ? "text-muted-foreground" : up ? "text-success" : "text-destructive";
-  const fmt = (n: number) => money ? fmtBRL(n) : (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  const fmt = (n: number) => (money ? fmtBRL(n) : Number.isInteger(n) ? String(n) : n.toFixed(1));
   return (
     <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -775,7 +922,23 @@ function ResultadoLayout(props: {
   titleRecs: string;
   footerProgress?: { realizado: number; meta: number; pct: number };
 }) {
-  const { status, analysis, errorMsg, onGenerate, rateLimited, minutesLeft, generatedAt, ctaLabel, emptyText, emptyAction, titleResumo, titleProj, titleDica, titleRecs, footerProgress } = props;
+  const {
+    status,
+    analysis,
+    errorMsg,
+    onGenerate,
+    rateLimited,
+    minutesLeft,
+    generatedAt,
+    ctaLabel,
+    emptyText,
+    emptyAction,
+    titleResumo,
+    titleProj,
+    titleDica,
+    titleRecs,
+    footerProgress,
+  } = props;
   return (
     <div className="space-y-5">
       {status !== "ok" && (
@@ -796,11 +959,7 @@ function ResultadoLayout(props: {
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
             <Sparkles className="mr-2 h-5 w-5" />
-            {status === "loading"
-              ? "Analisando..."
-              : rateLimited
-              ? `Disponível em ${minutesLeft} min`
-              : ctaLabel}
+            {status === "loading" ? "Analisando..." : rateLimited ? `Disponível em ${minutesLeft} min` : ctaLabel}
           </Button>
         </div>
       )}
@@ -847,7 +1006,9 @@ function ResultadoLayout(props: {
         <div className="space-y-5">
           <div className="rounded-xl p-[2px] [background:linear-gradient(135deg,hsl(270_80%_55%),hsl(180_80%_50%),hsl(270_80%_55%))] [background-size:200%_200%] animate-[shimmer_4s_linear_infinite]">
             <Card className="rounded-[10px] bg-card/95">
-              <CardHeader><CardTitle className="text-lg">{titleResumo}</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-lg">{titleResumo}</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
                 {analysis.resumo_dia || "—"}
               </CardContent>
@@ -855,20 +1016,28 @@ function ResultadoLayout(props: {
           </div>
 
           <Card>
-            <CardHeader><CardTitle className="text-lg">{titleRecs}</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">{titleRecs}</CardTitle>
+            </CardHeader>
             <CardContent>
               <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.recomendacoes || "—"}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-lg">{titleProj}</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">{titleProj}</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3">
               {footerProgress && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Realizado: <strong className="text-foreground">{fmtBRL(footerProgress.realizado)}</strong></span>
-                    <span className="text-muted-foreground">Meta: <strong className="text-foreground">{fmtBRL(footerProgress.meta)}</strong></span>
+                    <span className="text-muted-foreground">
+                      Realizado: <strong className="text-foreground">{fmtBRL(footerProgress.realizado)}</strong>
+                    </span>
+                    <span className="text-muted-foreground">
+                      Meta: <strong className="text-foreground">{fmtBRL(footerProgress.meta)}</strong>
+                    </span>
                   </div>
                   <Progress value={footerProgress.pct} className="h-3" />
                 </>
@@ -889,14 +1058,23 @@ function ResultadoLayout(props: {
             </CardContent>
           </Card>
 
+          {/* Aviso de análise temporária */}
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-center text-xs text-amber-700 dark:text-amber-400">
+            ⚠️ Esta análise não fica salva. Compartilhe antes de sair da tela para não perder.
+          </div>
+
           <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
             <Badge variant="secondary" className="gap-1.5">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              ✨ Gerado por Drive IA
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />✨ Gerado por Drive IA
             </Badge>
             {generatedAt && (
               <span className="text-xs text-muted-foreground">
-                Gerado em {generatedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}
+                Gerado em{" "}
+                {generatedAt.toLocaleString("pt-BR", {
+                  timeZone: "America/Sao_Paulo",
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
               </span>
             )}
           </div>
@@ -912,4 +1090,3 @@ function ResultadoLayout(props: {
     </div>
   );
 }
-
