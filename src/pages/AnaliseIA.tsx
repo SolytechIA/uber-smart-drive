@@ -78,6 +78,50 @@ async function getNomeMotorista(user: any): Promise<string> {
   return "";
 }
 
+async function fetchHistoricoAnalises(userId: string, periodo: "dia" | "semana" | "mes") {
+  try {
+    const { data } = await supabase
+      .from("analises_geradas" as any)
+      .select("data_referencia, resumo_dia, dica_estrategica, payload")
+      .eq("user_id", userId)
+      .eq("periodo", periodo)
+      .order("data_referencia", { ascending: false })
+      .limit(3);
+    return ((data as any) || []).map((h: any) => ({
+      data: h.data_referencia,
+      resumo: h.resumo_dia?.slice(0, 300),
+      dica: h.dica_estrategica?.slice(0, 200),
+      corridas: h.payload?.total_corridas,
+      ganho_real: h.payload?.ganho_real,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function saveAnalise(params: {
+  userId: string;
+  periodo: "dia" | "semana" | "mes";
+  dataRef: string;
+  payload: any;
+  result: Analysis;
+}) {
+  try {
+    await supabase.from("analises_geradas" as any).insert({
+      user_id: params.userId,
+      periodo: params.periodo,
+      data_referencia: params.dataRef,
+      payload: params.payload,
+      resumo_dia: params.result.resumo_dia,
+      recomendacoes: params.result.recomendacoes,
+      projecao_mes: params.result.projecao_mes,
+      dica_estrategica: params.result.dica_estrategica,
+    } as any);
+  } catch {
+    /* save é best-effort */
+  }
+}
+
 export default function AnaliseIA() {
   const { user } = useAuth();
   const navigate = useNavigate();
