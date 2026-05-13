@@ -103,7 +103,7 @@ export default function DashboardFinanceiro() {
   }, [user]);
 
   const range = useMemo(() => getPeriodRange(periodo, custom), [periodo, custom]);
-  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to), [rides, vehicle, range]);
+  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas), [rides, vehicle, range, jornadas]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, range.from, range.to), [rides, vehicle, range]);
   const metas = useMemo(() => resolveGoals(goals, vehicle), [goals, vehicle]);
 
