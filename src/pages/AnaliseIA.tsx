@@ -60,32 +60,9 @@ interface Analysis {
 }
 type Status = "idle" | "loading" | "ok" | "error" | "empty";
 
-const STORAGE_PREFIX = "driveIA_analise_";
 const RATE_LIMIT_MS = 60 * 60 * 1000;
 
 type Periodo = "hoje" | "semana" | "mes";
-
-interface CachedState {
-  analysis: Analysis;
-  generatedAt: number;
-  meta?: any;
-}
-
-function loadCache(key: string): CachedState | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-function saveCache(key: string, state: CachedState) {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state));
-  } catch {
-    /* noop */
-  }
-}
 
 async function getNomeMotorista(user: any): Promise<string> {
   try {
