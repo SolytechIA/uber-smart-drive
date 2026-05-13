@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      analises_geradas: {
+        Row: {
+          created_at: string
+          data_referencia: string
+          dica_estrategica: string
+          id: string
+          payload: Json
+          periodo: string
+          projecao_mes: string
+          recomendacoes: string
+          resumo_dia: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_referencia: string
+          dica_estrategica: string
+          id?: string
+          payload: Json
+          periodo: string
+          projecao_mes: string
+          recomendacoes: string
+          resumo_dia: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_referencia?: string
+          dica_estrategica?: string
+          id?: string
+          payload?: Json
+          periodo?: string
+          projecao_mes?: string
+          recomendacoes?: string
+          resumo_dia?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           horas_meta_dia: number | null
