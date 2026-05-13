@@ -1059,10 +1059,33 @@ function ResultadoLayout(props: {
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-2 pt-2">
+          <div className="flex flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
             <Button variant="outline" onClick={onGenerate} disabled={rateLimited}>
               <RefreshCw className="mr-2 h-4 w-4" />
               {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
+                if (typeof navigator !== "undefined" && (navigator as any).share) {
+                  try {
+                    await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
+                  } catch {
+                    /* usuário cancelou */
+                  }
+                } else {
+                  try {
+                    await navigator.clipboard.writeText(texto);
+                    toast.success("Análise copiada! Cole no WhatsApp ou e-mail.");
+                  } catch {
+                    toast.error("Não foi possível copiar a análise.");
+                  }
+                }
+              }}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartilhar
             </Button>
           </div>
         </div>
