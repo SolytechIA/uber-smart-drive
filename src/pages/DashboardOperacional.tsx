@@ -93,6 +93,8 @@ export default function DashboardOperacional() {
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() => nowInTZ());
+  const [jornadaMinutes, setJornadaMinutes] = useState(0);
+  const [jornadaTick, setJornadaTick] = useState(0);
 
   const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
   const todayStr = useMemo(() => getTodaySP(), []);
