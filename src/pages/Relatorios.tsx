@@ -198,12 +198,12 @@ export default function Relatorios() {
 // ABA DIÁRIO
 // ============================================================
 
-function AbaDiario({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehicle | null; loading: boolean }) {
+function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; loading: boolean }) {
   const [date, setDate] = useState<Date>(() => nowInTZ());
   const from = startOfDay(date);
   const to = endOfDay(date);
 
-  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to), [rides, vehicle, from, to]);
+  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
   const dayRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
 
   const rPorHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
