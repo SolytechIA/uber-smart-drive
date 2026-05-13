@@ -70,6 +70,36 @@ export type Database = {
           },
         ]
       }
+      jornadas: {
+        Row: {
+          created_at: string
+          data_jornada: string
+          duracao_minutos: number | null
+          fim: string | null
+          id: string
+          inicio: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_jornada: string
+          duracao_minutos?: number | null
+          fim?: string | null
+          id?: string
+          inicio: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_jornada?: string
+          duracao_minutos?: number | null
+          fim?: string | null
+          id?: string
+          inicio?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rides: {
         Row: {
           bairro_destino: string | null
