@@ -6,7 +6,9 @@ import {
   Car,
   Clock,
   Eye,
-  
+  Gauge,
+  Banknote,
+  Receipt,
   Pencil,
   Plus,
   Route,
@@ -43,7 +45,7 @@ import {
 } from "@/lib/rideClassification";
 import { cn } from "@/lib/utils";
 import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
-import { nowInTZ } from "@/lib/financeiro";
+import { nowInTZ, type Vehicle, calcCustoCombustivel, calcCustoFixoMensal, fmtNumber } from "@/lib/financeiro";
 import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
 
 interface RideRow {
@@ -87,6 +89,7 @@ export default function DashboardOperacional() {
   const [yesterdayCount, setYesterdayCount] = useState(0);
   const [params, setParams] = useState<ClassifyParams>(DEFAULT_PARAMS);
   const [nome, setNome] = useState<string>("");
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [editing, setEditing] = useState<EditingRide | null>(null);
@@ -142,13 +145,14 @@ export default function DashboardOperacional() {
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [profileRes, goalsRes, ridesRes, yRes, jornadasRes] = await Promise.all([
+    const [profileRes, goalsRes, vehicleRes, ridesRes, yRes, jornadasRes] = await Promise.all([
       supabase.from("users").select("nome").eq("id", user.id).maybeSingle(),
       supabase
         .from("goals")
         .select("valor_minimo_corrida, km_max_deslocamento, r_por_km_minimo, r_km_bom, r_km_medio")
         .eq("user_id", user.id)
         .maybeSingle(),
+      supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
       supabase
         .from("rides")
         .select(
@@ -170,6 +174,7 @@ export default function DashboardOperacional() {
     ]);
 
     setNome(profileRes.data?.nome || "");
+    setVehicle((vehicleRes.data as Vehicle) || null);
     if (goalsRes.data) {
       const g = goalsRes.data as any;
       const baseMin = Number(g.r_por_km_minimo) || DEFAULT_PARAMS.r_por_km_minimo;
@@ -208,8 +213,15 @@ export default function DashboardOperacional() {
     const boas = rides.filter((r) => r.classificacao === "BOA").length;
     const pctBoas = total > 0 ? (boas / total) * 100 : 0;
     const ganhoBruto = rides.reduce((sum, r) => sum + (Number(r.valor_bruto) || 0), 0);
-    return { total, km, horas, pctBoas, ganhoBruto, usaJornada: horasJornada > 0 };
-  }, [rides, jornadaMinutes]);
+    const rPorKm = km > 0 ? ganhoBruto / km : 0;
+    const ticketMedio = total > 0 ? ganhoBruto / total : 0;
+    const custoCombustivel = calcCustoCombustivel(km, vehicle);
+    const custoFixoMensal = calcCustoFixoMensal(vehicle);
+    const diasTrabMes = Number(vehicle?.dias_trabalhados_mes || 22);
+    const custoFixoDiario = diasTrabMes > 0 ? custoFixoMensal / diasTrabMes : 0;
+    const ganhoReal = ganhoBruto - custoCombustivel - custoFixoDiario;
+    return { total, km, horas, pctBoas, ganhoBruto, usaJornada: horasJornada > 0, rPorKm, ticketMedio, ganhoReal };
+  }, [rides, jornadaMinutes, vehicle]);
 
   const variacao = stats.total - yesterdayCount;
   const pctColor =
@@ -243,11 +255,37 @@ export default function DashboardOperacional() {
         {isToday && <JornadaTimer onChange={() => setJornadaTick((t) => t + 1)} />}
 
         {/* Cards de resumo */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-8">
           <SummaryCard
             icon={DollarSign}
             label={isToday ? "Bruto hoje" : "Bruto no dia"}
             value={fmtBRL(stats.ganhoBruto)}
+          />
+          <SummaryCard
+            icon={Gauge}
+            label={isToday ? "R$/km hoje" : "R$/km no dia"}
+            value={stats.km > 0 ? `R$ ${fmtNumber(stats.rPorKm, 2)}/km` : "—"}
+            valueClassName={
+              stats.rPorKm >= params.r_km_bom
+                ? "text-success"
+                : stats.rPorKm >= params.r_km_medio
+                ? "text-warning"
+                : "text-destructive"
+            }
+            hint={`meta: R$ ${fmtNumber(params.r_km_bom, 2)}/km`}
+          />
+          <SummaryCard
+            icon={Banknote}
+            label="Ganho real"
+            value={fmtBRL(stats.ganhoReal)}
+            valueClassName="text-success"
+            hint="líquido após custos"
+          />
+          <SummaryCard
+            icon={Receipt}
+            label="Ticket médio"
+            value={stats.total > 0 ? fmtBRL(stats.ticketMedio) : "—"}
+            hint="por corrida"
           />
           <SummaryCard
             icon={Car}
@@ -415,12 +453,14 @@ function SummaryCard({
   value,
   badge,
   valueClassName,
+  hint,
 }: {
   icon: typeof Car;
   label: string;
   value: string;
   badge?: React.ReactNode;
   valueClassName?: string;
+  hint?: string;
 }) {
   return (
     <Card className="p-4 transition-shadow hover:shadow-card">
@@ -432,6 +472,7 @@ function SummaryCard({
       </div>
       <p className="mt-3 text-xs text-muted-foreground">{label}</p>
       <p className={cn("font-display text-2xl font-bold", valueClassName)}>{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-muted-foreground/70">{hint}</p>}
     </Card>
   );
 }
