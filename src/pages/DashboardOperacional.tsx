@@ -269,7 +269,7 @@ export default function DashboardOperacional() {
           />
           <SummaryCard
             icon={Clock}
-            label="Horas ao volante"
+            label={stats.usaJornada ? "Horas no volante (tempo online)" : "Horas no volante"}
             value={`${stats.horas.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`}
           />
           <SummaryCard
