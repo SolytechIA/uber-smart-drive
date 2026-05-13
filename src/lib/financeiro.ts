@@ -59,6 +59,34 @@ export interface Goals {
   horas_meta_dia?: number | null;
 }
 
+export interface JornadaRecord {
+  id: string;
+  data_jornada: string;
+  inicio: string;
+  fim: string | null;
+  duracao_minutos: number | null;
+}
+
+/** Soma de horas de jornadas no período [from, to] (data_jornada).
+ * Para jornadas em andamento (fim=null), conta até agora. */
+export function sumJornadaHoursInRange(jornadas: JornadaRecord[], from: Date, to: Date): number {
+  const fromStr = format(from, "yyyy-MM-dd");
+  const toStr = format(to, "yyyy-MM-dd");
+  const now = Date.now();
+  let total = 0;
+  for (const j of jornadas) {
+    if (!j.data_jornada) continue;
+    if (j.data_jornada < fromStr || j.data_jornada > toStr) continue;
+    if (j.fim) {
+      total += Number(j.duracao_minutos || 0) / 60;
+    } else if (j.inicio) {
+      const ini = new Date(j.inicio).getTime();
+      if (!isNaN(ini)) total += Math.max(0, (now - ini) / (1000 * 60 * 60));
+    }
+  }
+  return total;
+}
+
 export interface Ride {
   id: string;
   data_corrida: string | null;
