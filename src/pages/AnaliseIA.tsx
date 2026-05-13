@@ -330,21 +330,28 @@ function PainelDia({
     setStatus("loading");
     setErrorMsg("");
     try {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
-        supabase.from("rides").select("*").eq("user_id", user.id),
-        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
-      ]);
-      const rides = (ridesRes.data || []) as Ride[];
-      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
-      const goals = (goalsRes.data as Goals | null) ?? null;
-
       const fromHoje = startOfDay(selectedDay);
       const toHoje = endOfDay(selectedDay);
       const fromMes = getStartOfMonthSP();
       const toMes = getEndOfMonthSP();
-      const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
-      const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes);
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
+        supabase.from("rides").select("*").eq("user_id", user.id),
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(fromMes, "yyyy-MM-dd"))
+          .lte("data_jornada", format(toMes, "yyyy-MM-dd")),
+      ]);
+      const rides = (ridesRes.data || []) as Ride[];
+      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
+      const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
+
+      const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje, jornadas);
+      const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes, jornadas);
 
       if (mHoje.numCorridas === 0) {
         setStatus("empty");
