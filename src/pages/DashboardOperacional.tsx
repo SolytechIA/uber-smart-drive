@@ -202,13 +202,14 @@ export default function DashboardOperacional() {
       (sum, r) => sum + (Number(r.km_passageiro) || 0) + (Number(r.km_deslocamento) || 0),
       0,
     );
-    const minutos = rides.reduce((sum, r) => sum + (Number(r.duracao_minutos) || 0), 0);
-    const horas = minutos / 60;
+    const horasCorridas = rides.reduce((sum, r) => sum + (Number(r.duracao_minutos) || 0), 0) / 60;
+    const horasJornada = jornadaMinutes / 60;
+    const horas = horasJornada > 0 ? horasJornada : horasCorridas;
     const boas = rides.filter((r) => r.classificacao === "BOA").length;
     const pctBoas = total > 0 ? (boas / total) * 100 : 0;
     const ganhoBruto = rides.reduce((sum, r) => sum + (Number(r.valor_bruto) || 0), 0);
-    return { total, km, horas, pctBoas, ganhoBruto };
-  }, [rides]);
+    return { total, km, horas, pctBoas, ganhoBruto, usaJornada: horasJornada > 0 };
+  }, [rides, jornadaMinutes]);
 
   const variacao = stats.total - yesterdayCount;
   const pctColor =
