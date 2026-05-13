@@ -177,16 +177,16 @@ export default function Relatorios() {
           </TabsList>
 
           <TabsContent value="diario">
-            <AbaDiario rides={rides} vehicle={vehicle} loading={loading} />
+            <AbaDiario rides={rides} vehicle={vehicle} jornadas={jornadas} loading={loading} />
           </TabsContent>
           <TabsContent value="semanal">
-            <AbaSemanal rides={rides} vehicle={vehicle} loading={loading} />
+            <AbaSemanal rides={rides} vehicle={vehicle} jornadas={jornadas} loading={loading} />
           </TabsContent>
           <TabsContent value="mensal">
-            <AbaMensal rides={rides} vehicle={vehicle} goals={goals} loading={loading} />
+            <AbaMensal rides={rides} vehicle={vehicle} jornadas={jornadas} goals={goals} loading={loading} />
           </TabsContent>
           <TabsContent value="acumulado">
-            <AbaAcumulado rides={rides} vehicle={vehicle} goals={goals} loading={loading} />
+            <AbaAcumulado rides={rides} vehicle={vehicle} jornadas={jornadas} goals={goals} loading={loading} />
           </TabsContent>
         </Tabs>
       </div>
