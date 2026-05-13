@@ -705,18 +705,25 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
     setStatus("loading");
     setErrorMsg("");
     try {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+      const refDate = new Date(mesYYYYMM + "-15T12:00:00");
+      const cur = getMonthRange(refDate);
+      const prev = getPrevMonthRange(refDate);
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(cur.from, "yyyy-MM-dd"))
+          .lte("data_jornada", format(cur.to, "yyyy-MM-dd")),
       ]);
       const rides = (ridesRes.data || []) as Ride[];
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
 
-      const refDate = new Date(mesYYYYMM + "-15T12:00:00");
-      const cur = getMonthRange(refDate);
-      const prev = getPrevMonthRange(refDate);
       const aCur = aggregateMonth(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateMonth(rides, vehicle, prev.from, prev.to);
       if (aCur.total_corridas === 0) {
@@ -726,6 +733,8 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
 
       const { mensal: metaMensal } = resolveGoals(goals, vehicle);
       const pct = metaMensal > 0 ? (aCur.ganho_real / metaMensal) * 100 : 0;
+      const horasJornada = sumJornadaHoursInRange(jornadas, cur.from, cur.to);
+      const rPorHoraFinal = horasJornada > 0 ? aCur.ganho_bruto / horasJornada : aCur.r_por_hora;
 
       const payload = {
         periodo: "mes" as const,
@@ -733,7 +742,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         total_corridas: aCur.total_corridas,
         ganho_bruto: aCur.ganho_bruto,
         ganho_real: aCur.ganho_real,
-        r_por_hora: aCur.r_por_hora,
+        r_por_hora: rPorHoraFinal,
         r_por_km: aCur.r_por_km,
         percentual_meta: pct,
         meta_mensal: metaMensal,
