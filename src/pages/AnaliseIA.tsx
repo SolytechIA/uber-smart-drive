@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle } from "lucide-react";
+import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle, Share2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
