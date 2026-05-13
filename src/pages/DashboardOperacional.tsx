@@ -255,7 +255,7 @@ export default function DashboardOperacional() {
         {isToday && <JornadaTimer onChange={() => setJornadaTick((t) => t + 1)} />}
 
         {/* Cards de resumo */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-8">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           <SummaryCard
             icon={DollarSign}
             label={isToday ? "Bruto hoje" : "Bruto no dia"}
