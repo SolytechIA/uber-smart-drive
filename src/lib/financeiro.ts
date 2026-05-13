@@ -243,7 +243,9 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
     0
   );
 
-  const horasTrabalhadas = inRange.reduce((s, r) => s + Number(r.duracao_minutos || 0) / 60, 0);
+  const horasCorridas = inRange.reduce((s, r) => s + Number(r.duracao_minutos || 0) / 60, 0);
+  const horasJornada = jornadas && jornadas.length > 0 ? sumJornadaHoursInRange(jornadas, from, to) : 0;
+  const horasTrabalhadas = horasJornada > 0 ? horasJornada : horasCorridas;
 
   const custoCombustivel = calcCustoCombustivel(kmTotal, vehicle);
 
