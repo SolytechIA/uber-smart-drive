@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle } from "lucide-react";
+import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle, Share2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,9 +30,11 @@ import {
   fmtInTZ,
   nowInTZ,
   projecaoMensal,
+  sumJornadaHoursInRange,
   type Ride,
   type Vehicle,
   type Goals,
+  type JornadaRecord,
 } from "@/lib/financeiro";
 import { getStartOfTodaySP, getEndOfTodaySP, getStartOfMonthSP, getEndOfMonthSP } from "@/lib/dateUtils";
 import { endOfMonth, format, subMonths, subWeeks, startOfDay, endOfDay } from "date-fns";
@@ -57,32 +60,9 @@ interface Analysis {
 }
 type Status = "idle" | "loading" | "ok" | "error" | "empty";
 
-const STORAGE_PREFIX = "driveIA_analise_";
 const RATE_LIMIT_MS = 60 * 60 * 1000;
 
 type Periodo = "hoje" | "semana" | "mes";
-
-interface CachedState {
-  analysis: Analysis;
-  generatedAt: number;
-  meta?: any;
-}
-
-function loadCache(key: string): CachedState | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-function saveCache(key: string, state: CachedState) {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state));
-  } catch {
-    /* noop */
-  }
-}
 
 async function getNomeMotorista(user: any): Promise<string> {
   try {
@@ -285,15 +265,22 @@ function PainelDia({
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(startOfDay(new Date(selectedDay.getTime() - 86400000)), "yyyy-MM-dd"))
+          .lte("data_jornada", format(selectedDay, "yyyy-MM-dd")),
       ]);
       if (cancelled) return;
       const rides = (ridesRes.data || []) as Ride[];
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
 
       const fromCur = startOfDay(selectedDay);
       const toCur = endOfDay(selectedDay);
@@ -302,8 +289,8 @@ function PainelDia({
       const fromPrev = startOfDay(prevDate);
       const toPrev = endOfDay(prevDate);
 
-      const mCur = calcPeriodMetrics(rides, vehicle, fromCur, toCur);
-      const mPrev = calcPeriodMetrics(rides, vehicle, fromPrev, toPrev);
+      const mCur = calcPeriodMetrics(rides, vehicle, fromCur, toCur, jornadas);
+      const mPrev = calcPeriodMetrics(rides, vehicle, fromPrev, toPrev, jornadas);
       const { diaria } = resolveGoals(goals, vehicle);
       const pct = diaria > 0 ? (mCur.ganhoReal / diaria) * 100 : 0;
 
@@ -343,21 +330,28 @@ function PainelDia({
     setStatus("loading");
     setErrorMsg("");
     try {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
-        supabase.from("rides").select("*").eq("user_id", user.id),
-        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
-      ]);
-      const rides = (ridesRes.data || []) as Ride[];
-      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
-      const goals = (goalsRes.data as Goals | null) ?? null;
-
       const fromHoje = startOfDay(selectedDay);
       const toHoje = endOfDay(selectedDay);
       const fromMes = getStartOfMonthSP();
       const toMes = getEndOfMonthSP();
-      const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje);
-      const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes);
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
+        supabase.from("rides").select("*").eq("user_id", user.id),
+        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(fromMes, "yyyy-MM-dd"))
+          .lte("data_jornada", format(toMes, "yyyy-MM-dd")),
+      ]);
+      const rides = (ridesRes.data || []) as Ride[];
+      const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
+      const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
+
+      const mHoje = calcPeriodMetrics(rides, vehicle, fromHoje, toHoje, jornadas);
+      const mMes = calcPeriodMetrics(rides, vehicle, fromMes, toMes, jornadas);
 
       if (mHoje.numCorridas === 0) {
         setStatus("empty");
@@ -551,18 +545,25 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
     setStatus("loading");
     setErrorMsg("");
     try {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+      const refDate = new Date(weekStartISO + "T12:00:00");
+      const cur = getWeekRange(refDate);
+      const prev = getPrevWeekRange(refDate);
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(cur.from, "yyyy-MM-dd"))
+          .lte("data_jornada", format(cur.to, "yyyy-MM-dd")),
       ]);
       const rides = (ridesRes.data || []) as Ride[];
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
 
-      const refDate = new Date(weekStartISO + "T12:00:00");
-      const cur = getWeekRange(refDate);
-      const prev = getPrevWeekRange(refDate);
       const aCur = aggregateWeek(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateWeek(rides, vehicle, prev.from, prev.to);
       if (aCur.total_corridas === 0) {
@@ -572,6 +573,9 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
 
       const { semanal: metaSemanal } = resolveGoals(goals, vehicle);
       const pct = metaSemanal > 0 ? (aCur.ganho_real / metaSemanal) * 100 : 0;
+      const horasJornada = sumJornadaHoursInRange(jornadas, cur.from, cur.to);
+      const horasFinal = horasJornada > 0 ? horasJornada : aCur.horas;
+      const rPorHoraFinal = horasFinal > 0 ? aCur.ganho_bruto / horasFinal : aCur.r_por_hora;
 
       const payload = {
         periodo: "semana" as const,
@@ -579,10 +583,10 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         total_corridas: aCur.total_corridas,
         ganho_bruto: aCur.ganho_bruto,
         ganho_real: aCur.ganho_real,
-        r_por_hora: aCur.r_por_hora,
+        r_por_hora: rPorHoraFinal,
         r_por_km: aCur.r_por_km,
         km_total: aCur.km_total,
-        horas: aCur.horas,
+        horas: horasFinal,
         meta_semanal: metaSemanal,
         percentual_meta: pct,
         melhor_dia: aCur.melhor_dia,
@@ -701,18 +705,25 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
     setStatus("loading");
     setErrorMsg("");
     try {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+      const refDate = new Date(mesYYYYMM + "-15T12:00:00");
+      const cur = getMonthRange(refDate);
+      const prev = getPrevMonthRange(refDate);
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(cur.from, "yyyy-MM-dd"))
+          .lte("data_jornada", format(cur.to, "yyyy-MM-dd")),
       ]);
       const rides = (ridesRes.data || []) as Ride[];
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
 
-      const refDate = new Date(mesYYYYMM + "-15T12:00:00");
-      const cur = getMonthRange(refDate);
-      const prev = getPrevMonthRange(refDate);
       const aCur = aggregateMonth(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateMonth(rides, vehicle, prev.from, prev.to);
       if (aCur.total_corridas === 0) {
@@ -722,6 +733,8 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
 
       const { mensal: metaMensal } = resolveGoals(goals, vehicle);
       const pct = metaMensal > 0 ? (aCur.ganho_real / metaMensal) * 100 : 0;
+      const horasJornada = sumJornadaHoursInRange(jornadas, cur.from, cur.to);
+      const rPorHoraFinal = horasJornada > 0 ? aCur.ganho_bruto / horasJornada : aCur.r_por_hora;
 
       const payload = {
         periodo: "mes" as const,
@@ -729,7 +742,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         total_corridas: aCur.total_corridas,
         ganho_bruto: aCur.ganho_bruto,
         ganho_real: aCur.ganho_real,
-        r_por_hora: aCur.r_por_hora,
+        r_por_hora: rPorHoraFinal,
         r_por_km: aCur.r_por_km,
         percentual_meta: pct,
         meta_mensal: metaMensal,
@@ -1079,10 +1092,33 @@ function ResultadoLayout(props: {
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-2 pt-2">
+          <div className="flex flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
             <Button variant="outline" onClick={onGenerate} disabled={rateLimited}>
               <RefreshCw className="mr-2 h-4 w-4" />
               {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
+                if (typeof navigator !== "undefined" && (navigator as any).share) {
+                  try {
+                    await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
+                  } catch {
+                    /* usuário cancelou */
+                  }
+                } else {
+                  try {
+                    await navigator.clipboard.writeText(texto);
+                    toast.success("Análise copiada! Cole no WhatsApp ou e-mail.");
+                  } catch {
+                    toast.error("Não foi possível copiar a análise.");
+                  }
+                }
+              }}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartilhar
             </Button>
           </div>
         </div>

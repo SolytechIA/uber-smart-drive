@@ -47,6 +47,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Goals,
+  JornadaRecord,
   Ride,
   TZ,
   Vehicle,

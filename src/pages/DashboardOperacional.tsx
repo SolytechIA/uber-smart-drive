@@ -44,6 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
 import { nowInTZ } from "@/lib/financeiro";
+import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
 
 interface RideRow {
   id: string;
@@ -92,6 +93,8 @@ export default function DashboardOperacional() {
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() => nowInTZ());
+  const [jornadaMinutes, setJornadaMinutes] = useState(0);
+  const [jornadaTick, setJornadaTick] = useState(0);
 
   const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
   const todayStr = useMemo(() => getTodaySP(), []);
@@ -139,7 +142,7 @@ export default function DashboardOperacional() {
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [profileRes, goalsRes, ridesRes, yRes] = await Promise.all([
+    const [profileRes, goalsRes, ridesRes, yRes, jornadasRes] = await Promise.all([
       supabase.from("users").select("nome").eq("id", user.id).maybeSingle(),
       supabase
         .from("goals")
@@ -159,6 +162,11 @@ export default function DashboardOperacional() {
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("data_corrida", prevDayStr),
+      supabase
+        .from("jornadas" as any)
+        .select("inicio, fim, duracao_minutos")
+        .eq("user_id", user.id)
+        .eq("data_jornada", selectedDateStr),
     ]);
 
     setNome(profileRes.data?.nome || "");
@@ -175,8 +183,14 @@ export default function DashboardOperacional() {
     }
     setRides((ridesRes.data as RideRow[]) || []);
     setYesterdayCount(yRes.count || 0);
+    const js = ((jornadasRes.data as any) || []) as Array<{ inicio: string; fim: string | null; duracao_minutos: number | null }>;
+    const totalMin = js.reduce((sum, j) => {
+      if (j.fim) return sum + (Number(j.duracao_minutos) || 0);
+      return sum + (Date.now() - new Date(j.inicio).getTime()) / 60000;
+    }, 0);
+    setJornadaMinutes(totalMin);
     setLoading(false);
-  }, [user, selectedDateStr, prevDayStr]);
+  }, [user, selectedDateStr, prevDayStr, jornadaTick]);
 
   useEffect(() => {
     loadAll();
@@ -188,13 +202,14 @@ export default function DashboardOperacional() {
       (sum, r) => sum + (Number(r.km_passageiro) || 0) + (Number(r.km_deslocamento) || 0),
       0,
     );
-    const minutos = rides.reduce((sum, r) => sum + (Number(r.duracao_minutos) || 0), 0);
-    const horas = minutos / 60;
+    const horasCorridas = rides.reduce((sum, r) => sum + (Number(r.duracao_minutos) || 0), 0) / 60;
+    const horasJornada = jornadaMinutes / 60;
+    const horas = horasJornada > 0 ? horasJornada : horasCorridas;
     const boas = rides.filter((r) => r.classificacao === "BOA").length;
     const pctBoas = total > 0 ? (boas / total) * 100 : 0;
     const ganhoBruto = rides.reduce((sum, r) => sum + (Number(r.valor_bruto) || 0), 0);
-    return { total, km, horas, pctBoas, ganhoBruto };
-  }, [rides]);
+    return { total, km, horas, pctBoas, ganhoBruto, usaJornada: horasJornada > 0 };
+  }, [rides, jornadaMinutes]);
 
   const variacao = stats.total - yesterdayCount;
   const pctColor =
@@ -225,6 +240,8 @@ export default function DashboardOperacional() {
           </Button>
         </div>
 
+        {isToday && <JornadaTimer onChange={() => setJornadaTick((t) => t + 1)} />}
+
         {/* Cards de resumo */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           <SummaryCard
@@ -252,7 +269,7 @@ export default function DashboardOperacional() {
           />
           <SummaryCard
             icon={Clock}
-            label="Horas ao volante"
+            label={stats.usaJornada ? "Horas no volante (tempo online)" : "Horas no volante"}
             value={`${stats.horas.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`}
           />
           <SummaryCard
