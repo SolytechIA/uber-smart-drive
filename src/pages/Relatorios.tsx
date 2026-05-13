@@ -427,12 +427,12 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
 // ABA SEMANAL
 // ============================================================
 
-function AbaSemanal({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehicle | null; loading: boolean }) {
+function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; loading: boolean }) {
   const [date, setDate] = useState<Date>(() => nowInTZ());
   const from = startOfWeek(date, { weekStartsOn: 1 });
   const to = endOfWeek(date, { weekStartsOn: 1 });
 
-  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to), [rides, vehicle, from, to]);
+  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, from, to), [rides, vehicle, from, to]);
 
   const mediaDiariaGanho = m.numCorridas > 0 && m.diasNoPeriodo > 0 ? m.ganhoReal / m.diasNoPeriodo : 0;
@@ -442,7 +442,7 @@ function AbaSemanal({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehic
     return eachDayOfInterval({ start: from, end: to }).map((day) => {
       const dStart = startOfDay(day);
       const dEnd = endOfDay(day);
-      const dm = calcPeriodMetrics(rides, vehicle, dStart, dEnd);
+      const dm = calcPeriodMetrics(rides, vehicle, dStart, dEnd, jornadas);
       const ticket = dm.numCorridas > 0 ? dm.ganhoBruto / dm.numCorridas : 0;
       const rHora = dm.horasTrabalhadas > 0 ? dm.ganhoBruto / dm.horasTrabalhadas : 0;
       return {
@@ -457,7 +457,7 @@ function AbaSemanal({ rides, vehicle, loading }: { rides: Ride[]; vehicle: Vehic
         ticket,
       };
     });
-  }, [from, to, rides, vehicle]);
+  }, [from, to, rides, vehicle, jornadas]);
 
   const melhor = porDia.reduce<typeof porDia[number] | null>((best, d) => (!best || d.ganhoReal > best.ganhoReal ? d : best), null);
   const pior = porDia.reduce<typeof porDia[number] | null>((worst, d) => (d.corridas > 0 && (!worst || d.ganhoReal < worst.ganhoReal) ? d : worst), null);
