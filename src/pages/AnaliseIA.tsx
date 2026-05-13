@@ -477,6 +477,7 @@ function PainelDia({
         ...calcContextoDia(rides, selectedDay),
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
         nome_motorista: await getNomeMotorista(user),
+        historico_analises: await fetchHistoricoAnalises(user.id, "dia"),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
@@ -492,6 +493,13 @@ function PainelDia({
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
+      void saveAnalise({
+        userId: user.id,
+        periodo: "dia",
+        dataRef: format(selectedDay, "yyyy-MM-dd"),
+        payload,
+        result,
+      });
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
