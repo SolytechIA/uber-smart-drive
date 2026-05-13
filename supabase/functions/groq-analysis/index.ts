@@ -475,8 +475,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const payload = (await req.json()) as Payload;
+    const payload = (await req.json()) as Payload & { historico_analises?: any };
     const userPrompt = buildPrompt(payload);
+    const systemContent = SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises);
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -489,7 +490,7 @@ Deno.serve(async (req) => {
         temperature: 0.85,
         max_tokens: 3000,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemContent },
           { role: "user", content: userPrompt },
         ],
       }),
