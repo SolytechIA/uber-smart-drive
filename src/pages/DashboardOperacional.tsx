@@ -44,6 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
 import { nowInTZ } from "@/lib/financeiro";
+import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
 
 interface RideRow {
   id: string;
