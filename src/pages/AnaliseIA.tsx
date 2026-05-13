@@ -825,6 +825,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         ...calcContextoMes(rides, cur.from, cur.to),
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, cur.from, cur.to),
         nome_motorista: await getNomeMotorista(user),
+        historico_analises: await fetchHistoricoAnalises(user.id, "mes"),
       };
 
       const newMeta = { aCur, aPrev, metaMensal, pct };
@@ -838,6 +839,13 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
+      void saveAnalise({
+        userId: user.id,
+        periodo: "mes",
+        dataRef: `${mesYYYYMM}-01`,
+        payload,
+        result,
+      });
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
