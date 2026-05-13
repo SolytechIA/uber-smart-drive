@@ -125,6 +125,7 @@ export default function Relatorios() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [goals, setGoals] = useState<Goals | null>(null);
+  const [loading, setLoading] = useState(true);
   const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
 
   useEffect(() => {
