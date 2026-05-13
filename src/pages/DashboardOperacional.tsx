@@ -240,6 +240,8 @@ export default function DashboardOperacional() {
           </Button>
         </div>
 
+        {isToday && <JornadaTimer onChange={() => setJornadaTick((t) => t + 1)} />}
+
         {/* Cards de resumo */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           <SummaryCard
