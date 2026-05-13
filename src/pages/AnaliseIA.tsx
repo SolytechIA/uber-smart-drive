@@ -545,18 +545,25 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
     setStatus("loading");
     setErrorMsg("");
     try {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+      const refDate = new Date(weekStartISO + "T12:00:00");
+      const cur = getWeekRange(refDate);
+      const prev = getPrevWeekRange(refDate);
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(cur.from, "yyyy-MM-dd"))
+          .lte("data_jornada", format(cur.to, "yyyy-MM-dd")),
       ]);
       const rides = (ridesRes.data || []) as Ride[];
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
 
-      const refDate = new Date(weekStartISO + "T12:00:00");
-      const cur = getWeekRange(refDate);
-      const prev = getPrevWeekRange(refDate);
       const aCur = aggregateWeek(rides, vehicle, cur.from, cur.to);
       const aPrev = aggregateWeek(rides, vehicle, prev.from, prev.to);
       if (aCur.total_corridas === 0) {
@@ -566,6 +573,9 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
 
       const { semanal: metaSemanal } = resolveGoals(goals, vehicle);
       const pct = metaSemanal > 0 ? (aCur.ganho_real / metaSemanal) * 100 : 0;
+      const horasJornada = sumJornadaHoursInRange(jornadas, cur.from, cur.to);
+      const horasFinal = horasJornada > 0 ? horasJornada : aCur.horas;
+      const rPorHoraFinal = horasFinal > 0 ? aCur.ganho_bruto / horasFinal : aCur.r_por_hora;
 
       const payload = {
         periodo: "semana" as const,
@@ -573,10 +583,10 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         total_corridas: aCur.total_corridas,
         ganho_bruto: aCur.ganho_bruto,
         ganho_real: aCur.ganho_real,
-        r_por_hora: aCur.r_por_hora,
+        r_por_hora: rPorHoraFinal,
         r_por_km: aCur.r_por_km,
         km_total: aCur.km_total,
-        horas: aCur.horas,
+        horas: horasFinal,
         meta_semanal: metaSemanal,
         percentual_meta: pct,
         melhor_dia: aCur.melhor_dia,
