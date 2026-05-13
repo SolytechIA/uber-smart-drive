@@ -142,7 +142,7 @@ export default function DashboardOperacional() {
   const loadAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [profileRes, goalsRes, ridesRes, yRes] = await Promise.all([
+    const [profileRes, goalsRes, ridesRes, yRes, jornadasRes] = await Promise.all([
       supabase.from("users").select("nome").eq("id", user.id).maybeSingle(),
       supabase
         .from("goals")
@@ -162,6 +162,11 @@ export default function DashboardOperacional() {
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("data_corrida", prevDayStr),
+      supabase
+        .from("jornadas" as any)
+        .select("inicio, fim, duracao_minutos")
+        .eq("user_id", user.id)
+        .eq("data_jornada", selectedDateStr),
     ]);
 
     setNome(profileRes.data?.nome || "");
@@ -178,8 +183,14 @@ export default function DashboardOperacional() {
     }
     setRides((ridesRes.data as RideRow[]) || []);
     setYesterdayCount(yRes.count || 0);
+    const js = ((jornadasRes.data as any) || []) as Array<{ inicio: string; fim: string | null; duracao_minutos: number | null }>;
+    const totalMin = js.reduce((sum, j) => {
+      if (j.fim) return sum + (Number(j.duracao_minutos) || 0);
+      return sum + (Date.now() - new Date(j.inicio).getTime()) / 60000;
+    }, 0);
+    setJornadaMinutes(totalMin);
     setLoading(false);
-  }, [user, selectedDateStr, prevDayStr]);
+  }, [user, selectedDateStr, prevDayStr, jornadaTick]);
 
   useEffect(() => {
     loadAll();
