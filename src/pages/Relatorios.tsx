@@ -125,14 +125,14 @@ export default function Relatorios() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [goals, setGoals] = useState<Goals | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
 
   useEffect(() => {
     if (!user) return;
     let cancel = false;
     (async () => {
       setLoading(true);
-      const [rRes, vRes, gRes] = await Promise.all([
+      const [rRes, vRes, gRes, jRes] = await Promise.all([
         supabase
           .from("rides")
           .select(
@@ -143,11 +143,13 @@ export default function Relatorios() {
           .limit(5000),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("jornadas").select("*").eq("user_id", user.id),
       ]);
       if (cancel) return;
       setRides(((rRes.data as any[]) || []) as Ride[]);
       setVehicle((vRes.data as Vehicle) || null);
       setGoals((gRes.data as Goals) || null);
+      setJornadas(((jRes.data as any[]) || []) as JornadaRecord[]);
       setLoading(false);
     })();
     return () => {
