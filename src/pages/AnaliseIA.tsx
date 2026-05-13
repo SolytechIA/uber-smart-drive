@@ -30,9 +30,11 @@ import {
   fmtInTZ,
   nowInTZ,
   projecaoMensal,
+  sumJornadaHoursInRange,
   type Ride,
   type Vehicle,
   type Goals,
+  type JornadaRecord,
 } from "@/lib/financeiro";
 import { getStartOfTodaySP, getEndOfTodaySP, getStartOfMonthSP, getEndOfMonthSP } from "@/lib/dateUtils";
 import { endOfMonth, format, subMonths, subWeeks, startOfDay, endOfDay } from "date-fns";
