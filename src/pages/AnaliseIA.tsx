@@ -265,15 +265,22 @@ function PainelDia({
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [ridesRes, vehicleRes, goalsRes] = await Promise.all([
+      const [ridesRes, vehicleRes, goalsRes, jornadasRes] = await Promise.all([
         supabase.from("rides").select("*").eq("user_id", user.id),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("jornadas" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_jornada", format(startOfDay(new Date(selectedDay.getTime() - 86400000)), "yyyy-MM-dd"))
+          .lte("data_jornada", format(selectedDay, "yyyy-MM-dd")),
       ]);
       if (cancelled) return;
       const rides = (ridesRes.data || []) as Ride[];
       const vehicle = (vehicleRes.data as Vehicle | null) ?? null;
       const goals = (goalsRes.data as Goals | null) ?? null;
+      const jornadas = ((jornadasRes.data as any) || []) as JornadaRecord[];
 
       const fromCur = startOfDay(selectedDay);
       const toCur = endOfDay(selectedDay);
@@ -282,8 +289,8 @@ function PainelDia({
       const fromPrev = startOfDay(prevDate);
       const toPrev = endOfDay(prevDate);
 
-      const mCur = calcPeriodMetrics(rides, vehicle, fromCur, toCur);
-      const mPrev = calcPeriodMetrics(rides, vehicle, fromPrev, toPrev);
+      const mCur = calcPeriodMetrics(rides, vehicle, fromCur, toCur, jornadas);
+      const mPrev = calcPeriodMetrics(rides, vehicle, fromPrev, toPrev, jornadas);
       const { diaria } = resolveGoals(goals, vehicle);
       const pct = diaria > 0 ? (mCur.ganhoReal / diaria) * 100 : 0;
 
