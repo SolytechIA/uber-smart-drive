@@ -505,7 +505,7 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
-            <ResumoCard label="R$/hora" value={fmtBRL(rH)} />
+            <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
             <ResumoCard label="R$/km" value={fmtBRL(rK)} />
             <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
           </div>
@@ -770,7 +770,7 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
-            <ResumoCard label="R$/hora" value={fmtBRL(rH)} />
+            <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
             <ResumoCard label="R$/km" value={fmtBRL(rK)} />
             <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
           </div>
@@ -1071,7 +1071,7 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <ResumoCard label="Ticket médio" value={fmtBRL(ticket)} />
-        <ResumoCard label="R$/hora histórico" value={fmtBRL(rHora)} />
+        <ResumoCard label="R$/hora histórico" value={fmtBRL(rHora)} hint="(tempo online)" />
         <ResumoCard label="R$/km histórico" value={fmtBRL(rKm)} />
         <ResumoCard label="Total corridas" value={String(m.numCorridas)} />
       </div>
