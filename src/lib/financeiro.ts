@@ -216,7 +216,7 @@ export function clampToTodayTZ(to: Date): Date {
   return to > todayEnd ? todayEnd : to;
 }
 
-export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: Date, to: Date): PeriodMetrics {
+export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: Date, to: Date, jornadas?: JornadaRecord[]): PeriodMetrics {
   const toClamped = clampToTodayTZ(to);
   // Se o período ainda não começou, retorna zeros
   if (from > toClamped) {
