@@ -141,16 +141,16 @@ export default function DashboardFinanceiro() {
   // Métricas para cards de meta (sempre exibe diária, semanal, mensal)
   const metricsHoje = useMemo(() => {
     const r = getPeriodRange("hoje");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to);
-  }, [rides, vehicle]);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
+  }, [rides, vehicle, jornadas]);
   const metricsSemana = useMemo(() => {
     const r = getPeriodRange("semana");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to);
-  }, [rides, vehicle]);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
+  }, [rides, vehicle, jornadas]);
   const metricsMes = useMemo(() => {
     const r = getPeriodRange("mes");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to);
-  }, [rides, vehicle]);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
+  }, [rides, vehicle, jornadas]);
 
   // Meta do período (sempre usa o valor FIXO configurado pelo motorista,
   // nunca recalcula proporcional ao número de dias do filtro).
