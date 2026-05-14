@@ -171,7 +171,8 @@ export default function DashboardOperacional() {
           "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem",
         )
         .eq("user_id", user.id)
-        .eq("data_corrida", selectedDateStr)
+        .gte("data_corrida", fromStr)
+        .lte("data_corrida", toStr)
         .order("horario_inicio", { ascending: false }),
       supabase
         .from("rides")
@@ -182,7 +183,8 @@ export default function DashboardOperacional() {
         .from("jornadas" as any)
         .select("inicio, fim, duracao_minutos")
         .eq("user_id", user.id)
-        .eq("data_jornada", selectedDateStr),
+        .gte("data_jornada", fromStr)
+        .lte("data_jornada", toStr),
     ]);
 
     setNome(profileRes.data?.nome || "");
@@ -207,7 +209,7 @@ export default function DashboardOperacional() {
     }, 0);
     setJornadaMinutes(totalMin);
     setLoading(false);
-  }, [user, selectedDateStr, prevDayStr, jornadaTick]);
+  }, [user, fromStr, toStr, prevDayStr, jornadaTick]);
 
   useEffect(() => {
     loadAll();
