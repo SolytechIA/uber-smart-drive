@@ -499,6 +499,7 @@ function PainelDia({
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
         nome_motorista: await getNomeMotorista(user),
         historico_analises: await fetchHistoricoAnalises(user.id, "dia"),
+        historico_semanal: await fetchHistoricoSemanal(user.id),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
