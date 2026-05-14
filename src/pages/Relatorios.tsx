@@ -63,6 +63,7 @@ import {
   resolveGoals,
 } from "@/lib/financeiro";
 import { exportCSV } from "@/lib/csvExport";
+import { formatHorasHHMM } from "@/lib/formatters";
 
 // ============================================================
 // Helpers
