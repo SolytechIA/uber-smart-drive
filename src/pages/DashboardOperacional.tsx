@@ -277,10 +277,9 @@ export default function DashboardOperacional() {
           />
           <SummaryCard
             icon={Banknote}
-            label="Ganho real"
-            value={fmtBRL(stats.ganhoReal)}
-            valueClassName="text-success"
-            hint="líquido após custos"
+            label="R$/hora"
+            value={stats.horasJornada > 0 ? `R$ ${fmtNumber(stats.rPorHora, 2)}/h` : "—"}
+            hint="bruto por hora online"
           />
           <SummaryCard
             icon={Receipt}
