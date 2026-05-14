@@ -517,7 +517,7 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
             <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
-            <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+            <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
             <ResumoCard label="R$/km" value={fmtBRL(rK)} />
             <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
@@ -782,7 +782,7 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
             <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
-            <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+            <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
             <ResumoCard label="R$/km" value={fmtBRL(rK)} />
             <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
@@ -1080,7 +1080,7 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
         <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
         <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
         <ResumoCard label="Total km" value={`${fmtNumber(m.kmTotal, 1)} km`} />
-        <ResumoCard label="Total horas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+        <ResumoCard label="Total horas" value={formatHorasHHMM(m.horasTrabalhadas)} />
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <ResumoCard label="Ticket médio" value={fmtBRL(ticket)} />
