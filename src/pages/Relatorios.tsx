@@ -332,12 +332,12 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
                 <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${Math.round(v)}`} />
                 <RechartsTooltip
                   formatter={(v: number, name: string) =>
-                    name === "Valor Total" ? fmtBRL(v) : `${Math.round(v)} corridas`} />
+                    name === "Valor total" ? fmtBRL(v) : `${Math.round(v)} corridas`} />
                   }
                 />
                 <Legend />
                 <Bar yAxisId="l" dataKey="corridas" name="Corridas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="r" dataKey="valorTotal" name="Valor Total" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="r" dataKey="valorTotal" name="Valor total" fill="#22C55E" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
