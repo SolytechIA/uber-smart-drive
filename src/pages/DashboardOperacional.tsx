@@ -233,17 +233,6 @@ export default function DashboardOperacional() {
     const horasCorridas = rides.reduce((sum, r) => sum + (Number(r.duracao_minutos) || 0), 0) / 60;
     const horasJornada = jornadaMinutes / 60;
     const horas = horasJornada > 0 ? horasJornada : horasCorridas;
-    // Log temporário — remover após confirmar que funciona
-    console.log(
-      "[DEBUG] rides:",
-      rides.length,
-      "| horasCorridas:",
-      horasCorridas.toFixed(2),
-      "| jornadaMinutes:",
-      jornadaMinutes,
-      "| horasJornada:",
-      horasJornada.toFixed(2),
-    );
     const boas = rides.filter((r) => r.classificacao === "BOA").length;
     const pctBoas = total > 0 ? (boas / total) * 100 : 0;
     const ganhoBruto = rides.reduce((sum, r) => sum + (Number(r.valor_bruto) || 0), 0);
