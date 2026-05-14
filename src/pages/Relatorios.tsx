@@ -200,9 +200,13 @@ export default function Relatorios() {
 // ============================================================
 
 function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; loading: boolean }) {
-  const [date, setDate] = useState<Date>(() => nowInTZ());
-  const from = startOfDay(date);
-  const to = endOfDay(date);
+  const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
+    const n = nowInTZ();
+    return { from: startOfDay(n), to: endOfDay(n) };
+  });
+  const from = range.from;
+  const to = range.to;
+  const isSingleDay = useMemo(() => format(from, "yyyy-MM-dd") === format(to, "yyyy-MM-dd"), [from, to]);
 
   const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
   const dayRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
@@ -221,7 +225,13 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
   const totalCls = counts.BOA + counts.MEDIA + counts.RUIM || 1;
   const pctBoas = totalCls > 0 ? (counts.BOA / totalCls) * 100 : 0;
 
-  // Gráfico por hora
+  // Número de dias distintos no intervalo (inclusivo)
+  const numDias = useMemo(() => {
+    const ms = endOfDay(to).getTime() - startOfDay(from).getTime();
+    return Math.max(1, Math.round(ms / 86400000) + (isSingleDay ? 0 : 0));
+  }, [from, to, isSingleDay]);
+
+  // Gráfico por hora: em modo multi-dia, exibe média por hora (não soma)
   const hourSeries = useMemo(() => {
     const buckets: Record<number, { n: number; valor: number }> = {};
     dayRides.forEach((r) => {
@@ -238,12 +248,13 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       bucket.valor += Number(r.valor_bruto || 0);
       buckets[h] = bucket;
     });
+    const divisor = isSingleDay ? 1 : Math.max(1, numDias);
     return Array.from({ length: 24 }, (_, h) => ({
       hora: `${String(h).padStart(2, "0")}h`,
-      corridas: buckets[h]?.n || 0,
+      corridas: (buckets[h]?.n || 0) / divisor,
       mediaValor: buckets[h]?.n ? buckets[h].valor / buckets[h].n : 0,
     }));
-  }, [dayRides]);
+  }, [dayRides, isSingleDay, numDias]);
 
   // Top 3 mais rentáveis
   const top3 = useMemo(
@@ -277,14 +288,15 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       Valor: Number(r.valor_bruto || 0).toFixed(2),
       Classificacao: r.classificacao || "",
     }));
-    exportCSV(`relatorio-diario-${format(date, "yyyy-MM-dd")}`, rows);
+    const slug = isSingleDay ? format(from, "yyyy-MM-dd") : `${format(from, "yyyy-MM-dd")}_a_${format(to, "yyyy-MM-dd")}`;
+    exportCSV(`relatorio-diario-${slug}`, rows);
   };
 
   return (
     <div className="space-y-6">
       {/* Seletor */}
       <div className="flex items-center justify-between gap-4">
-        <DateSelector date={date} onChange={setDate} maxDate={nowInTZ()} />
+        <DateRangeSelector range={range} onChange={setRange} maxDate={nowInTZ()} />
         <Button variant="outline" onClick={handleExportCSV} disabled={!dayRides.length}>
           <Download className="mr-2 h-4 w-4" /> Exportar CSV
         </Button>
