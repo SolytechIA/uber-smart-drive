@@ -587,7 +587,7 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
                 <TableRow key={d.date.toISOString()}>
                   <TableCell className="text-xs">{d.label}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{d.corridas}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{fmtNumber(d.horas, 1)}h</TableCell>
+                  <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(d.horas)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtNumber(d.km, 1)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(d.ganhoBruto)}</TableCell>
                   <TableCell className={cn("text-right font-mono text-xs", d.ganhoReal >= 0 ? "text-success" : "text-destructive")}>
@@ -856,7 +856,7 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
                 <TableRow key={s.label}>
                   <TableCell className="text-xs">{s.label}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{s.corridas}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{fmtNumber(s.horas, 1)}h</TableCell>
+                  <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(s.horas)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtNumber(s.km, 1)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(s.ganhoBruto)}</TableCell>
                   <TableCell className={cn("text-right font-mono text-xs", s.ganhoReal >= 0 ? "text-success" : "text-destructive")}>{fmtBRL(s.ganhoReal)}</TableCell>
@@ -1187,7 +1187,7 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
                     <TableCell className="text-xs capitalize">{s.label}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{s.corridas}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtNumber(s.km, 1)}</TableCell>
-                    <TableCell className="text-right font-mono text-xs">{fmtNumber(s.horas, 1)}h</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(s.horas)}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtBRL(s.ganhoBruto)}</TableCell>
                     <TableCell className={cn("text-right font-mono text-xs", s.ganhoReal >= 0 ? "text-success" : "text-destructive")}>{fmtBRL(s.ganhoReal)}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtBRL(rh)}</TableCell>
