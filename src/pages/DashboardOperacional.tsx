@@ -47,6 +47,9 @@ import { cn } from "@/lib/utils";
 import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
 import { nowInTZ, type Vehicle, calcCustoCombustivel, calcCustoFixoMensal, fmtNumber } from "@/lib/financeiro";
 import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
+import { formatHorasHHMM } from "@/lib/formatters";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 
 interface RideRow {
   id: string;
@@ -95,20 +98,29 @@ export default function DashboardOperacional() {
   const [editing, setEditing] = useState<EditingRide | null>(null);
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(() => nowInTZ());
+  // Modo do filtro: "today" (dia atual, padrão) ou "custom" (intervalo personalizado).
+  // CASO DE USO MOTORISTA NOTURNO: ao selecionar "ontem + hoje" (ex: 13/05 + 14/05),
+  // o sistema mostra o consolidado das duas datas, permitindo ver o resultado de uma
+  // jornada que atravessou a meia-noite.
+  const [mode, setMode] = useState<"today" | "custom">("today");
+  const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
+    const n = nowInTZ();
+    return { from: n, to: n };
+  });
   const [jornadaMinutes, setJornadaMinutes] = useState(0);
   const [jornadaTick, setJornadaTick] = useState(0);
 
-  const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
   const todayStr = useMemo(() => getTodaySP(), []);
-  
-  const isToday = selectedDateStr === todayStr;
-  // Comparativo: dia anterior à data selecionada
+  const fromStr = useMemo(() => format(range.from, "yyyy-MM-dd"), [range.from]);
+  const toStr = useMemo(() => format(range.to, "yyyy-MM-dd"), [range.to]);
+  const isSingleDay = fromStr === toStr;
+  const isToday = mode === "today" && isSingleDay && fromStr === todayStr;
+  // Comparativo: dia anterior à data selecionada (apenas modo single-day)
   const prevDayStr = useMemo(() => {
-    const d = new Date(selectedDate);
+    const d = new Date(range.from);
     d.setDate(d.getDate() - 1);
     return format(d, "yyyy-MM-dd");
-  }, [selectedDate]);
+  }, [range.from]);
 
   const handleView = async (id: string) => {
     const { data, error } = await supabase
