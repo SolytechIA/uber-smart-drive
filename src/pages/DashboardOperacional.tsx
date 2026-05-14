@@ -603,3 +603,101 @@ function EmptyState({ onNew }: { onNew: () => void }) {
     </div>
   );
 }
+
+function PeriodFilter({
+  mode,
+  range,
+  onTodayClick,
+  onApplyCustom,
+}: {
+  mode: "today" | "custom";
+  range: { from: Date; to: Date };
+  onTodayClick: () => void;
+  onApplyCustom: (r: { from: Date; to: Date }) => void;
+}) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ from?: Date; to?: Date }>({ from: range.from, to: range.to });
+
+  useEffect(() => {
+    if (open) setDraft({ from: range.from, to: range.to });
+  }, [open, range]);
+
+  const handleApply = () => {
+    if (draft.from && draft.to) {
+      onApplyCustom({ from: draft.from, to: draft.to });
+      setOpen(false);
+    } else if (draft.from) {
+      onApplyCustom({ from: draft.from, to: draft.from });
+      setOpen(false);
+    }
+  };
+
+  const customLabel = mode === "custom"
+    ? `${format(range.from, "dd/MM")} – ${format(range.to, "dd/MM")}`
+    : "Período";
+
+  const calendarPanel = (
+    <>
+      <Calendar
+        mode="range"
+        selected={draft as any}
+        onSelect={(r: any) => setDraft(r || {})}
+        numberOfMonths={isMobile ? 1 : 2}
+        disabled={(d) => d > nowInTZ()}
+        className={cn("p-3 pointer-events-auto")}
+      />
+      <div className="flex items-center justify-between gap-2 border-t border-border/60 p-3">
+        <div className="text-xs text-muted-foreground">
+          {draft.from && draft.to
+            ? `${format(draft.from, "dd/MM")} → ${format(draft.to, "dd/MM")}`
+            : "Selecione data inicial e final"}
+        </div>
+        <Button size="sm" onClick={handleApply} disabled={!draft.from}>
+          Aplicar
+        </Button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant={mode === "today" ? "default" : "outline"}
+        size="sm"
+        className="h-8"
+        onClick={onTodayClick}
+      >
+        Hoje
+      </Button>
+      {isMobile ? (
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerTrigger asChild>
+            <Button variant={mode === "custom" ? "default" : "outline"} size="sm" className="h-8">
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {customLabel}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Selecionar período</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-2 pb-4">{calendarPanel}</div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button variant={mode === "custom" ? "default" : "outline"} size="sm" className="h-8">
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {customLabel}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            {calendarPanel}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  );
+}
