@@ -211,7 +211,9 @@ export default function DashboardOperacional() {
     }>;
     const totalMin = js.reduce((sum, j) => {
       if (j.fim) {
-        if (j.duracao_minutos != null) return sum + Number(j.duracao_minutos);
+        if (j.duracao_minutos != null && j.duracao_minutos > 0) {
+          return sum + Number(j.duracao_minutos);
+        }
         return sum + Math.max(0, (new Date(j.fim).getTime() - new Date(j.inicio).getTime()) / 60000);
       }
       if (j.inicio) return sum + Math.max(0, (Date.now() - new Date(j.inicio).getTime()) / 60000);
