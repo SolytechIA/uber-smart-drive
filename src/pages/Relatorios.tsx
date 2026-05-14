@@ -1238,6 +1238,78 @@ function DateSelector({ date, onChange, label, maxDate }: { date: Date; onChange
   );
 }
 
+function DateRangeSelector({
+  range,
+  onChange,
+  maxDate,
+}: {
+  range: { from: Date; to: Date };
+  onChange: (r: { from: Date; to: Date }) => void;
+  maxDate?: Date;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ from?: Date; to?: Date }>({ from: range.from, to: range.to });
+
+  useEffect(() => {
+    if (open) setDraft({ from: range.from, to: range.to });
+  }, [open, range]);
+
+  const isSingle = format(range.from, "yyyy-MM-dd") === format(range.to, "yyyy-MM-dd");
+  const label = isSingle
+    ? format(range.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+    : `${format(range.from, "dd MMM", { locale: ptBR })} – ${format(range.to, "dd MMM yyyy", { locale: ptBR })}`;
+
+  const handleApply = () => {
+    if (draft.from && draft.to) {
+      onChange({ from: startOfDay(draft.from), to: endOfDay(draft.to) });
+      setOpen(false);
+    } else if (draft.from) {
+      onChange({ from: startOfDay(draft.from), to: endOfDay(draft.from) });
+      setOpen(false);
+    }
+  };
+
+  const handleHoje = () => {
+    const n = nowInTZ();
+    onChange({ from: startOfDay(n), to: endOfDay(n) });
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="justify-start gap-2">
+          <CalendarIcon className="h-4 w-4" />
+          {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="range"
+          selected={draft as any}
+          onSelect={(r: any) => setDraft(r || {})}
+          numberOfMonths={2}
+          disabled={(d) => (maxDate ? d > maxDate : false)}
+          className={cn("p-3 pointer-events-auto")}
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 p-3">
+          <Button variant="ghost" size="sm" onClick={handleHoje}>
+            Hoje
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleApply} disabled={!draft.from}>
+              Aplicar
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function MonthSelector({ date, onChange, maxDate }: { date: Date; onChange: (d: Date) => void; maxDate?: Date }) {
   const now = nowInTZ();
   const months = useMemo(() => {
