@@ -306,10 +306,10 @@ export default function DashboardOperacional() {
             label={isToday ? "Corridas hoje" : "Corridas no dia"}
             value={String(stats.total)}
             badge={
-              variacao !== 0 ? (
+              mode === "today" && isSingleDay && variacao !== 0 ? (
                 <Badge variant="outline" className={cn("text-xs", variacao > 0 ? "text-success" : "text-destructive")}>
                   {variacao > 0 ? "+" : ""}
-                  {variacao} {isToday ? "vs ontem" : "vs dia anterior"}
+                  {variacao} vs ontem
                 </Badge>
               ) : null
             }
