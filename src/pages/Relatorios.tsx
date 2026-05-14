@@ -337,7 +337,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
                 />
                 <Legend />
                 <Bar yAxisId="l" dataKey="corridas" name="Corridas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="r" dataKey="valorTotal" name="valorTotal" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="r" dataKey="valorTotal" name="Valor total" fill="#22C55E" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
