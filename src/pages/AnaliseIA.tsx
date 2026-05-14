@@ -99,6 +99,27 @@ async function fetchHistoricoAnalises(userId: string, periodo: "dia" | "semana" 
   }
 }
 
+async function fetchHistoricoSemanal(userId: string) {
+  try {
+    const { data } = await supabase
+      .from("analises_geradas" as any)
+      .select("data_referencia, resumo_dia, payload")
+      .eq("user_id", userId)
+      .eq("periodo", "semana")
+      .order("data_referencia", { ascending: false })
+      .limit(4);
+    return ((data as any) || []).map((h: any) => ({
+      data: h.data_referencia,
+      resumo: h.resumo_dia?.slice(0, 200),
+      corridas: h.payload?.total_corridas,
+      ganho_real: h.payload?.ganho_real,
+      r_por_hora: h.payload?.r_por_hora,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 async function saveAnalise(params: {
   userId: string;
   periodo: "dia" | "semana" | "mes";
