@@ -740,13 +740,15 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
     );
   };
 
-  const compareRow = (label: string, atual: number, prev: number, isCurrency = true) => {
+  const compareRow = (label: string, atual: number, prev: number, isCurrency: boolean | "hours" = true) => {
     const variacao = prev > 0 ? ((atual - prev) / prev) * 100 : null;
+    const fmt = (v: number) =>
+      isCurrency === "hours" ? formatHorasHHMM(v) : isCurrency ? fmtBRL(v) : fmtNumber(v, 0);
     return (
       <TableRow>
         <TableCell className="text-xs">{label}</TableCell>
-        <TableCell className="text-right font-mono text-xs">{isCurrency ? fmtBRL(atual) : fmtNumber(atual, 0)}</TableCell>
-        <TableCell className="text-right font-mono text-xs">{isCurrency ? fmtBRL(prev) : fmtNumber(prev, 0)}</TableCell>
+        <TableCell className="text-right font-mono text-xs">{fmt(atual)}</TableCell>
+        <TableCell className="text-right font-mono text-xs">{fmt(prev)}</TableCell>
         <TableCell className="text-right font-mono text-xs">
           {variacao == null ? (
             <span className="text-muted-foreground">— Sem dados</span>
