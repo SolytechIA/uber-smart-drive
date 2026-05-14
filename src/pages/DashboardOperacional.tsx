@@ -47,6 +47,9 @@ import { cn } from "@/lib/utils";
 import { getTodaySP, formatLongDateSP } from "@/lib/dateUtils";
 import { nowInTZ, type Vehicle, calcCustoCombustivel, calcCustoFixoMensal, fmtNumber } from "@/lib/financeiro";
 import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
+import { formatHorasHHMM } from "@/lib/formatters";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 
 interface RideRow {
   id: string;
@@ -95,20 +98,29 @@ export default function DashboardOperacional() {
   const [editing, setEditing] = useState<EditingRide | null>(null);
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(() => nowInTZ());
+  // Modo do filtro: "today" (dia atual, padrão) ou "custom" (intervalo personalizado).
+  // CASO DE USO MOTORISTA NOTURNO: ao selecionar "ontem + hoje" (ex: 13/05 + 14/05),
+  // o sistema mostra o consolidado das duas datas, permitindo ver o resultado de uma
+  // jornada que atravessou a meia-noite.
+  const [mode, setMode] = useState<"today" | "custom">("today");
+  const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
+    const n = nowInTZ();
+    return { from: n, to: n };
+  });
   const [jornadaMinutes, setJornadaMinutes] = useState(0);
   const [jornadaTick, setJornadaTick] = useState(0);
 
-  const selectedDateStr = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
   const todayStr = useMemo(() => getTodaySP(), []);
-  
-  const isToday = selectedDateStr === todayStr;
-  // Comparativo: dia anterior à data selecionada
+  const fromStr = useMemo(() => format(range.from, "yyyy-MM-dd"), [range.from]);
+  const toStr = useMemo(() => format(range.to, "yyyy-MM-dd"), [range.to]);
+  const isSingleDay = fromStr === toStr;
+  const isToday = mode === "today" && isSingleDay && fromStr === todayStr;
+  // Comparativo: dia anterior à data selecionada (apenas modo single-day)
   const prevDayStr = useMemo(() => {
-    const d = new Date(selectedDate);
+    const d = new Date(range.from);
     d.setDate(d.getDate() - 1);
     return format(d, "yyyy-MM-dd");
-  }, [selectedDate]);
+  }, [range.from]);
 
   const handleView = async (id: string) => {
     const { data, error } = await supabase
@@ -159,7 +171,8 @@ export default function DashboardOperacional() {
           "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem",
         )
         .eq("user_id", user.id)
-        .eq("data_corrida", selectedDateStr)
+        .gte("data_corrida", fromStr)
+        .lte("data_corrida", toStr)
         .order("horario_inicio", { ascending: false }),
       supabase
         .from("rides")
@@ -170,7 +183,8 @@ export default function DashboardOperacional() {
         .from("jornadas" as any)
         .select("inicio, fim, duracao_minutos")
         .eq("user_id", user.id)
-        .eq("data_jornada", selectedDateStr),
+        .gte("data_jornada", fromStr)
+        .lte("data_jornada", toStr),
     ]);
 
     setNome(profileRes.data?.nome || "");
@@ -195,7 +209,7 @@ export default function DashboardOperacional() {
     }, 0);
     setJornadaMinutes(totalMin);
     setLoading(false);
-  }, [user, selectedDateStr, prevDayStr, jornadaTick]);
+  }, [user, fromStr, toStr, prevDayStr, jornadaTick]);
 
   useEffect(() => {
     loadAll();
@@ -292,10 +306,10 @@ export default function DashboardOperacional() {
             label={isToday ? "Corridas hoje" : "Corridas no dia"}
             value={String(stats.total)}
             badge={
-              variacao !== 0 ? (
+              mode === "today" && isSingleDay && variacao !== 0 ? (
                 <Badge variant="outline" className={cn("text-xs", variacao > 0 ? "text-success" : "text-destructive")}>
                   {variacao > 0 ? "+" : ""}
-                  {variacao} {isToday ? "vs ontem" : "vs dia anterior"}
+                  {variacao} vs ontem
                 </Badge>
               ) : null
             }
@@ -308,7 +322,7 @@ export default function DashboardOperacional() {
           <SummaryCard
             icon={Clock}
             label={stats.usaJornada ? "Horas no volante (tempo online)" : "Horas no volante"}
-            value={`${stats.horas.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`}
+            value={formatHorasHHMM(stats.horas)}
           />
           <SummaryCard
             icon={TrendingUp}
@@ -323,26 +337,25 @@ export default function DashboardOperacional() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-lg font-semibold">
-                {isToday ? "Corridas de Hoje" : "Corridas do dia"}
+                {isToday
+                  ? "Corridas de Hoje"
+                  : isSingleDay
+                  ? "Corridas do dia"
+                  : "Corridas do Período"}
               </h2>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                    {format(selectedDate, "dd/MM/yyyy")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(d) => d && setSelectedDate(d)}
-                    disabled={(date) => date > nowInTZ()}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <PeriodFilter
+                mode={mode}
+                range={range}
+                onTodayClick={() => {
+                  const n = nowInTZ();
+                  setMode("today");
+                  setRange({ from: n, to: n });
+                }}
+                onApplyCustom={(r) => {
+                  setMode("custom");
+                  setRange(r);
+                }}
+              />
             </div>
             {rides.length > 0 && (
               <span className="text-xs text-muted-foreground">{rides.length} registro(s)</span>
@@ -353,17 +366,28 @@ export default function DashboardOperacional() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
               <span>
                 📅 Visualizando{" "}
-                {selectedDate
-                  .toLocaleDateString("pt-BR", {
-                    weekday: "long",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    timeZone: "America/Sao_Paulo",
-                  })
-                  .replace(/^./, (m) => m.toUpperCase())}
+                {isSingleDay
+                  ? range.from
+                      .toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        timeZone: "America/Sao_Paulo",
+                      })
+                      .replace(/^./, (m) => m.toUpperCase())
+                  : `${format(range.from, "dd/MM")} – ${format(range.to, "dd/MM/yyyy")}`}
               </span>
-              <Button variant="ghost" size="sm" className="h-7" onClick={() => setSelectedDate(nowInTZ())}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                onClick={() => {
+                  const n = nowInTZ();
+                  setMode("today");
+                  setRange({ from: n, to: n });
+                }}
+              >
                 Voltar para hoje
               </Button>
             </div>
@@ -419,7 +443,7 @@ export default function DashboardOperacional() {
         onSaved={loadAll}
         params={params}
         editing={editing}
-        defaultDate={selectedDate}
+        defaultDate={range.from}
       />
 
       <RideViewModal
@@ -576,6 +600,104 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       <Button variant="gradient" className="mt-5 hover-scale" onClick={onNew}>
         <Plus className="mr-2 h-4 w-4" /> Registrar Corrida
       </Button>
+    </div>
+  );
+}
+
+function PeriodFilter({
+  mode,
+  range,
+  onTodayClick,
+  onApplyCustom,
+}: {
+  mode: "today" | "custom";
+  range: { from: Date; to: Date };
+  onTodayClick: () => void;
+  onApplyCustom: (r: { from: Date; to: Date }) => void;
+}) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ from?: Date; to?: Date }>({ from: range.from, to: range.to });
+
+  useEffect(() => {
+    if (open) setDraft({ from: range.from, to: range.to });
+  }, [open, range]);
+
+  const handleApply = () => {
+    if (draft.from && draft.to) {
+      onApplyCustom({ from: draft.from, to: draft.to });
+      setOpen(false);
+    } else if (draft.from) {
+      onApplyCustom({ from: draft.from, to: draft.from });
+      setOpen(false);
+    }
+  };
+
+  const customLabel = mode === "custom"
+    ? `${format(range.from, "dd/MM")} – ${format(range.to, "dd/MM")}`
+    : "Período";
+
+  const calendarPanel = (
+    <>
+      <Calendar
+        mode="range"
+        selected={draft as any}
+        onSelect={(r: any) => setDraft(r || {})}
+        numberOfMonths={isMobile ? 1 : 2}
+        disabled={(d) => d > nowInTZ()}
+        className={cn("p-3 pointer-events-auto")}
+      />
+      <div className="flex items-center justify-between gap-2 border-t border-border/60 p-3">
+        <div className="text-xs text-muted-foreground">
+          {draft.from && draft.to
+            ? `${format(draft.from, "dd/MM")} → ${format(draft.to, "dd/MM")}`
+            : "Selecione data inicial e final"}
+        </div>
+        <Button size="sm" onClick={handleApply} disabled={!draft.from}>
+          Aplicar
+        </Button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant={mode === "today" ? "default" : "outline"}
+        size="sm"
+        className="h-8"
+        onClick={onTodayClick}
+      >
+        Hoje
+      </Button>
+      {isMobile ? (
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerTrigger asChild>
+            <Button variant={mode === "custom" ? "default" : "outline"} size="sm" className="h-8">
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {customLabel}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Selecionar período</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-2 pb-4">{calendarPanel}</div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button variant={mode === "custom" ? "default" : "outline"} size="sm" className="h-8">
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {customLabel}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            {calendarPanel}
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }

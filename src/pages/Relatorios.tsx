@@ -63,6 +63,7 @@ import {
   resolveGoals,
 } from "@/lib/financeiro";
 import { exportCSV } from "@/lib/csvExport";
+import { formatHorasHHMM } from "@/lib/formatters";
 
 // ============================================================
 // Helpers
@@ -199,9 +200,13 @@ export default function Relatorios() {
 // ============================================================
 
 function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; loading: boolean }) {
-  const [date, setDate] = useState<Date>(() => nowInTZ());
-  const from = startOfDay(date);
-  const to = endOfDay(date);
+  const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
+    const n = nowInTZ();
+    return { from: startOfDay(n), to: endOfDay(n) };
+  });
+  const from = range.from;
+  const to = range.to;
+  const isSingleDay = useMemo(() => format(from, "yyyy-MM-dd") === format(to, "yyyy-MM-dd"), [from, to]);
 
   const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
   const dayRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
@@ -220,7 +225,13 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
   const totalCls = counts.BOA + counts.MEDIA + counts.RUIM || 1;
   const pctBoas = totalCls > 0 ? (counts.BOA / totalCls) * 100 : 0;
 
-  // Gráfico por hora
+  // Número de dias distintos no intervalo (inclusivo)
+  const numDias = useMemo(() => {
+    const ms = endOfDay(to).getTime() - startOfDay(from).getTime();
+    return Math.max(1, Math.round(ms / 86400000) + (isSingleDay ? 0 : 0));
+  }, [from, to, isSingleDay]);
+
+  // Gráfico por hora: em modo multi-dia, exibe média por hora (não soma)
   const hourSeries = useMemo(() => {
     const buckets: Record<number, { n: number; valor: number }> = {};
     dayRides.forEach((r) => {
@@ -237,12 +248,13 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       bucket.valor += Number(r.valor_bruto || 0);
       buckets[h] = bucket;
     });
+    const divisor = isSingleDay ? 1 : Math.max(1, numDias);
     return Array.from({ length: 24 }, (_, h) => ({
       hora: `${String(h).padStart(2, "0")}h`,
-      corridas: buckets[h]?.n || 0,
+      corridas: (buckets[h]?.n || 0) / divisor,
       mediaValor: buckets[h]?.n ? buckets[h].valor / buckets[h].n : 0,
     }));
-  }, [dayRides]);
+  }, [dayRides, isSingleDay, numDias]);
 
   // Top 3 mais rentáveis
   const top3 = useMemo(
@@ -276,14 +288,15 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       Valor: Number(r.valor_bruto || 0).toFixed(2),
       Classificacao: r.classificacao || "",
     }));
-    exportCSV(`relatorio-diario-${format(date, "yyyy-MM-dd")}`, rows);
+    const slug = isSingleDay ? format(from, "yyyy-MM-dd") : `${format(from, "yyyy-MM-dd")}_a_${format(to, "yyyy-MM-dd")}`;
+    exportCSV(`relatorio-diario-${slug}`, rows);
   };
 
   return (
     <div className="space-y-6">
       {/* Seletor */}
       <div className="flex items-center justify-between gap-4">
-        <DateSelector date={date} onChange={setDate} maxDate={nowInTZ()} />
+        <DateRangeSelector range={range} onChange={setRange} maxDate={nowInTZ()} />
         <Button variant="outline" onClick={handleExportCSV} disabled={!dayRides.length}>
           <Download className="mr-2 h-4 w-4" /> Exportar CSV
         </Button>
@@ -299,7 +312,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
 
       {/* Secundários */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+        <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
         <ResumoCard label="R$/hora" value={fmtBRL(rPorHora)} hint="(tempo online)" />
         <ResumoCard label="R$/km" value={fmtBRL(rPorKm)} />
         <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
@@ -308,7 +321,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       {/* Gráfico por hora */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Corridas por hora do dia</CardTitle>
+          <CardTitle className="text-base">Corridas por hora do dia {!isSingleDay && <span className="text-xs font-normal text-muted-foreground">(média do período)</span>}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-72 w-full">
@@ -504,7 +517,7 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
             <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
-            <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+            <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
             <ResumoCard label="R$/km" value={fmtBRL(rK)} />
             <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
@@ -574,7 +587,7 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
                 <TableRow key={d.date.toISOString()}>
                   <TableCell className="text-xs">{d.label}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{d.corridas}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{fmtNumber(d.horas, 1)}h</TableCell>
+                  <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(d.horas)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtNumber(d.km, 1)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(d.ganhoBruto)}</TableCell>
                   <TableCell className={cn("text-right font-mono text-xs", d.ganhoReal >= 0 ? "text-success" : "text-destructive")}>
@@ -727,13 +740,15 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
     );
   };
 
-  const compareRow = (label: string, atual: number, prev: number, isCurrency = true) => {
+  const compareRow = (label: string, atual: number, prev: number, isCurrency: boolean | "hours" = true) => {
     const variacao = prev > 0 ? ((atual - prev) / prev) * 100 : null;
+    const fmt = (v: number) =>
+      isCurrency === "hours" ? formatHorasHHMM(v) : isCurrency ? fmtBRL(v) : fmtNumber(v, 0);
     return (
       <TableRow>
         <TableCell className="text-xs">{label}</TableCell>
-        <TableCell className="text-right font-mono text-xs">{isCurrency ? fmtBRL(atual) : fmtNumber(atual, 0)}</TableCell>
-        <TableCell className="text-right font-mono text-xs">{isCurrency ? fmtBRL(prev) : fmtNumber(prev, 0)}</TableCell>
+        <TableCell className="text-right font-mono text-xs">{fmt(atual)}</TableCell>
+        <TableCell className="text-right font-mono text-xs">{fmt(prev)}</TableCell>
         <TableCell className="text-right font-mono text-xs">
           {variacao == null ? (
             <span className="text-muted-foreground">— Sem dados</span>
@@ -769,7 +784,7 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
             <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
-            <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+            <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
             <ResumoCard label="R$/km" value={fmtBRL(rK)} />
             <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
@@ -843,7 +858,7 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
                 <TableRow key={s.label}>
                   <TableCell className="text-xs">{s.label}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{s.corridas}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{fmtNumber(s.horas, 1)}h</TableCell>
+                  <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(s.horas)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtNumber(s.km, 1)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(s.ganhoBruto)}</TableCell>
                   <TableCell className={cn("text-right font-mono text-xs", s.ganhoReal >= 0 ? "text-success" : "text-destructive")}>{fmtBRL(s.ganhoReal)}</TableCell>
@@ -1067,7 +1082,7 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
         <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
         <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
         <ResumoCard label="Total km" value={`${fmtNumber(m.kmTotal, 1)} km`} />
-        <ResumoCard label="Total horas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+        <ResumoCard label="Total horas" value={formatHorasHHMM(m.horasTrabalhadas)} />
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <ResumoCard label="Ticket médio" value={fmtBRL(ticket)} />
@@ -1174,7 +1189,7 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
                     <TableCell className="text-xs capitalize">{s.label}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{s.corridas}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtNumber(s.km, 1)}</TableCell>
-                    <TableCell className="text-right font-mono text-xs">{fmtNumber(s.horas, 1)}h</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(s.horas)}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtBRL(s.ganhoBruto)}</TableCell>
                     <TableCell className={cn("text-right font-mono text-xs", s.ganhoReal >= 0 ? "text-success" : "text-destructive")}>{fmtBRL(s.ganhoReal)}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtBRL(rh)}</TableCell>
@@ -1218,6 +1233,78 @@ function DateSelector({ date, onChange, label, maxDate }: { date: Date; onChange
           initialFocus
           className={cn("p-3 pointer-events-auto")}
         />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function DateRangeSelector({
+  range,
+  onChange,
+  maxDate,
+}: {
+  range: { from: Date; to: Date };
+  onChange: (r: { from: Date; to: Date }) => void;
+  maxDate?: Date;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ from?: Date; to?: Date }>({ from: range.from, to: range.to });
+
+  useEffect(() => {
+    if (open) setDraft({ from: range.from, to: range.to });
+  }, [open, range]);
+
+  const isSingle = format(range.from, "yyyy-MM-dd") === format(range.to, "yyyy-MM-dd");
+  const label = isSingle
+    ? format(range.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+    : `${format(range.from, "dd MMM", { locale: ptBR })} – ${format(range.to, "dd MMM yyyy", { locale: ptBR })}`;
+
+  const handleApply = () => {
+    if (draft.from && draft.to) {
+      onChange({ from: startOfDay(draft.from), to: endOfDay(draft.to) });
+      setOpen(false);
+    } else if (draft.from) {
+      onChange({ from: startOfDay(draft.from), to: endOfDay(draft.from) });
+      setOpen(false);
+    }
+  };
+
+  const handleHoje = () => {
+    const n = nowInTZ();
+    onChange({ from: startOfDay(n), to: endOfDay(n) });
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="justify-start gap-2">
+          <CalendarIcon className="h-4 w-4" />
+          {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="range"
+          selected={draft as any}
+          onSelect={(r: any) => setDraft(r || {})}
+          numberOfMonths={2}
+          disabled={(d) => (maxDate ? d > maxDate : false)}
+          className={cn("p-3 pointer-events-auto")}
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 p-3">
+          <Button variant="ghost" size="sm" onClick={handleHoje}>
+            Hoje
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleApply} disabled={!draft.from}>
+              Aplicar
+            </Button>
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );
