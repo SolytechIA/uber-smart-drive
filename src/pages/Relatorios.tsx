@@ -248,11 +248,10 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       bucket.valor += Number(r.valor_bruto || 0);
       buckets[h] = bucket;
     });
-    const divisor = isSingleDay ? 1 : Math.max(1, numDias);
     return Array.from({ length: 24 }, (_, h) => ({
       hora: `${String(h).padStart(2, "0")}h`,
-      corridas: (buckets[h]?.n || 0) / divisor,
-      mediaValor: buckets[h]?.n ? buckets[h].valor / buckets[h].n : 0,
+      corridas: (buckets[h]?.n || 0),
+      valorTotal: buckets[h]?.valor ?? 0,
     }));
   }, [dayRides, isSingleDay, numDias]);
 
@@ -321,7 +320,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       {/* Gráfico por hora */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Corridas por hora do dia {!isSingleDay && <span className="text-xs font-normal text-muted-foreground">(média do período)</span>}</CardTitle>
+          <CardTitle className="text-base">Corridas por hora do dia</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-72 w-full">
@@ -333,12 +332,12 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
                 <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${Math.round(v)}`} />
                 <RechartsTooltip
                   formatter={(v: number, name: string) =>
-                    name === "Valor médio" ? fmtBRL(v) : `${v} corridas`
+                    name === "Valor total" ? fmtBRL(v) : `${Math.round(v)} corridas`} />
                   }
                 />
                 <Legend />
                 <Bar yAxisId="l" dataKey="corridas" name="Corridas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="r" dataKey="mediaValor" name="Valor médio" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="r" dataKey="valorTotal" name="valorTotal" fill="#22C55E" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
