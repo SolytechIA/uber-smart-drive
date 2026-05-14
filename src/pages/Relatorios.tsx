@@ -312,7 +312,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
 
       {/* Secundários */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <ResumoCard label="Horas trabalhadas" value={`${fmtNumber(m.horasTrabalhadas, 1)}h`} />
+        <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
         <ResumoCard label="R$/hora" value={fmtBRL(rPorHora)} hint="(tempo online)" />
         <ResumoCard label="R$/km" value={fmtBRL(rPorKm)} />
         <ResumoCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
@@ -321,7 +321,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       {/* Gráfico por hora */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Corridas por hora do dia</CardTitle>
+          <CardTitle className="text-base">Corridas por hora do dia {!isSingleDay && <span className="text-xs font-normal text-muted-foreground">(média do período)</span>}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-72 w-full">
