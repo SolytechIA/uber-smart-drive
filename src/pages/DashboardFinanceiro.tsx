@@ -119,9 +119,9 @@ export default function DashboardFinanceiro() {
   const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
 
   // Comparativos
-  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle), [rides, vehicle]);
-  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle), [rides, vehicle]);
-  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle), [rides, vehicle]);
+  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
+  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
+  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
 
   // Série para o gráfico "Evolução do ganho real":
   // - Filtro "hoje": eixo X por hora (00h..hora atual)
@@ -564,32 +564,44 @@ interface CompRow {
   bHasData: boolean;
 }
 
-function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
+function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfDay(now);
   const aTo = endOfDay(now);
   const ontem = subDays(now, 1);
   const bFrom = startOfDay(ontem);
   const bTo = endOfDay(ontem);
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
+  return makeComp(
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    { includeTicket: true },
+  );
 }
 
-function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
+function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   const bTo = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
+  return makeComp(
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    { includeTicket: true },
+  );
 }
 
-function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null): CompRow[] {
+function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfMonth(now);
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
   const bTo = endOfMonth(subMonths(now, 1));
-  return makeComp(calcPeriodMetrics(rides, vehicle, aFrom, aTo), calcPeriodMetrics(rides, vehicle, bFrom, bTo), { includeTicket: true });
+  return makeComp(
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    { includeTicket: true },
+  );
 }
 
 function makeComp(

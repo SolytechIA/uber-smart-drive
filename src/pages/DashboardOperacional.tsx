@@ -220,7 +220,8 @@ export default function DashboardOperacional() {
     const diasTrabMes = Number(vehicle?.dias_trabalhados_mes || 22);
     const custoFixoDiario = diasTrabMes > 0 ? custoFixoMensal / diasTrabMes : 0;
     const ganhoReal = ganhoBruto - custoCombustivel - custoFixoDiario;
-    return { total, km, horas, pctBoas, ganhoBruto, usaJornada: horasJornada > 0, rPorKm, ticketMedio, ganhoReal };
+    const rPorHora = horasJornada > 0 ? ganhoBruto / horasJornada : 0;
+    return { total, km, horas, horasJornada, pctBoas, ganhoBruto, usaJornada: horasJornada > 0, rPorKm, rPorHora, ticketMedio, ganhoReal };
   }, [rides, jornadaMinutes, vehicle]);
 
   const variacao = stats.total - yesterdayCount;
@@ -276,10 +277,9 @@ export default function DashboardOperacional() {
           />
           <SummaryCard
             icon={Banknote}
-            label="Ganho real"
-            value={fmtBRL(stats.ganhoReal)}
-            valueClassName="text-success"
-            hint="líquido após custos"
+            label="R$/hora"
+            value={stats.horasJornada > 0 ? `R$ ${fmtNumber(stats.rPorHora, 2)}/h` : "—"}
+            hint="bruto por hora online"
           />
           <SummaryCard
             icon={Receipt}

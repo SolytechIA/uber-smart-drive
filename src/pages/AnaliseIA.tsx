@@ -86,13 +86,34 @@ async function fetchHistoricoAnalises(userId: string, periodo: "dia" | "semana" 
       .eq("user_id", userId)
       .eq("periodo", periodo)
       .order("data_referencia", { ascending: false })
-      .limit(3);
+      .limit(21);
     return ((data as any) || []).map((h: any) => ({
       data: h.data_referencia,
       resumo: h.resumo_dia?.slice(0, 300),
       dica: h.dica_estrategica?.slice(0, 200),
       corridas: h.payload?.total_corridas,
       ganho_real: h.payload?.ganho_real,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchHistoricoSemanal(userId: string) {
+  try {
+    const { data } = await supabase
+      .from("analises_geradas" as any)
+      .select("data_referencia, resumo_dia, payload")
+      .eq("user_id", userId)
+      .eq("periodo", "semana")
+      .order("data_referencia", { ascending: false })
+      .limit(4);
+    return ((data as any) || []).map((h: any) => ({
+      data: h.data_referencia,
+      resumo: h.resumo_dia?.slice(0, 200),
+      corridas: h.payload?.total_corridas,
+      ganho_real: h.payload?.ganho_real,
+      r_por_hora: h.payload?.r_por_hora,
     }));
   } catch {
     return [];
@@ -478,6 +499,7 @@ function PainelDia({
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
         nome_motorista: await getNomeMotorista(user),
         historico_analises: await fetchHistoricoAnalises(user.id, "dia"),
+        historico_semanal: await fetchHistoricoSemanal(user.id),
       };
 
       const pct = metaMensalCfg > 0 ? Math.min(100, (mMes.ganhoReal / metaMensalCfg) * 100) : 0;
