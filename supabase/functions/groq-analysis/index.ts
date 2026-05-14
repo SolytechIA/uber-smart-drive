@@ -502,9 +502,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const payload = (await req.json()) as Payload & { historico_analises?: any };
+    const payload = (await req.json()) as Payload & { historico_analises?: any; historico_semanal?: any };
     const userPrompt = buildPrompt(payload);
-    const systemContent = SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises);
+    const systemContent = SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises, (payload as any).historico_semanal);
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
