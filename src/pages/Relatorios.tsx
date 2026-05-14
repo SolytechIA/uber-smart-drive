@@ -82,7 +82,7 @@ function rideRefDateSP(r: Ride): Date | null {
 }
 
 function rideKmTotal(r: Ride): number {
-  return Number(r.km_total ?? (Number(r.km_passageiro || 0) + Number(r.km_deslocamento || 0)));
+  return Number(r.km_total ?? Number(r.km_passageiro || 0) + Number(r.km_deslocamento || 0));
 }
 
 function rideRPorKmReal(r: Ride): number {
@@ -102,13 +102,7 @@ function ResumoCard({ label, value, hint, positive, negative }: ResumoCardProps)
     <Card>
       <CardContent className="p-4">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p
-          className={cn(
-            "mt-1 text-2xl font-bold",
-            positive && "text-success",
-            negative && "text-destructive",
-          )}
-        >
+        <p className={cn("mt-1 text-2xl font-bold", positive && "text-success", negative && "text-destructive")}>
           {value}
         </p>
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
@@ -199,7 +193,17 @@ export default function Relatorios() {
 // ABA DIÁRIO
 // ============================================================
 
-function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; loading: boolean }) {
+function AbaDiario({
+  rides,
+  vehicle,
+  jornadas,
+  loading,
+}: {
+  rides: Ride[];
+  vehicle: Vehicle | null;
+  jornadas: JornadaRecord[];
+  loading: boolean;
+}) {
   const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
     const n = nowInTZ();
     return { from: startOfDay(n), to: endOfDay(n) };
@@ -250,7 +254,7 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
     });
     return Array.from({ length: 24 }, (_, h) => ({
       hora: `${String(h).padStart(2, "0")}h`,
-      corridas: (buckets[h]?.n || 0),
+      corridas: buckets[h]?.n || 0,
       valorTotal: buckets[h]?.valor ?? 0,
     }));
   }, [dayRides, isSingleDay, numDias]);
@@ -287,7 +291,9 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       Valor: Number(r.valor_bruto || 0).toFixed(2),
       Classificacao: r.classificacao || "",
     }));
-    const slug = isSingleDay ? format(from, "yyyy-MM-dd") : `${format(from, "yyyy-MM-dd")}_a_${format(to, "yyyy-MM-dd")}`;
+    const slug = isSingleDay
+      ? format(from, "yyyy-MM-dd")
+      : `${format(from, "yyyy-MM-dd")}_a_${format(to, "yyyy-MM-dd")}`;
     exportCSV(`relatorio-diario-${slug}`, rows);
   };
 
@@ -304,7 +310,12 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
       {/* Resumo executivo */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <ResumoCard label="Ganho bruto" value={fmtBRL(m.ganhoBruto)} />
-        <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
+        <ResumoCard
+          label="Ganho real"
+          value={fmtBRL(m.ganhoReal)}
+          positive={m.ganhoReal > 0}
+          negative={m.ganhoReal < 0}
+        />
         <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
         <ResumoCard label="Corridas" value={String(m.numCorridas)} />
       </div>
@@ -329,10 +340,15 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
                 <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${Math.round(v)}`} />
+                <YAxis
+                  yAxisId="r"
+                  orientation="right"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v) => `R$${Math.round(v)}`}
+                />
                 <RechartsTooltip
                   formatter={(v: number, name: string) =>
-                    name === "Valor total" ? fmtBRL(v) : `${Math.round(v)} corridas`} />
+                    name === "Valor total" ? fmtBRL(v) : `${Math.round(v)} corridas`
                   }
                 />
                 <Legend />
@@ -367,7 +383,11 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {top3.length ? top3.map((r) => <RideMiniRow key={r.id} ride={r} highlight="success" />) : <p className="text-sm text-muted-foreground">Sem corridas.</p>}
+            {top3.length ? (
+              top3.map((r) => <RideMiniRow key={r.id} ride={r} highlight="success" />)
+            ) : (
+              <p className="text-sm text-muted-foreground">Sem corridas.</p>
+            )}
           </CardContent>
         </Card>
         <Card className="border-destructive/40">
@@ -377,7 +397,11 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {piores.length ? piores.map((r) => <RideMiniRow key={r.id} ride={r} highlight="destructive" />) : <p className="text-sm text-muted-foreground">Sem corridas.</p>}
+            {piores.length ? (
+              piores.map((r) => <RideMiniRow key={r.id} ride={r} highlight="destructive" />)
+            ) : (
+              <p className="text-sm text-muted-foreground">Sem corridas.</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -413,9 +437,18 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
                         {r.bairro_origem || "—"} → {r.bairro_destino || "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">{fmtNumber(km, 1)}</TableCell>
-                      <TableCell className="text-right font-mono text-xs">{fmtBRL(Number(r.valor_bruto || 0))}</TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">{fmtBRL(custo)}</TableCell>
-                      <TableCell className={cn("text-right font-mono text-xs", ganhoReal > 0 ? "text-success" : "text-destructive")}>
+                      <TableCell className="text-right font-mono text-xs">
+                        {fmtBRL(Number(r.valor_bruto || 0))}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {fmtBRL(custo)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right font-mono text-xs",
+                          ganhoReal > 0 ? "text-success" : "text-destructive",
+                        )}
+                      >
                         {fmtBRL(ganhoReal)}
                       </TableCell>
                       <TableCell>
@@ -439,7 +472,17 @@ function AbaDiario({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehic
 // ABA SEMANAL
 // ============================================================
 
-function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; loading: boolean }) {
+function AbaSemanal({
+  rides,
+  vehicle,
+  jornadas,
+  loading,
+}: {
+  rides: Ride[];
+  vehicle: Vehicle | null;
+  jornadas: JornadaRecord[];
+  loading: boolean;
+}) {
   const [date, setDate] = useState<Date>(() => nowInTZ());
   const from = startOfWeek(date, { weekStartsOn: 1 });
   const to = endOfWeek(date, { weekStartsOn: 1 });
@@ -471,8 +514,14 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
     });
   }, [from, to, rides, vehicle, jornadas]);
 
-  const melhor = porDia.reduce<typeof porDia[number] | null>((best, d) => (!best || d.ganhoReal > best.ganhoReal ? d : best), null);
-  const pior = porDia.reduce<typeof porDia[number] | null>((worst, d) => (d.corridas > 0 && (!worst || d.ganhoReal < worst.ganhoReal) ? d : worst), null);
+  const melhor = porDia.reduce<(typeof porDia)[number] | null>(
+    (best, d) => (!best || d.ganhoReal > best.ganhoReal ? d : best),
+    null,
+  );
+  const pior = porDia.reduce<(typeof porDia)[number] | null>(
+    (worst, d) => (d.corridas > 0 && (!worst || d.ganhoReal < worst.ganhoReal) ? d : worst),
+    null,
+  );
 
   const handleExportCSV = () => {
     exportCSV(
@@ -513,7 +562,12 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
         return (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <ResumoCard label="Ganho bruto" value={fmtBRL(m.ganhoBruto)} />
-            <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
+            <ResumoCard
+              label="Ganho real"
+              value={fmtBRL(m.ganhoReal)}
+              positive={m.ganhoReal > 0}
+              negative={m.ganhoReal < 0}
+            />
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
@@ -537,7 +591,14 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${Math.round(v)}`} />
                   <RechartsTooltip formatter={(v: number) => fmtBRL(v)} />
-                  <Line type="monotone" dataKey="ganhoReal" name="Ganho real" stroke="#22C55E" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="ganhoReal"
+                    name="Ganho real"
+                    stroke="#22C55E"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -589,7 +650,12 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
                   <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(d.horas)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtNumber(d.km, 1)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(d.ganhoBruto)}</TableCell>
-                  <TableCell className={cn("text-right font-mono text-xs", d.ganhoReal >= 0 ? "text-success" : "text-destructive")}>
+                  <TableCell
+                    className={cn(
+                      "text-right font-mono text-xs",
+                      d.ganhoReal >= 0 ? "text-success" : "text-destructive",
+                    )}
+                  >
                     {fmtBRL(d.ganhoReal)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(d.rHora)}</TableCell>
@@ -613,7 +679,9 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
               <div>
                 <p className="text-lg font-bold">{melhor.label}</p>
                 <p className="text-2xl font-bold text-success">{fmtBRL(melhor.ganhoReal)}</p>
-                <p className="text-xs text-muted-foreground">{melhor.corridas} corridas • {fmtNumber(melhor.km, 1)} km</p>
+                <p className="text-xs text-muted-foreground">
+                  {melhor.corridas} corridas • {fmtNumber(melhor.km, 1)} km
+                </p>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Sem dados.</p>
@@ -631,7 +699,9 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
               <div>
                 <p className="text-lg font-bold">{pior.label}</p>
                 <p className="text-2xl font-bold text-destructive">{fmtBRL(pior.ganhoReal)}</p>
-                <p className="text-xs text-muted-foreground">{pior.corridas} corridas • {fmtNumber(pior.km, 1)} km</p>
+                <p className="text-xs text-muted-foreground">
+                  {pior.corridas} corridas • {fmtNumber(pior.km, 1)} km
+                </p>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Sem dados.</p>
@@ -647,7 +717,19 @@ function AbaSemanal({ rides, vehicle, jornadas, loading }: { rides: Ride[]; vehi
 // ABA MENSAL
 // ============================================================
 
-function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; goals: Goals | null; loading: boolean }) {
+function AbaMensal({
+  rides,
+  vehicle,
+  jornadas,
+  goals,
+  loading,
+}: {
+  rides: Ride[];
+  vehicle: Vehicle | null;
+  jornadas: JornadaRecord[];
+  goals: Goals | null;
+  loading: boolean;
+}) {
   const [date, setDate] = useState<Date>(() => nowInTZ());
   const from = startOfMonth(date);
   const to = endOfMonth(date);
@@ -680,10 +762,16 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
   // Mês anterior (comparativo)
   const prevFrom = startOfMonth(subMonths(date, 1));
   const prevTo = endOfMonth(subMonths(date, 1));
-  const mPrev = useMemo(() => calcPeriodMetrics(rides, vehicle, prevFrom, prevTo, jornadas), [rides, vehicle, prevFrom, prevTo, jornadas]);
+  const mPrev = useMemo(
+    () => calcPeriodMetrics(rides, vehicle, prevFrom, prevTo, jornadas),
+    [rides, vehicle, prevFrom, prevTo, jornadas],
+  );
 
   // Análise: melhor semana, melhor dia da semana histórico, horário de pico
-  const melhorSemana = semanas.reduce<typeof semanas[number] | null>((best, s) => (!best || s.ganhoReal > best.ganhoReal ? s : best), null);
+  const melhorSemana = semanas.reduce<(typeof semanas)[number] | null>(
+    (best, s) => (!best || s.ganhoReal > best.ganhoReal ? s : best),
+    null,
+  );
 
   const monthRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
   const diaSemanaTop = useMemo(() => {
@@ -711,7 +799,11 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
     const buckets: Record<number, number> = {};
     monthRides.forEach((r) => {
       if (!r.horario_inicio) return;
-      const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }).format(new Date(r.horario_inicio)));
+      const h = Number(
+        new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "2-digit", hour12: false }).format(
+          new Date(r.horario_inicio),
+        ),
+      );
       buckets[h] = (buckets[h] || 0) + 1;
     });
     let best = -1;
@@ -741,8 +833,7 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
 
   const compareRow = (label: string, atual: number, prev: number, isCurrency: boolean | "hours" = true) => {
     const variacao = prev > 0 ? ((atual - prev) / prev) * 100 : null;
-    const fmt = (v: number) =>
-      isCurrency === "hours" ? formatHorasHHMM(v) : isCurrency ? fmtBRL(v) : fmtNumber(v, 0);
+    const fmt = (v: number) => (isCurrency === "hours" ? formatHorasHHMM(v) : isCurrency ? fmtBRL(v) : fmtNumber(v, 0));
     return (
       <TableRow>
         <TableCell className="text-xs">{label}</TableCell>
@@ -780,7 +871,12 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
         return (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <ResumoCard label="Ganho bruto" value={fmtBRL(m.ganhoBruto)} />
-            <ResumoCard label="Ganho real" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
+            <ResumoCard
+              label="Ganho real"
+              value={fmtBRL(m.ganhoReal)}
+              positive={m.ganhoReal > 0}
+              negative={m.ganhoReal < 0}
+            />
             <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
@@ -805,9 +901,21 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
                 <RechartsTooltip formatter={(v: number) => fmtBRL(v)} />
                 <Legend />
                 {metas.diaria > 0 && (
-                  <ReferenceLine y={metas.diaria} stroke="#8B5CF6" strokeDasharray="4 4" label={{ value: "Meta diária", fontSize: 11, fill: "#8B5CF6" }} />
+                  <ReferenceLine
+                    y={metas.diaria}
+                    stroke="#8B5CF6"
+                    strokeDasharray="4 4"
+                    label={{ value: "Meta diária", fontSize: 11, fill: "#8B5CF6" }}
+                  />
                 )}
-                <Line type="monotone" dataKey="ganhoReal" name="Ganho real" stroke="#22C55E" strokeWidth={2} dot={{ r: 2 }} />
+                <Line
+                  type="monotone"
+                  dataKey="ganhoReal"
+                  name="Ganho real"
+                  stroke="#22C55E"
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -860,7 +968,14 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
                   <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(s.horas)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtNumber(s.km, 1)}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{fmtBRL(s.ganhoBruto)}</TableCell>
-                  <TableCell className={cn("text-right font-mono text-xs", s.ganhoReal >= 0 ? "text-success" : "text-destructive")}>{fmtBRL(s.ganhoReal)}</TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right font-mono text-xs",
+                      s.ganhoReal >= 0 ? "text-success" : "text-destructive",
+                    )}
+                  >
+                    {fmtBRL(s.ganhoReal)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -948,7 +1063,19 @@ function AbaMensal({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]
 // ABA ACUMULADO
 // ============================================================
 
-function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Ride[]; vehicle: Vehicle | null; jornadas: JornadaRecord[]; goals: Goals | null; loading: boolean }) {
+function AbaAcumulado({
+  rides,
+  vehicle,
+  jornadas,
+  goals,
+  loading,
+}: {
+  rides: Ride[];
+  vehicle: Vehicle | null;
+  jornadas: JornadaRecord[];
+  goals: Goals | null;
+  loading: boolean;
+}) {
   const metas = resolveGoals(goals, vehicle);
 
   // Range total = primeira corrida → hoje
@@ -957,13 +1084,16 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
       [...rides]
         .map((r) => ({ r, ref: rideRefDateSP(r) }))
         .filter((x) => !!x.ref)
-        .sort((a, b) => (a.ref!.getTime() - b.ref!.getTime())),
+        .sort((a, b) => a.ref!.getTime() - b.ref!.getTime()),
     [rides],
   );
   const fromAll = sorted.length ? startOfDay(sorted[0].ref!) : startOfMonth(nowInTZ());
   const toAll = endOfDay(nowInTZ());
 
-  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, fromAll, toAll, jornadas), [rides, vehicle, fromAll, toAll, jornadas]);
+  const m = useMemo(
+    () => calcPeriodMetrics(rides, vehicle, fromAll, toAll, jornadas),
+    [rides, vehicle, fromAll, toAll, jornadas],
+  );
   const ticket = m.numCorridas > 0 ? m.ganhoBruto / m.numCorridas : 0;
   const rHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
   const rKm = m.kmTotal > 0 ? m.ganhoBruto / m.kmTotal : 0;
@@ -1028,7 +1158,16 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
 
   // Série mensal (últimos 12 meses ou todos)
   const monthlySeries = useMemo(() => {
-    if (!sorted.length) return [] as { label: string; ganhoReal: number; mStart: Date; corridas: number; horas: number; km: number; ganhoBruto: number }[];
+    if (!sorted.length)
+      return [] as {
+        label: string;
+        ganhoReal: number;
+        mStart: Date;
+        corridas: number;
+        horas: number;
+        km: number;
+        ganhoBruto: number;
+      }[];
     const months: Date[] = [];
     let cursor = startOfMonth(fromAll);
     while (cursor <= toAll) {
@@ -1079,7 +1218,12 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <ResumoCard label="Receita bruta" value={fmtBRL(m.ganhoBruto)} />
-        <ResumoCard label="Ganho real total" value={fmtBRL(m.ganhoReal)} positive={m.ganhoReal > 0} negative={m.ganhoReal < 0} />
+        <ResumoCard
+          label="Ganho real total"
+          value={fmtBRL(m.ganhoReal)}
+          positive={m.ganhoReal > 0}
+          negative={m.ganhoReal < 0}
+        />
         <ResumoCard label="Total km" value={`${fmtNumber(m.kmTotal, 1)} km`} />
         <ResumoCard label="Total horas" value={formatHorasHHMM(m.horasTrabalhadas)} />
       </div>
@@ -1092,9 +1236,21 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
 
       {/* Recordes */}
       <div className="grid gap-4 md:grid-cols-3">
-        <RecordCard title="Melhor dia" subtitle={recordeDia ? format(new Date(recordeDia.date + "T12:00:00"), "dd/MM/yyyy") : "—"} value={recordeDia ? fmtBRL(recordeDia.ganhoReal) : "—"} />
-        <RecordCard title="Melhor semana" subtitle={recordeSemana?.label || "—"} value={recordeSemana ? fmtBRL(recordeSemana.ganhoReal) : "—"} />
-        <RecordCard title="Melhor mês" subtitle={recordeMes?.label || "—"} value={recordeMes ? fmtBRL(recordeMes.ganhoReal) : "—"} />
+        <RecordCard
+          title="Melhor dia"
+          subtitle={recordeDia ? format(new Date(recordeDia.date + "T12:00:00"), "dd/MM/yyyy") : "—"}
+          value={recordeDia ? fmtBRL(recordeDia.ganhoReal) : "—"}
+        />
+        <RecordCard
+          title="Melhor semana"
+          subtitle={recordeSemana?.label || "—"}
+          value={recordeSemana ? fmtBRL(recordeSemana.ganhoReal) : "—"}
+        />
+        <RecordCard
+          title="Melhor mês"
+          subtitle={recordeMes?.label || "—"}
+          value={recordeMes ? fmtBRL(recordeMes.ganhoReal) : "—"}
+        />
       </div>
 
       {/* Série mensal */}
@@ -1133,7 +1289,14 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
             <div className="h-64">
               <ResponsiveContainer>
                 <PieChart>
-                  <Pie data={classDist} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                  <Pie
+                    data={classDist}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
+                  >
                     {classDist.map((d, i) => (
                       <Cell key={i} fill={d.color} />
                     ))}
@@ -1190,9 +1353,18 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
                     <TableCell className="text-right font-mono text-xs">{fmtNumber(s.km, 1)}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{formatHorasHHMM(s.horas)}</TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtBRL(s.ganhoBruto)}</TableCell>
-                    <TableCell className={cn("text-right font-mono text-xs", s.ganhoReal >= 0 ? "text-success" : "text-destructive")}>{fmtBRL(s.ganhoReal)}</TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right font-mono text-xs",
+                        s.ganhoReal >= 0 ? "text-success" : "text-destructive",
+                      )}
+                    >
+                      {fmtBRL(s.ganhoReal)}
+                    </TableCell>
                     <TableCell className="text-right font-mono text-xs">{fmtBRL(rh)}</TableCell>
-                    <TableCell className="text-right font-mono text-xs">{metaPct == null ? "—" : `${fmtNumber(metaPct, 0)}%`}</TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {metaPct == null ? "—" : `${fmtNumber(metaPct, 0)}%`}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -1208,7 +1380,17 @@ function AbaAcumulado({ rides, vehicle, jornadas, goals, loading }: { rides: Rid
 // Subcomponentes
 // ============================================================
 
-function DateSelector({ date, onChange, label, maxDate }: { date: Date; onChange: (d: Date) => void; label?: string; maxDate?: Date }) {
+function DateSelector({
+  date,
+  onChange,
+  label,
+  maxDate,
+}: {
+  date: Date;
+  onChange: (d: Date) => void;
+  label?: string;
+  maxDate?: Date;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -1345,7 +1527,9 @@ function ClassBadge({ color, label, count, total }: { color: string; label: stri
   return (
     <div className="rounded-lg border border-border/50 p-4 text-center" style={{ borderColor: `${color}55` }}>
       <p className="text-sm font-medium">{label}</p>
-      <p className="mt-1 text-3xl font-bold" style={{ color }}>{count}</p>
+      <p className="mt-1 text-3xl font-bold" style={{ color }}>
+        {count}
+      </p>
       <p className="text-xs text-muted-foreground">{fmtNumber(pct, 1)}%</p>
     </div>
   );
@@ -1359,14 +1543,23 @@ function ClassChip({ c }: { c: string | null }) {
     RUIM: "bg-destructive/15 text-destructive border-destructive/30",
   };
   const labels: Record<string, string> = { BOA: "Boa", MEDIA: "Média", RUIM: "Ruim" };
-  return <Badge variant="outline" className={cn("text-[10px]", colors[cls] || colors.MEDIA)}>{labels[cls] || labels.MEDIA}</Badge>;
+  return (
+    <Badge variant="outline" className={cn("text-[10px]", colors[cls] || colors.MEDIA)}>
+      {labels[cls] || labels.MEDIA}
+    </Badge>
+  );
 }
 
 function RideMiniRow({ ride, highlight }: { ride: Ride; highlight: "success" | "destructive" }) {
   const km = rideKmTotal(ride);
   const rkm = rideRPorKmReal(ride);
   return (
-    <div className={cn("rounded-md border p-3 text-sm", highlight === "success" ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5")}>
+    <div
+      className={cn(
+        "rounded-md border p-3 text-sm",
+        highlight === "success" ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5",
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium">
           {ride.bairro_origem || "—"} → {ride.bairro_destino || "—"}
@@ -1374,7 +1567,10 @@ function RideMiniRow({ ride, highlight }: { ride: Ride; highlight: "success" | "
         <p className="font-mono text-xs">{fmtBRL(Number(ride.valor_bruto || 0))}</p>
       </div>
       <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{fmtInTZ(ride.horario_inicio)} • {fmtNumber(km, 1)} km • desloc. {fmtNumber(Number(ride.km_deslocamento || 0), 1)} km</span>
+        <span>
+          {fmtInTZ(ride.horario_inicio)} • {fmtNumber(km, 1)} km • desloc.{" "}
+          {fmtNumber(Number(ride.km_deslocamento || 0), 1)} km
+        </span>
         <span className="font-mono">R$/km: {fmtBRL(rkm)}</span>
       </div>
     </div>
