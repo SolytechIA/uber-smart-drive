@@ -86,7 +86,7 @@ async function fetchHistoricoAnalises(userId: string, periodo: "dia" | "semana" 
       .eq("user_id", userId)
       .eq("periodo", periodo)
       .order("data_referencia", { ascending: false })
-      .limit(3);
+      .limit(21);
     return ((data as any) || []).map((h: any) => ({
       data: h.data_referencia,
       resumo: h.resumo_dia?.slice(0, 300),
