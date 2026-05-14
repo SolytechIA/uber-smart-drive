@@ -72,15 +72,17 @@ const DEFAULT_PARAMS: ClassifyParams = {
   r_km_medio: 1.3,
 };
 
-const fmtBRL = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const fmtKm = (v: number) =>
-  `${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}km`;
+const fmtKm = (v: number) => `${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}km`;
 
 const fmtHora = (iso: string | null) => {
   if (!iso) return "--:--";
-  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  return new Date(iso).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
 };
 
 const fmtDataHoje = () => formatLongDateSP();
@@ -202,10 +204,15 @@ export default function DashboardOperacional() {
     }
     setRides((ridesRes.data as RideRow[]) || []);
     setYesterdayCount(yRes.count || 0);
-    const js = ((jornadasRes.data as any) || []) as Array<{ inicio: string; fim: string | null; duracao_minutos: number | null }>;
+    const js = ((jornadasRes.data as any) || []) as Array<{
+      inicio: string;
+      fim: string | null;
+      duracao_minutos: number | null;
+    }>;
     const totalMin = js.reduce((sum, j) => {
       if (j.fim) return sum + (Number(j.duracao_minutos) || 0);
-      return sum + (Date.now() - new Date(j.inicio).getTime()) / 60000;
+      if (j.inicio) return sum + Math.max(0, (Date.now() - new Date(j.inicio).getTime()) / 60000);
+      return sum;
     }, 0);
     setJornadaMinutes(totalMin);
     setLoading(false);
@@ -217,10 +224,7 @@ export default function DashboardOperacional() {
 
   const stats = useMemo(() => {
     const total = rides.length;
-    const km = rides.reduce(
-      (sum, r) => sum + (Number(r.km_passageiro) || 0) + (Number(r.km_deslocamento) || 0),
-      0,
-    );
+    const km = rides.reduce((sum, r) => sum + (Number(r.km_passageiro) || 0) + (Number(r.km_deslocamento) || 0), 0);
     const horasCorridas = rides.reduce((sum, r) => sum + (Number(r.duracao_minutos) || 0), 0) / 60;
     const horasJornada = jornadaMinutes / 60;
     const horas = horasJornada > 0 ? horasJornada : horasCorridas;
@@ -235,12 +239,23 @@ export default function DashboardOperacional() {
     const custoFixoDiario = diasTrabMes > 0 ? custoFixoMensal / diasTrabMes : 0;
     const ganhoReal = ganhoBruto - custoCombustivel - custoFixoDiario;
     const rPorHora = horasJornada > 0 ? ganhoBruto / horasJornada : 0;
-    return { total, km, horas, horasJornada, pctBoas, ganhoBruto, usaJornada: horasJornada > 0, rPorKm, rPorHora, ticketMedio, ganhoReal };
+    return {
+      total,
+      km,
+      horas,
+      horasJornada,
+      pctBoas,
+      ganhoBruto,
+      usaJornada: horasJornada > 0,
+      rPorKm,
+      rPorHora,
+      ticketMedio,
+      ganhoReal,
+    };
   }, [rides, jornadaMinutes, vehicle]);
 
   const variacao = stats.total - yesterdayCount;
-  const pctColor =
-    stats.pctBoas >= 70 ? "text-success" : stats.pctBoas >= 40 ? "text-warning" : "text-destructive";
+  const pctColor = stats.pctBoas >= 70 ? "text-success" : stats.pctBoas >= 40 ? "text-warning" : "text-destructive";
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -257,9 +272,7 @@ export default function DashboardOperacional() {
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold sm:text-3xl">
-              Olá, {nome || "motorista"}! 👋
-            </h1>
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">Olá, {nome || "motorista"}! 👋</h1>
             <p className="text-sm text-muted-foreground">{fmtDataHoje()}</p>
           </div>
           <Button variant="gradient" onClick={() => setShowNew(true)} className="hidden sm:inline-flex">
@@ -273,19 +286,19 @@ export default function DashboardOperacional() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           <SummaryCard
             icon={DollarSign}
-            label={isToday ? "Bruto hoje" : "Bruto no dia"}
+            label={isToday ? "Bruto hoje" : "Bruto no período"}
             value={fmtBRL(stats.ganhoBruto)}
           />
           <SummaryCard
             icon={Gauge}
-            label={isToday ? "R$/km hoje" : "R$/km no dia"}
+            label={isToday ? "R$/km hoje" : "R$/km no período"}
             value={stats.km > 0 ? `R$ ${fmtNumber(stats.rPorKm, 2)}/km` : "—"}
             valueClassName={
               stats.rPorKm >= params.r_km_bom
                 ? "text-success"
                 : stats.rPorKm >= params.r_km_medio
-                ? "text-warning"
-                : "text-destructive"
+                  ? "text-warning"
+                  : "text-destructive"
             }
             hint={`meta: R$ ${fmtNumber(params.r_km_bom, 2)}/km`}
           />
@@ -303,7 +316,7 @@ export default function DashboardOperacional() {
           />
           <SummaryCard
             icon={Car}
-            label={isToday ? "Corridas hoje" : "Corridas no dia"}
+            label={isToday ? "Corridas hoje" : "Corridas no período"}
             value={String(stats.total)}
             badge={
               mode === "today" && isSingleDay && variacao !== 0 ? (
@@ -337,11 +350,7 @@ export default function DashboardOperacional() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-lg font-semibold">
-                {isToday
-                  ? "Corridas de Hoje"
-                  : isSingleDay
-                  ? "Corridas do dia"
-                  : "Corridas do Período"}
+                {isToday ? "Corridas de Hoje" : isSingleDay ? "Corridas do dia" : "Corridas do Período"}
               </h2>
               <PeriodFilter
                 mode={mode}
@@ -357,9 +366,7 @@ export default function DashboardOperacional() {
                 }}
               />
             </div>
-            {rides.length > 0 && (
-              <span className="text-xs text-muted-foreground">{rides.length} registro(s)</span>
-            )}
+            {rides.length > 0 && <span className="text-xs text-muted-foreground">{rides.length} registro(s)</span>}
           </div>
 
           {!isToday && (
@@ -395,7 +402,7 @@ export default function DashboardOperacional() {
 
           {loading ? (
             <ul className="space-y-2">
-              {[0,1,2,3].map((i) => (
+              {[0, 1, 2, 3].map((i) => (
                 <li key={i} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/30 p-3">
                   <div className="h-4 w-12 animate-pulse rounded bg-muted" />
                   <div className="flex-1 space-y-2">
@@ -457,9 +464,7 @@ export default function DashboardOperacional() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir corrida?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -531,7 +536,9 @@ function RideItem({
               {classificacaoLabel[c]}
             </Badge>
             {ride.origem === "uber_sync" && (
-              <span title="Sincronizada automaticamente da Uber" className="text-xs">🔄</span>
+              <span title="Sincronizada automaticamente da Uber" className="text-xs">
+                🔄
+              </span>
             )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
@@ -558,20 +565,12 @@ function RideItem({
           </Button>
         </div>
       </div>
-      <p className="mt-1 pl-[3.75rem] text-xs italic text-purple-400/80 dark:text-purple-300/80">
-        {insight}
-      </p>
+      <p className="mt-1 pl-[3.75rem] text-xs italic text-purple-400/80 dark:text-purple-300/80">{insight}</p>
     </li>
   );
 }
 
-function buildInsight(
-  c: Classificacao,
-  valor: number,
-  kmPax: number,
-  kmDesl: number,
-  dur: number,
-): string {
+function buildInsight(c: Classificacao, valor: number, kmPax: number, kmDesl: number, dur: number): string {
   if (c === "BOA") {
     if (kmDesl < 0.5) return "✨ Corrida eficiente — deslocamento mínimo com ótimo retorno por km.";
     if (valor > 15) return "🏆 Corrida premium — entre as mais rentáveis do dia.";
@@ -633,9 +632,7 @@ function PeriodFilter({
     }
   };
 
-  const customLabel = mode === "custom"
-    ? `${format(range.from, "dd/MM")} – ${format(range.to, "dd/MM")}`
-    : "Período";
+  const customLabel = mode === "custom" ? `${format(range.from, "dd/MM")} – ${format(range.to, "dd/MM")}` : "Período";
 
   const calendarPanel = (
     <>
@@ -662,12 +659,7 @@ function PeriodFilter({
 
   return (
     <div className="flex items-center gap-1.5">
-      <Button
-        variant={mode === "today" ? "default" : "outline"}
-        size="sm"
-        className="h-8"
-        onClick={onTodayClick}
-      >
+      <Button variant={mode === "today" ? "default" : "outline"} size="sm" className="h-8" onClick={onTodayClick}>
         Hoje
       </Button>
       {isMobile ? (
