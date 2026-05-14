@@ -220,7 +220,8 @@ export default function DashboardOperacional() {
     const diasTrabMes = Number(vehicle?.dias_trabalhados_mes || 22);
     const custoFixoDiario = diasTrabMes > 0 ? custoFixoMensal / diasTrabMes : 0;
     const ganhoReal = ganhoBruto - custoCombustivel - custoFixoDiario;
-    return { total, km, horas, pctBoas, ganhoBruto, usaJornada: horasJornada > 0, rPorKm, ticketMedio, ganhoReal };
+    const rPorHora = horasJornada > 0 ? ganhoBruto / horasJornada : 0;
+    return { total, km, horas, horasJornada, pctBoas, ganhoBruto, usaJornada: horasJornada > 0, rPorKm, rPorHora, ticketMedio, ganhoReal };
   }, [rides, jornadaMinutes, vehicle]);
 
   const variacao = stats.total - yesterdayCount;
