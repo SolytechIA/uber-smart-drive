@@ -322,7 +322,7 @@ export default function DashboardOperacional() {
           <SummaryCard
             icon={Clock}
             label={stats.usaJornada ? "Horas no volante (tempo online)" : "Horas no volante"}
-            value={`${stats.horas.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`}
+            value={formatHorasHHMM(stats.horas)}
           />
           <SummaryCard
             icon={TrendingUp}
@@ -337,26 +337,25 @@ export default function DashboardOperacional() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-lg font-semibold">
-                {isToday ? "Corridas de Hoje" : "Corridas do dia"}
+                {isToday
+                  ? "Corridas de Hoje"
+                  : isSingleDay
+                  ? "Corridas do dia"
+                  : "Corridas do Período"}
               </h2>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                    {format(selectedDate, "dd/MM/yyyy")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(d) => d && setSelectedDate(d)}
-                    disabled={(date) => date > nowInTZ()}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <PeriodFilter
+                mode={mode}
+                range={range}
+                onTodayClick={() => {
+                  const n = nowInTZ();
+                  setMode("today");
+                  setRange({ from: n, to: n });
+                }}
+                onApplyCustom={(r) => {
+                  setMode("custom");
+                  setRange(r);
+                }}
+              />
             </div>
             {rides.length > 0 && (
               <span className="text-xs text-muted-foreground">{rides.length} registro(s)</span>
@@ -367,17 +366,28 @@ export default function DashboardOperacional() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
               <span>
                 📅 Visualizando{" "}
-                {selectedDate
-                  .toLocaleDateString("pt-BR", {
-                    weekday: "long",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    timeZone: "America/Sao_Paulo",
-                  })
-                  .replace(/^./, (m) => m.toUpperCase())}
+                {isSingleDay
+                  ? range.from
+                      .toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        timeZone: "America/Sao_Paulo",
+                      })
+                      .replace(/^./, (m) => m.toUpperCase())
+                  : `${format(range.from, "dd/MM")} – ${format(range.to, "dd/MM/yyyy")}`}
               </span>
-              <Button variant="ghost" size="sm" className="h-7" onClick={() => setSelectedDate(nowInTZ())}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                onClick={() => {
+                  const n = nowInTZ();
+                  setMode("today");
+                  setRange({ from: n, to: n });
+                }}
+              >
                 Voltar para hoje
               </Button>
             </div>
@@ -433,7 +443,7 @@ export default function DashboardOperacional() {
         onSaved={loadAll}
         params={params}
         editing={editing}
-        defaultDate={selectedDate}
+        defaultDate={range.from}
       />
 
       <RideViewModal
