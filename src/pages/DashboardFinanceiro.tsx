@@ -119,9 +119,9 @@ export default function DashboardFinanceiro() {
   const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
 
   // Comparativos
-  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle), [rides, vehicle]);
-  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle), [rides, vehicle]);
-  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle), [rides, vehicle]);
+  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
+  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
+  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
 
   // Série para o gráfico "Evolução do ganho real":
   // - Filtro "hoje": eixo X por hora (00h..hora atual)
