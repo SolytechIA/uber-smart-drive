@@ -264,6 +264,13 @@ function buildPromptDia(d: PayloadDia): string {
 
   const nomeMotorista = d.nome_motorista ? d.nome_motorista : "o motorista";
 
+  const tempoOcioso = d.tempo_medio_entre_corridas
+    ? `Intervalo médio entre corridas: ${d.tempo_medio_entre_corridas.toFixed(0)} min | Maior pausa: ${(d.maior_intervalo_sem_corrida || 0).toFixed(0)} min`
+    : "";
+  const eficiencia = d.corridas_por_hora_efetiva
+    ? `Corridas por hora efetiva: ${d.corridas_por_hora_efetiva.toFixed(1)} | Tempo online sem corrida: ${(d.pct_tempo_online_sem_corrida || 0).toFixed(0)}%`
+    : "";
+
   return `${ctx}
 NOME DO MOTORISTA: ${nomeMotorista} — use o nome naturalmente na análise, onde soar genuíno. Não em toda frase.
 
@@ -272,49 +279,50 @@ Corridas: ${d.total_corridas} (BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: 
 Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custos: R$ ${fmt(d.custo_total)} | Ganho real: R$ ${fmt(d.ganho_real)}
 Meta diária: R$ ${fmt(d.meta_diaria)} → ${fmt(d.percentual_meta)}% atingida
 Km rodados: ${fmt(d.km_total)} | Km vazio (deslocamento sem passageiro): ${fmt(d.km_deslocamento_total)} km = ${pctVazio}% do total
-Horas trabalhadas: ${fmt(d.horas)}h
+Horas trabalhadas: ${fmtHHMM(d.horas)}
 R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km médio: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
 Parâmetros configurados pelo motorista: BOA ≥ R$ ${fmt(rkmBom)}/km | MÉDIA ≥ R$ ${fmt(rkmMedio)}/km${ticketMin > 0 ? ` | ticket mínimo: R$ ${fmt(ticketMin)}` : ""}
 Janela de trabalho: ${d.hora_inicio} → ${d.hora_fim}
+${tempoOcioso ? `Tempo ocioso: ${tempoOcioso}` : ""}
+${eficiencia ? `Eficiência de jornada: ${eficiencia}` : ""}
 Melhor corrida: R$ ${fmt(d.corrida_melhor.valor)} | ${d.corrida_melhor.origem} → ${d.corrida_melhor.destino} | ${fmt(d.corrida_melhor.km)} km
 Pior corrida: R$ ${fmt(d.corrida_pior.valor)} | ${d.corrida_pior.origem} → ${d.corrida_pior.destino} | ${fmt(d.corrida_pior.km)} km
 Acumulado no mês: R$ ${fmt(d.ganho_real)} | Meta mensal: R$ ${fmt(d.meta_mensal)} | Projeção atual: R$ ${fmt(d.projecao_mensal)}
 Faltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) → necessário R$ ${fmt(d.valor_necessario_por_dia)}/dia
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
-MISSÃO: Analise estes dados e encontre o que o motorista NÃO percebeu hoje. Ele já sabe quanto ganhou — descubra o POR QUÊ por trás dos números.
+MISSÃO: Encontre o que o motorista NÃO percebeu hoje. Ele já sabe quanto ganhou. Descubra o POR QUÊ e o QUANTO ficou na mesa.
+
+SEMENTE PSICOLÓGICA — inclua no resumo ou nas recomendações, de forma natural (não forçada):
+O motorista que gera análise perto do fim do dia ainda pode agir. Se o dia ainda não acabou, destaque UMA oportunidade concreta para a próxima hora. Se o dia encerrou, mostre quanto teria mudado com 1 corrida a mais no horário de pico identificado. O objetivo é fazer o motorista pensar: "vou gerar isso todo dia antes de encerrar."
 
 ## RESUMO DO DIA
-Não repita os dados. Interprete-os. O que esses números revelam sobre COMO foi esse dia — não QUANTO foi? 
-
-Perguntas que devem guiar sua análise (responda as que os dados permitirem):
-— A proporção de corridas BOA/MÉDIA/RUIM (${d.n_boas}/${d.n_medias}/${d.n_ruins}) explica o R$/km de R$ ${fmt(d.r_por_km)} — isso é acima ou abaixo do configurado como BOA (R$ ${fmt(rkmBom)}/km)? O que essa diferença significa em R$ no final do dia?
-— Os ${fmt(d.km_deslocamento_total)} km rodados vazios (${pctVazio}% do total) custaram quanto em combustível? Isso foi normal para o padrão do motorista ou alto?
-— A diferença entre a melhor corrida (R$ ${fmt(d.corrida_melhor.valor)}, ${fmt(d.corrida_melhor.km)} km) e o ticket médio (R$ ${fmt(d.ticket_medio)}) — o que isso revela sobre a distribuição das corridas hoje?
-— Trabalhou ${fmt(d.horas)}h e gerou R$ ${fmt(d.r_por_hora)}/hora. Se a janela foi ${d.hora_inicio}→${d.hora_fim}, houve tempo ocioso embutido nessas horas?
-
-Escreva 2 parágrafos densos de análise. Cada frase deve conter uma descoberta, não uma descrição.
+Formato: 1 frase de abertura impactante (o que os números escondem) + 3 bullets de revelação.
+Cada bullet deve responder uma destas perguntas com os dados reais:
+• Os ${d.km_deslocamento_total ? fmt(d.km_deslocamento_total) : "?"}km vazios (${pctVazio}% do total) custaram quanto em combustível? Isso é normal ou alto para este motorista?
+• A diferença entre corridas BOA e MÉDIA em R$/km — quanto isso representa em reais no total do dia?
+• O tempo entre corridas — havia janelas ociosas que coincidem com horários de alta demanda?
+• Se houve intervalo longo sem corrida: em qual horário foi? O que estava acontecendo?
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-Quatro recomendações concretas para amanhã — cada uma precisa ser uma conclusão direta dos dados de HOJE.
-Se fizer sentido para qualquer motorista em qualquer dia, está errada.
-Deve fazer sentido APENAS para quem viveu exatamente este dia.
-Use os dados: janela ${d.hora_inicio}→${d.hora_fim}, melhor corrida ${d.corrida_melhor.origem}→${d.corrida_melhor.destino} de R$ ${fmt(d.corrida_melhor.valor)}, proporção BOA/MÉDIA/RUIM ${d.n_boas}/${d.n_medias}/${d.n_ruins}, km vazio ${pctVazio}%.
+Formato: exatamente 4 bullets numerados. Cada um: 1 ação + motivo em dados + valor estimado em R$.
+Estrutura de cada bullet: "N. [Verbo de ação] [especificidade] — porque [dado do dia] — vale aprox. R$ [valor calculado]."
+PROIBIDO recomendação que qualquer motorista poderia receber sem ler esta análise.
 
 ## PROJEÇÃO DO MÊS
-Não repita a projeção R$ ${fmt(d.projecao_mensal)} que o motorista já vê na tela.
-Dado o que hoje revelou sobre o comportamento dele, essa projeção é otimista, realista ou conservadora?
-O que precisaria mudar nos próximos ${d.dias_restantes_mes} dias para os R$ ${fmt(d.valor_necessario_por_dia)}/dia serem alcançáveis — e o que ele demonstrou hoje indica que isso é possível?
-Seja honesto, sem drama.
+Formato: 3 bullets.
+• Bullet 1: projeção realista com o ritmo atual (não repita o número que o motorista já vê).
+• Bullet 2: o que precisaria mudar para fechar a meta — expresso em corridas/dia ou horas/dia, não em R$.
+• Bullet 3: com base no que hoje revelou, isso é alcançável? Seja honesto em 1 frase.
 
 ## DICA ESTRATÉGICA
-Um insight que o motorista definitivamente não chegaria sozinho. 
-Pode ser uma relação entre dois dados que parecem não ter conexão, um padrão no cruzamento de km vazio com horário, ou uma implicação financeira que ele não calculou. 
-Seja específico — use os números do dia como evidência.
+Formato: 1 bullet de abertura (o insight) + 2 bullets de evidência + 1 bullet de implicação financeira.
+Cruzar obrigatoriamente pelo menos 2 destas variáveis: horário × classificação, km_vazio × período do dia, intervalo entre corridas × valor da corrida seguinte, janela de trabalho × R$/km.
+Exemplo do padrão esperado: "Suas 3 corridas BOA aconteceram nas 40 min após as pausas curtas (≤5 min). Após pausas longas (+15 min), R$/km caiu 32%. Cada pausa longa desnecessária custou R$ X em média."
 
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
-Última linha — "Ação para amanhã:" seguida de UMA ação hiper-específica que só faz sentido após ler esta análise.`;
+Última linha — "⚡ Ação para agora:" seguida de UMA ação hiper-específica que só faz sentido após ler esta análise.`;
 }
 
 function buildPromptSemana(d: PayloadSemana): string {
