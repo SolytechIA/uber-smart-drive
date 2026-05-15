@@ -68,6 +68,9 @@ interface PayloadDia extends ContextoBase {
   maior_intervalo_sem_corrida?: number;
   corridas_por_hora_efetiva?: number;
   pct_tempo_online_sem_corrida?: number;
+  consumo_medio_km_l?: number;
+  preco_combustivel?: number;
+  tipo_combustivel?: string;
 }
 
 interface PayloadSemana extends ContextoBase {
@@ -279,6 +282,9 @@ Corridas: ${d.total_corridas} (BOA: ${d.n_boas} | MÉDIA: ${d.n_medias} | RUIM: 
 Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custos: R$ ${fmt(d.custo_total)} | Ganho real: R$ ${fmt(d.ganho_real)}
 Meta diária: R$ ${fmt(d.meta_diaria)} → ${fmt(d.percentual_meta)}% atingida
 Km rodados: ${fmt(d.km_total)} | Km vazio (deslocamento sem passageiro): ${fmt(d.km_deslocamento_total)} km = ${pctVazio}% do total
+${d.consumo_medio_km_l ? `Dados do veículo cadastrado: consumo médio ${fmt(d.consumo_medio_km_l)} km/l | preço combustível R$ ${fmt(d.preco_combustivel || 0)}/l${d.tipo_combustivel ? ` | combustível: ${d.tipo_combustivel}` : ""}` : "Dados do veículo: não cadastrados pelo motorista."}
+${d.consumo_medio_km_l && d.preco_combustivel ? `Custo real por km rodado: R$ ${fmt((d.preco_combustivel / d.consumo_medio_km_l))} | Custo estimado do deslocamento vazio hoje: R$ ${fmt((d.km_deslocamento_total || 0) * (d.preco_combustivel / d.consumo_medio_km_l))}` : ""}
+REGRA ANTI-ALUCINAÇÃO: Use APENAS os dados fornecidos acima para cálculos de combustível. Se "Dados do veículo: não cadastrados", NÃO estime consumo nem preço — diga apenas "configure seu veículo em Config para cálculos precisos de combustível".
 Horas trabalhadas: ${fmtHHMM(d.horas)}
 R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km médio: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
 Parâmetros configurados pelo motorista: BOA ≥ R$ ${fmt(rkmBom)}/km | MÉDIA ≥ R$ ${fmt(rkmMedio)}/km${ticketMin > 0 ? ` | ticket mínimo: R$ ${fmt(ticketMin)}` : ""}
