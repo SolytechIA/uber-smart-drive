@@ -344,7 +344,7 @@ NOME DO MOTORISTA: ${nomeMotorista} — use o nome naturalmente na análise, ond
 
 DADOS BRUTOS DA SEMANA — ${d.rotulo_periodo}:
 Corridas: ${d.total_corridas} | Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Ganho real: R$ ${fmt(d.ganho_real)}
-R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Horas: ${fmt(d.horas)}h | Km: ${fmt(d.km_total)}
+R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km: R$ ${fmt(d.r_por_km)} | Horas: ${fmtHHMM(d.horas)} | Km: ${fmt(d.km_total)}
 Meta semanal: R$ ${fmt(d.meta_semanal)} → ${fmt(d.percentual_meta)}% atingida
 Melhor dia: ${d.melhor_dia.rotulo} — R$ ${fmt(d.melhor_dia.valor)}
 Pior dia: ${d.pior_dia.rotulo} — R$ ${fmt(d.pior_dia.valor)}
