@@ -465,6 +465,36 @@ function PainelDia({
       const valorFaltante = Math.max(0, metaMensalCfg - mMes.ganhoReal);
       const valorPorDia = diasRestantes > 0 ? valorFaltante / diasRestantes : valorFaltante;
 
+      // Métricas de tempo ocioso / eficiência de jornada
+      const corridasOrdenadas = [...ridesHoje].sort(
+        (a, b) =>
+          new Date(a.horario_inicio || 0).getTime() - new Date(b.horario_inicio || 0).getTime(),
+      );
+      const intervalos: number[] = [];
+      for (let i = 1; i < corridasOrdenadas.length; i++) {
+        const fim =
+          new Date(corridasOrdenadas[i - 1].horario_inicio || 0).getTime() +
+          (Number((corridasOrdenadas[i - 1] as any).duracao_minutos) || 0) * 60000;
+        const inicioProx = new Date(corridasOrdenadas[i].horario_inicio || 0).getTime();
+        const diff = (inicioProx - fim) / 60000;
+        if (diff >= 0 && diff < 120) intervalos.push(diff);
+      }
+      const tempoMedioEntreCorridas =
+        intervalos.length > 0 ? intervalos.reduce((s, v) => s + v, 0) / intervalos.length : 0;
+      const maiorIntervalo = intervalos.length > 0 ? Math.max(...intervalos) : 0;
+      const totalMinCorridas = ridesHoje.reduce(
+        (s, r) => s + (Number((r as any).duracao_minutos) || 0),
+        0,
+      );
+      const jornadaMinutes = mHoje.horasTrabalhadas * 60;
+      const totalMinJornada = jornadaMinutes > 0 ? jornadaMinutes : totalMinCorridas;
+      const pctTempoOnlineSemCorrida =
+        totalMinJornada > 0
+          ? Math.max(0, ((totalMinJornada - totalMinCorridas) / totalMinJornada) * 100)
+          : 0;
+      const corridasPorHoraEfetiva =
+        totalMinCorridas > 0 ? ridesHoje.length / (totalMinCorridas / 60) : 0;
+
       const payload = {
         periodo: "dia" as const,
         total_corridas: mHoje.numCorridas,
