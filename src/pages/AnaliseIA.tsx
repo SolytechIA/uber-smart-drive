@@ -465,6 +465,36 @@ function PainelDia({
       const valorFaltante = Math.max(0, metaMensalCfg - mMes.ganhoReal);
       const valorPorDia = diasRestantes > 0 ? valorFaltante / diasRestantes : valorFaltante;
 
+      // Métricas de tempo ocioso / eficiência de jornada
+      const corridasOrdenadas = [...ridesHoje].sort(
+        (a, b) =>
+          new Date(a.horario_inicio || 0).getTime() - new Date(b.horario_inicio || 0).getTime(),
+      );
+      const intervalos: number[] = [];
+      for (let i = 1; i < corridasOrdenadas.length; i++) {
+        const fim =
+          new Date(corridasOrdenadas[i - 1].horario_inicio || 0).getTime() +
+          (Number((corridasOrdenadas[i - 1] as any).duracao_minutos) || 0) * 60000;
+        const inicioProx = new Date(corridasOrdenadas[i].horario_inicio || 0).getTime();
+        const diff = (inicioProx - fim) / 60000;
+        if (diff >= 0 && diff < 120) intervalos.push(diff);
+      }
+      const tempoMedioEntreCorridas =
+        intervalos.length > 0 ? intervalos.reduce((s, v) => s + v, 0) / intervalos.length : 0;
+      const maiorIntervalo = intervalos.length > 0 ? Math.max(...intervalos) : 0;
+      const totalMinCorridas = ridesHoje.reduce(
+        (s, r) => s + (Number((r as any).duracao_minutos) || 0),
+        0,
+      );
+      const jornadaMinutes = mHoje.horasTrabalhadas * 60;
+      const totalMinJornada = jornadaMinutes > 0 ? jornadaMinutes : totalMinCorridas;
+      const pctTempoOnlineSemCorrida =
+        totalMinJornada > 0
+          ? Math.max(0, ((totalMinJornada - totalMinCorridas) / totalMinJornada) * 100)
+          : 0;
+      const corridasPorHoraEfetiva =
+        totalMinCorridas > 0 ? ridesHoje.length / (totalMinCorridas / 60) : 0;
+
       const payload = {
         periodo: "dia" as const,
         total_corridas: mHoje.numCorridas,
@@ -495,6 +525,10 @@ function PainelDia({
         r_km_bom: Number((goals as any)?.r_km_bom || (goals as any)?.r_por_km_minimo || 0),
         r_km_medio: Number((goals as any)?.r_km_medio || 0),
         ticket_minimo: Number((goals as any)?.valor_minimo_corrida || 0),
+        tempo_medio_entre_corridas: tempoMedioEntreCorridas,
+        maior_intervalo_sem_corrida: maiorIntervalo,
+        corridas_por_hora_efetiva: corridasPorHoraEfetiva,
+        pct_tempo_online_sem_corrida: pctTempoOnlineSemCorrida,
         ...calcContextoDia(rides, selectedDay),
         analise_personalizada: calcAnalisePersonalizada(rides, vehicle, goals, fromHoje, toHoje),
         nome_motorista: await getNomeMotorista(user),
