@@ -1204,112 +1204,18 @@ function ResultadoLayout(props: {
       )}
 
       {status === "ok" && analysis && (
-        <div className="space-y-5">
-          <div className="rounded-xl p-[2px] [background:linear-gradient(135deg,hsl(270_80%_55%),hsl(180_80%_50%),hsl(270_80%_55%))] [background-size:200%_200%] animate-[shimmer_4s_linear_infinite]">
-            <Card className="rounded-[10px] bg-card/95">
-              <CardHeader>
-                <CardTitle className="text-lg">{titleResumo}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
-                {analysis.resumo_dia || "—"}
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{titleRecs}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.recomendacoes || "—"}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{titleProj}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {footerProgress && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Realizado: <strong className="text-foreground">{fmtBRL(footerProgress.realizado)}</strong>
-                    </span>
-                    <span className="text-muted-foreground">
-                      Meta: <strong className="text-foreground">{fmtBRL(footerProgress.meta)}</strong>
-                    </span>
-                  </div>
-                  <Progress value={footerProgress.pct} className="h-3" />
-                </>
-              )}
-              <p className="whitespace-pre-line pt-2 text-sm leading-relaxed">{analysis.projecao_mes || "—"}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-amber-500/40 bg-amber-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Lightbulb className="h-5 w-5 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-                {titleDica}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.dica_estrategica || "—"}</p>
-            </CardContent>
-          </Card>
-
-          {/* Aviso de análise temporária */}
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-center text-xs text-amber-700 dark:text-amber-400">
-            ⚠️ Esta análise não fica salva. Compartilhe antes de sair da tela para não perder.
-          </div>
-
-          <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
-            <Badge variant="secondary" className="gap-1.5">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />✨ Gerado por Drive IA
-            </Badge>
-            {generatedAt && (
-              <span className="text-xs text-muted-foreground">
-                Gerado em{" "}
-                {generatedAt.toLocaleString("pt-BR", {
-                  timeZone: "America/Sao_Paulo",
-                  dateStyle: "short",
-                  timeStyle: "short",
-                })}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
-            <Button variant="outline" onClick={onGenerate} disabled={rateLimited}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
-                if (typeof navigator !== "undefined" && (navigator as any).share) {
-                  try {
-                    await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
-                  } catch {
-                    /* usuário cancelou */
-                  }
-                } else {
-                  try {
-                    await navigator.clipboard.writeText(texto);
-                    toast.success("Análise copiada! Cole no WhatsApp ou e-mail.");
-                  } catch {
-                    toast.error("Não foi possível copiar a análise.");
-                  }
-                }
-              }}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartilhar
-            </Button>
-          </div>
-        </div>
+        <AnaliseResultado
+          analysis={analysis}
+          generatedAt={generatedAt}
+          onGenerate={onGenerate}
+          rateLimited={rateLimited}
+          minutesLeft={minutesLeft}
+          titleResumo={titleResumo}
+          titleRecs={titleRecs}
+          titleProj={titleProj}
+          titleDica={titleDica}
+          footerProgress={footerProgress}
+        />
       )}
     </div>
   );
