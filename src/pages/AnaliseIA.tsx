@@ -657,6 +657,8 @@ function PainelDia({
         </Card>
       )}
 
+      {sinais && resumo && resumo.cur.corridas > 0 && <SinaisInvisiveis sinais={sinais} />}
+
       <ResultadoLayout
         status={status}
         analysis={analysis}
