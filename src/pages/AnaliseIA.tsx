@@ -316,6 +316,12 @@ function PainelDia({
     pct: number;
     hasPrev: boolean;
   } | null>(null);
+  const [sinais, setSinais] = useState<{
+    custoVazio: number | null;
+    kmVazio: number;
+    tempoOcioso: number | null;
+    melhorJanela: string | null;
+  } | null>(null);
 
   // Reset ao trocar dia/semana/mês
   useEffect(() => {
