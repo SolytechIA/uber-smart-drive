@@ -183,7 +183,21 @@ REGRAS DE LINGUAGEM (OBRIGATÓRIAS):
 - Nunca encerrar com: "dependendo da demanda", "se você conseguir", "considerando que".
 - Termine sempre com afirmação concreta.
 - Tom: direto, como gestor de operações que quer resultado real.
-- Não é coach de vida. É analista de dados que respeita o tempo do motorista.`;
+- Não é coach de vida. É analista de dados que respeita o tempo do motorista.
+
+REGRAS DE QUALIDADE DA ANÁLISE:
+- Não reescreva os dados que já estão no dashboard. Interprete o que os dados significam.
+- Não use frases como "isso mostra", "isso indica", "é importante destacar", "é fundamental", "há espaço para melhoria", "com ajustes estratégicos". Isso é genérico e reduz valor percebido.
+- Não elogie, motive ou console sem evidência concreta nos dados.
+- Se citar um número, explique por que ele importa operacionalmente.
+- Evite duplicidade de ideia entre RESUMO, RECOMENDAÇÕES, PROJEÇÃO e DICA ESTRATÉGICA. Cada seção deve acrescentar algo novo.
+- Nunca repetir a mesma recomendação em mais de uma seção.
+- Nunca transformar os blocos ELIMINAR, MANTER e MELHORAR em lista de conselhos genéricos. Eles devem aparecer como padrões descobertos nos dados.
+- Quando houver contexto temporal de período passado, fale do período no passado e extraia lições para o período atual.
+- Quando o período estiver em andamento, priorize leitura de ritmo, tendência e alavanca de melhoria.
+- Se faltar dado para alguma inferência, não invente. Omita a inferência e siga para outra descoberta real.
+- O motorista deve terminar a leitura pensando: "isso eu não tinha percebido sozinho".
+- A análise deve soar como inteligência operacional premium, não como resumo automático.`;
 
 function buildHistoricoTexto(historico: any, historicoSemanal?: any): string {
   let out = "";
@@ -297,7 +311,7 @@ Ganho bruto: R$ ${fmt(d.ganho_bruto)} | Custos: R$ ${fmt(d.custo_total)} | Ganho
 Meta diária: R$ ${fmt(d.meta_diaria)} → ${fmt(d.percentual_meta)}% atingida
 Km rodados: ${fmt(d.km_total)} | Km vazio (deslocamento sem passageiro): ${fmt(d.km_deslocamento_total)} km = ${pctVazio}% do total
 ${d.consumo_medio_km_l ? `Dados do veículo cadastrado: consumo médio ${fmt(d.consumo_medio_km_l)} km/l | preço combustível R$ ${fmt(d.preco_combustivel || 0)}/l${d.tipo_combustivel ? ` | combustível: ${d.tipo_combustivel}` : ""}` : "Dados do veículo: não cadastrados pelo motorista."}
-${d.consumo_medio_km_l && d.preco_combustivel ? `Custo real por km rodado: R$ ${fmt((d.preco_combustivel / d.consumo_medio_km_l))} | Custo estimado do deslocamento vazio hoje: R$ ${fmt((d.km_deslocamento_total || 0) * (d.preco_combustivel / d.consumo_medio_km_l))}` : ""}
+${d.consumo_medio_km_l && d.preco_combustivel ? `Custo real por km rodado: R$ ${fmt(d.preco_combustivel / d.consumo_medio_km_l)} | Custo estimado do deslocamento vazio hoje: R$ ${fmt((d.km_deslocamento_total || 0) * (d.preco_combustivel / d.consumo_medio_km_l))}` : ""}
 REGRA ANTI-ALUCINAÇÃO: Use APENAS os dados fornecidos acima para cálculos de combustível. Se "Dados do veículo: não cadastrados", NÃO estime consumo nem preço — diga apenas "configure seu veículo em Config para cálculos precisos de combustível".
 Horas trabalhadas: ${fmtHHMM(d.horas)}
 R$/hora: R$ ${fmt(d.r_por_hora)} | R$/km médio: R$ ${fmt(d.r_por_km)} | Ticket médio: R$ ${fmt(d.ticket_medio)}
@@ -522,7 +536,8 @@ Deno.serve(async (req) => {
 
     const payload = (await req.json()) as Payload & { historico_analises?: any; historico_semanal?: any };
     const userPrompt = buildPrompt(payload);
-    const systemContent = SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises, (payload as any).historico_semanal);
+    const systemContent =
+      SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises, (payload as any).historico_semanal);
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
