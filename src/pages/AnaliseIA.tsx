@@ -329,6 +329,7 @@ function PainelDia({
     setAnalysis(null);
     setGeneratedAt(null);
     setResumo(null);
+    setSinais(null);
   }, [cacheKey]);
 
   // Carrega resumo do dia (KPIs e comparação) independentemente da IA
