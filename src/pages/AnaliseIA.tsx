@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Sparkles, AlertTriangle, Lightbulb, Star, RefreshCw, AlertCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +9,9 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Zap, Fuel, Clock, TrendingUp } from "lucide-react";
+import { formatHorasHHMM } from "@/lib/formatters";
 import {
   ResponsiveContainer,
   LineChart,
@@ -316,6 +319,12 @@ function PainelDia({
     pct: number;
     hasPrev: boolean;
   } | null>(null);
+  const [sinais, setSinais] = useState<{
+    custoVazio: number | null;
+    kmVazio: number;
+    tempoOcioso: number | null;
+    melhorJanela: string | null;
+  } | null>(null);
 
   // Reset ao trocar dia/semana/mês
   useEffect(() => {
@@ -323,6 +332,7 @@ function PainelDia({
     setAnalysis(null);
     setGeneratedAt(null);
     setResumo(null);
+    setSinais(null);
   }, [cacheKey]);
 
   // Carrega resumo do dia (KPIs e comparação) independentemente da IA
@@ -375,6 +385,55 @@ function PainelDia({
         pct,
         hasPrev: mPrev.numCorridas > 0,
       });
+
+      // ── Sinais invisíveis ─────────────────────────────────────────
+      const ridesCur = rides.filter((r) => {
+        if (!r.data_corrida) return false;
+        const ref = new Date(r.data_corrida + "T12:00:00");
+        return ref >= fromCur && ref <= toCur;
+      });
+      const kmVazio = ridesCur.reduce((s, r) => s + Number((r as any).km_deslocamento || 0), 0);
+      const consumo = vehicle?.consumo_km_litro ? Number(vehicle.consumo_km_litro) : null;
+      const precoComb = (vehicle as any)?.preco_combustivel
+        ? Number((vehicle as any).preco_combustivel)
+        : null;
+      const custoVazio =
+        consumo && consumo > 0 && precoComb && precoComb > 0 ? kmVazio * (precoComb / consumo) : null;
+
+      const horasJornadaDia = sumJornadaHoursInRange(jornadas, fromCur, toCur);
+      const minPassageiro = ridesCur.reduce(
+        (s, r) => s + (Number((r as any).duracao_minutos) || 0),
+        0,
+      );
+      const tempoOcioso =
+        horasJornadaDia > 0 ? Math.max(0, horasJornadaDia - minPassageiro / 60) : null;
+
+      const buckets: Record<number, { v: number; k: number }> = {};
+      for (const r of ridesCur) {
+        const cls = String((r as any).classificacao || "").toLowerCase();
+        if (cls !== "boa") continue;
+        const ts = (r as any).horario_inicio;
+        if (!ts) continue;
+        const h = new Date(ts).getHours();
+        if (!buckets[h]) buckets[h] = { v: 0, k: 0 };
+        buckets[h].v += Number((r as any).valor_bruto || 0);
+        buckets[h].k +=
+          Number((r as any).km_passageiro || 0) + Number((r as any).km_deslocamento || 0);
+      }
+      let bestHour: number | null = null;
+      let bestRkm = -1;
+      for (const [h, b] of Object.entries(buckets)) {
+        if (b.k <= 0) continue;
+        const rkm = b.v / b.k;
+        if (rkm > bestRkm) {
+          bestRkm = rkm;
+          bestHour = Number(h);
+        }
+      }
+      const melhorJanela =
+        bestHour != null ? `${bestHour}h–${(bestHour + 1) % 24}h` : null;
+
+      setSinais({ custoVazio, kmVazio, tempoOcioso, melhorJanela });
     })();
     return () => {
       cancelled = true;
@@ -600,6 +659,8 @@ function PainelDia({
           </CardContent>
         </Card>
       )}
+
+      {sinais && resumo && resumo.cur.corridas > 0 && <SinaisInvisiveis sinais={sinais} />}
 
       <ResultadoLayout
         status={status}
@@ -1143,113 +1204,351 @@ function ResultadoLayout(props: {
       )}
 
       {status === "ok" && analysis && (
-        <div className="space-y-5">
-          <div className="rounded-xl p-[2px] [background:linear-gradient(135deg,hsl(270_80%_55%),hsl(180_80%_50%),hsl(270_80%_55%))] [background-size:200%_200%] animate-[shimmer_4s_linear_infinite]">
-            <Card className="rounded-[10px] bg-card/95">
-              <CardHeader>
-                <CardTitle className="text-lg">{titleResumo}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
-                {analysis.resumo_dia || "—"}
-              </CardContent>
-            </Card>
-          </div>
+        <AnaliseResultado
+          analysis={analysis}
+          generatedAt={generatedAt}
+          onGenerate={onGenerate}
+          rateLimited={rateLimited}
+          minutesLeft={minutesLeft}
+          titleResumo={titleResumo}
+          titleRecs={titleRecs}
+          titleProj={titleProj}
+          titleDica={titleDica}
+          footerProgress={footerProgress}
+        />
+      )}
+    </div>
+  );
+}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{titleRecs}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.recomendacoes || "—"}</p>
-            </CardContent>
-          </Card>
+/* ======================== Sinais Invisíveis ======================== */
+function SinaisInvisiveis({
+  sinais,
+}: {
+  sinais: {
+    custoVazio: number | null;
+    kmVazio: number;
+    tempoOcioso: number | null;
+    melhorJanela: string | null;
+  };
+}) {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 animate-fade-in">
+        <SinalCard
+          tone="danger"
+          icon={<Fuel className="h-4 w-4" />}
+          label="Custo do deslocamento vazio"
+          value={sinais.custoVazio != null ? fmtBRL(sinais.custoVazio) : "—"}
+          sublabel={`${sinais.kmVazio.toFixed(1)} km sem passageiro`}
+          tooltip="Estimativa do custo de combustível gasto no deslocamento até o passageiro ou entre corridas, sem cliente no carro."
+        />
+        <SinalCard
+          tone="warning"
+          icon={<Clock className="h-4 w-4" />}
+          label="Tempo ocioso"
+          value={sinais.tempoOcioso != null ? formatHorasHHMM(sinais.tempoOcioso) : "—"}
+          sublabel="do tempo online sem corrida"
+          tooltip="Tempo total online menos o tempo com passageiro a bordo."
+        />
+        <SinalCard
+          tone="success"
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Melhor janela do dia"
+          value={sinais.melhorJanela ?? "—"}
+          sublabel="maior R$/km registrado"
+          tooltip="Hora do dia com o maior R$/km médio entre as corridas classificadas como BOA."
+        />
+      </div>
+    </TooltipProvider>
+  );
+}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{titleProj}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {footerProgress && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Realizado: <strong className="text-foreground">{fmtBRL(footerProgress.realizado)}</strong>
-                    </span>
-                    <span className="text-muted-foreground">
-                      Meta: <strong className="text-foreground">{fmtBRL(footerProgress.meta)}</strong>
-                    </span>
-                  </div>
-                  <Progress value={footerProgress.pct} className="h-3" />
-                </>
-              )}
-              <p className="whitespace-pre-line pt-2 text-sm leading-relaxed">{analysis.projecao_mes || "—"}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-amber-500/40 bg-amber-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Lightbulb className="h-5 w-5 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-                {titleDica}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-sm leading-relaxed">{analysis.dica_estrategica || "—"}</p>
-            </CardContent>
-          </Card>
-
-          {/* Aviso de análise temporária */}
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-center text-xs text-amber-700 dark:text-amber-400">
-            ⚠️ Esta análise não fica salva. Compartilhe antes de sair da tela para não perder.
-          </div>
-
-          <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
-            <Badge variant="secondary" className="gap-1.5">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />✨ Gerado por Drive IA
-            </Badge>
-            {generatedAt && (
-              <span className="text-xs text-muted-foreground">
-                Gerado em{" "}
-                {generatedAt.toLocaleString("pt-BR", {
-                  timeZone: "America/Sao_Paulo",
-                  dateStyle: "short",
-                  timeStyle: "short",
-                })}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
-            <Button variant="outline" onClick={onGenerate} disabled={rateLimited}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {rateLimited ? `Disponível em ${minutesLeft} min` : "Gerar nova análise"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
-                if (typeof navigator !== "undefined" && (navigator as any).share) {
-                  try {
-                    await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
-                  } catch {
-                    /* usuário cancelou */
-                  }
-                } else {
-                  try {
-                    await navigator.clipboard.writeText(texto);
-                    toast.success("Análise copiada! Cole no WhatsApp ou e-mail.");
-                  } catch {
-                    toast.error("Não foi possível copiar a análise.");
-                  }
-                }
-              }}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartilhar
-            </Button>
+function SinalCard({
+  tone,
+  icon,
+  label,
+  value,
+  sublabel,
+  tooltip,
+}: {
+  tone: "danger" | "warning" | "success";
+  icon: ReactNode;
+  label: string;
+  value: string;
+  sublabel: string;
+  tooltip: string;
+}) {
+  const topBar =
+    tone === "danger"
+      ? "bg-destructive"
+      : tone === "warning"
+        ? "bg-amber-500"
+        : "bg-emerald-500";
+  const valueColor =
+    tone === "danger"
+      ? "text-destructive"
+      : tone === "warning"
+        ? "text-amber-500"
+        : "text-emerald-500";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="group min-w-[220px] flex-1 cursor-help overflow-hidden rounded-xl border border-border/60 bg-card/60 transition-all hover:border-border hover:bg-card/80 sm:min-w-0">
+          <div className={cn("h-[3px] w-full", topBar)} />
+          <div className="space-y-1 p-4">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <span className={cn("opacity-80", valueColor)}>{icon}</span>
+              <span className="truncate">{label}</span>
+            </div>
+            <p className={cn("font-display text-xl font-bold leading-tight", valueColor)}>{value}</p>
+            <p className="text-xs text-muted-foreground">{sublabel}</p>
           </div>
         </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-[260px] text-xs leading-relaxed">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/* ======================== Análise: parse + blocos ======================== */
+function extrairAcao(text: string): { content: string; acao?: string } {
+  if (!text) return { content: "" };
+  let acao: string | undefined;
+  const linhas = text.split("\n").filter((raw) => {
+    const l = raw.trim();
+    const m = l.match(/^[⚡✨]?\s*A[çc][ãa]o\s+para\s+agora\s*:?\s*(.*)$/i);
+    if (m) {
+      const rest = m[1].trim();
+      if (rest) acao = rest;
+      return false;
+    }
+    return true;
+  });
+  return { content: linhas.join("\n").trim(), acao };
+}
+
+function RichBlock({ text }: { text: string }) {
+  if (!text || !text.trim()) return <p className="text-sm text-muted-foreground">—</p>;
+  const linhas = text.split("\n");
+  const nodes: ReactNode[] = [];
+  let buf: string[] = [];
+  const flush = () => {
+    if (!buf.length) return;
+    nodes.push(
+      <ul key={`ul-${nodes.length}`} className="space-y-1.5">
+        {buf.map((b, i) => (
+          <li key={i} className="flex gap-2 text-sm leading-relaxed text-foreground/90">
+            <span className="mt-[2px] select-none text-primary">•</span>
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>,
+    );
+    buf = [];
+  };
+  for (const raw of linhas) {
+    const l = raw.trim();
+    if (!l) {
+      flush();
+      continue;
+    }
+    if (/^#{1,3}\s+/.test(l)) continue;
+    const m = l.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+    if (m) {
+      buf.push(m[1].replace(/\*\*(.+?)\*\*/g, "$1"));
+    } else {
+      flush();
+      nodes.push(
+        <p key={`p-${nodes.length}`} className="text-sm leading-relaxed text-foreground/90">
+          {l.replace(/\*\*(.+?)\*\*/g, "")}
+        </p>,
+      );
+    }
+  }
+  flush();
+  return <div className="space-y-2.5">{nodes}</div>;
+}
+
+function SectionBlock({
+  title,
+  icon,
+  text,
+  delay,
+}: {
+  title: string;
+  icon?: ReactNode;
+  text: string;
+  delay?: number;
+}) {
+  return (
+    <div
+      className="animate-fade-in rounded-xl border border-border/60 bg-muted/20 p-5 transition-colors hover:border-border md:hover:bg-muted/25"
+      style={delay ? { animationDelay: `${delay}ms`, animationFillMode: "both" } : undefined}
+    >
+      <div className="mb-3 flex items-center gap-2 border-b border-border/40 pb-2.5">
+        {icon}
+        <h3 className="font-display text-base font-semibold tracking-tight text-foreground">
+          {title}
+        </h3>
+      </div>
+      <RichBlock text={text} />
+    </div>
+  );
+}
+
+function AcaoChip({ texto }: { texto: string }) {
+  return (
+    <div className="animate-fade-in flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 shadow-sm">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+        <Zap className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+          Ação para agora
+        </p>
+        <p className="mt-0.5 text-sm font-medium leading-snug text-foreground">{texto}</p>
+      </div>
+    </div>
+  );
+}
+
+function AnaliseResultado({
+  analysis,
+  generatedAt,
+  onGenerate,
+  rateLimited,
+  minutesLeft,
+  titleResumo,
+  titleRecs,
+  titleProj,
+  titleDica,
+  footerProgress,
+}: {
+  analysis: Analysis;
+  generatedAt: Date | null;
+  onGenerate: () => void;
+  rateLimited: boolean;
+  minutesLeft: number;
+  titleResumo: string;
+  titleRecs: string;
+  titleProj: string;
+  titleDica: string;
+  footerProgress?: { realizado: number; meta: number; pct: number };
+}) {
+  const pResumo = extrairAcao(analysis.resumo_dia || "");
+  const pRecs = extrairAcao(analysis.recomendacoes || "");
+  const pProj = extrairAcao(analysis.projecao_mes || "");
+  const pDica = extrairAcao(analysis.dica_estrategica || "");
+  const acao = pDica.acao || pRecs.acao || pResumo.acao || pProj.acao;
+
+  const handleShare = async () => {
+    const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
+      } catch {
+        /* cancelado */
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(texto);
+        toast.success("Análise copiada! Cole no WhatsApp ou e-mail.");
+      } catch {
+        toast.error("Não foi possível copiar a análise.");
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <SectionBlock
+        title={titleResumo}
+        text={pResumo.content}
+        delay={0}
+      />
+      <SectionBlock
+        title={titleRecs}
+        text={pRecs.content}
+        delay={60}
+      />
+      <div
+        className="animate-fade-in rounded-xl border border-border/60 bg-muted/20 p-5"
+        style={{ animationDelay: "120ms", animationFillMode: "both" }}
+      >
+        <div className="mb-3 flex items-center gap-2 border-b border-border/40 pb-2.5">
+          <h3 className="font-display text-base font-semibold tracking-tight text-foreground">
+            {titleProj}
+          </h3>
+        </div>
+        {footerProgress && (
+          <div className="mb-3 space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">
+                Realizado <strong className="text-foreground">{fmtBRL(footerProgress.realizado)}</strong>
+              </span>
+              <span className="text-muted-foreground">
+                Meta <strong className="text-foreground">{fmtBRL(footerProgress.meta)}</strong>
+              </span>
+            </div>
+            <Progress value={footerProgress.pct} className="h-2" />
+          </div>
+        )}
+        <RichBlock text={pProj.content} />
+      </div>
+      <SectionBlock
+        title={titleDica}
+        icon={<Lightbulb className="h-4 w-4 text-amber-500" />}
+        text={pDica.content}
+        delay={180}
+      />
+
+      {acao && (
+        <div className="pt-2">
+          <AcaoChip texto={acao} />
+        </div>
       )}
+
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-3 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3 text-amber-500" /> Não salva automaticamente
+        </span>
+        <span aria-hidden>·</span>
+        {generatedAt && (
+          <>
+            <span>
+              Gerado em{" "}
+              {generatedAt.toLocaleString("pt-BR", {
+                timeZone: "America/Sao_Paulo",
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
+            </span>
+            <span aria-hidden>·</span>
+          </>
+        )}
+        {rateLimited ? (
+          <span>⏳ Disponível em {minutesLeft} min</span>
+        ) : (
+          <button
+            type="button"
+            onClick={onGenerate}
+            className="text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+          >
+            Gerar nova análise
+          </button>
+        )}
+        <span aria-hidden>·</span>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 transition-colors hover:underline"
+        >
+          <Share2 className="h-3 w-3" /> Compartilhar →
+        </button>
+      </div>
     </div>
   );
 }
