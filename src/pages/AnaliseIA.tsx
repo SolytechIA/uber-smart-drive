@@ -1273,7 +1273,7 @@ function SinalCard({
   tooltip,
 }: {
   tone: "danger" | "warning" | "success";
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   sublabel: string;
@@ -1333,7 +1333,7 @@ function extrairAcao(text: string): { content: string; acao?: string } {
 function RichBlock({ text }: { text: string }) {
   if (!text || !text.trim()) return <p className="text-sm text-muted-foreground">—</p>;
   const linhas = text.split("\n");
-  const nodes: React.ReactNode[] = [];
+  const nodes: ReactNode[] = [];
   let buf: string[] = [];
   const flush = () => {
     if (!buf.length) return;
@@ -1379,7 +1379,7 @@ function SectionBlock({
   delay,
 }: {
   title: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   text: string;
   delay?: number;
 }) {
