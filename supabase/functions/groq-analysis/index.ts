@@ -483,38 +483,30 @@ function buildPrompt(p: Payload): string {
 
 function splitSections(text: string) {
   const sections = {
-    resumo_dia: "",
+    resumodia: "",
     recomendacoes: "",
-    projecao_mes: "",
-    dica_estrategica: "",
+    projecaomes: "",
+    dicaestrategica: "",
   };
 
   const patterns: Array<[keyof typeof sections, RegExp]> = [
-    [
-      "resumo_dia",
-      new RegExp(
-        "##\\s*RESUMO\\s+(?:DO\\s+DIA|DA\\s+SEMANA|DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*RECOMENDA|##\\s*INSIGHTS|$)",
-        "i",
-      ),
-    ],
+    ["resumodia", /(?:^|\n)\s*(RESUMO DO DIA|RESUMO DA SEMANA|RESUMO DO M[S|Ê]S|INSIGHTS DO M[S|Ê]S)\s*/i],
     [
       "recomendacoes",
-      new RegExp(
-        "##\\s*(?:RECOMENDA(?:ÇÕES|COES|[\\u00C7C][\\u00D5O]ES)\\s+PARA\\s+(?:AMANH[\\u00C3A]|A\\s+PR[\\u00D3O]XIMA\\s+SEMANA)|INSIGHTS\\s+DO\\s+M[\\u00CAE]S)\\s*([\\s\\S]*?)(?=##\\s*PROJE|##\\s*DICA|$)",
-        "i",
-      ),
+      /(?:^|\n)\s*(RECOMENDA[ÇC][ÕO]ES PARA AMANH[ÃA]|RECOMENDA[ÇC][ÕO]ES PARA A PR[ÓO]XIMA SEMANA|RECOMENDA[ÇC][ÕO]ES PARA A PR[ÓO]XIMA SEMANA|RECOMENDA[ÇC][ÕO]ES)\s*/i,
     ],
-    [
-      "projecao_mes",
-      new RegExp("##\\s*PROJE[\\u00C7C][\\u00C3A]O\\s+DO\\s+M[\\u00CAE]S\\s*([\\s\\S]*?)(?=##\\s*DICA|$)", "i"),
-    ],
-    ["dica_estrategica", new RegExp("##\\s*DICA\\s+ESTRAT[\\u00C9E]GICA(?:\\s+DO\\s+DIA)?\\s*([\\s\\S]*?)$", "i")],
+    ["projecaomes", /(?:^|\n)\s*(PROJE[ÇC][ÃA]O DO M[S|Ê]S|PROJE[ÇC][ÃA]O SEMANAL|PROJE[ÇC][ÃA]O DO MS)\s*/i],
+    ["dicaestrategica", /(?:^|\n)\s*(DICA ESTRAT[ÉE]GICA|INSIGHT(S)? DO M[S|Ê]S|DICA ESTRAT[ÉE]GICA DO DIA)\s*/i],
   ];
 
   for (const [key, re] of patterns) {
     const m = text.match(re);
-    if (m && m[1]) sections[key] = m[1].trim();
+    if (m && m.index !== undefined) {
+      const start = m.index + m[0].length;
+      sections[key] = text.slice(start).trim();
+    }
   }
+
   return sections;
 }
 
