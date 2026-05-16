@@ -382,6 +382,55 @@ function PainelDia({
         pct,
         hasPrev: mPrev.numCorridas > 0,
       });
+
+      // ── Sinais invisíveis ─────────────────────────────────────────
+      const ridesCur = rides.filter((r) => {
+        if (!r.data_corrida) return false;
+        const ref = new Date(r.data_corrida + "T12:00:00");
+        return ref >= fromCur && ref <= toCur;
+      });
+      const kmVazio = ridesCur.reduce((s, r) => s + Number((r as any).km_deslocamento || 0), 0);
+      const consumo = vehicle?.consumo_km_litro ? Number(vehicle.consumo_km_litro) : null;
+      const precoComb = (vehicle as any)?.preco_combustivel
+        ? Number((vehicle as any).preco_combustivel)
+        : null;
+      const custoVazio =
+        consumo && consumo > 0 && precoComb && precoComb > 0 ? kmVazio * (precoComb / consumo) : null;
+
+      const horasJornadaDia = sumJornadaHoursInRange(jornadas, fromCur, toCur);
+      const minPassageiro = ridesCur.reduce(
+        (s, r) => s + (Number((r as any).duracao_minutos) || 0),
+        0,
+      );
+      const tempoOcioso =
+        horasJornadaDia > 0 ? Math.max(0, horasJornadaDia - minPassageiro / 60) : null;
+
+      const buckets: Record<number, { v: number; k: number }> = {};
+      for (const r of ridesCur) {
+        const cls = String((r as any).classificacao || "").toLowerCase();
+        if (cls !== "boa") continue;
+        const ts = (r as any).horario_inicio;
+        if (!ts) continue;
+        const h = new Date(ts).getHours();
+        if (!buckets[h]) buckets[h] = { v: 0, k: 0 };
+        buckets[h].v += Number((r as any).valor_bruto || 0);
+        buckets[h].k +=
+          Number((r as any).km_passageiro || 0) + Number((r as any).km_deslocamento || 0);
+      }
+      let bestHour: number | null = null;
+      let bestRkm = -1;
+      for (const [h, b] of Object.entries(buckets)) {
+        if (b.k <= 0) continue;
+        const rkm = b.v / b.k;
+        if (rkm > bestRkm) {
+          bestRkm = rkm;
+          bestHour = Number(h);
+        }
+      }
+      const melhorJanela =
+        bestHour != null ? `${bestHour}h–${(bestHour + 1) % 24}h` : null;
+
+      setSinais({ custoVazio, kmVazio, tempoOcioso, melhorJanela });
     })();
     return () => {
       cancelled = true;
