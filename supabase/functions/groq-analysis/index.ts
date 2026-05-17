@@ -56,11 +56,12 @@ interface PayloadDia extends ContextoBase {
   data_hoje: string;
   corrida_melhor: RideRef;
   corrida_pior: RideRef;
-  projecao_mensal: number;
+  projecao_mensal: number | null;
   meta_mensal: number;
   dias_restantes_mes: number;
   valor_faltante_meta: number;
   valor_necessario_por_dia: number;
+  dias_com_corridas_mes?: number;
   r_km_bom?: number;
   r_km_medio?: number;
   ticket_minimo?: number;
