@@ -590,6 +590,7 @@ function PainelDia({
         corrida_melhor: refRide(melhor),
         corrida_pior: refRide(pior),
         projecao_mensal: projMes,
+        dias_com_corridas_mes: diasComCorridas,
         meta_mensal: metaMensalCfg,
         dias_restantes_mes: diasRestantes,
         valor_faltante_meta: valorFaltante,
