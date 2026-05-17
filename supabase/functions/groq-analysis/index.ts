@@ -344,8 +344,8 @@ Cada bullet deve responder uma destas perguntas com os dados reais:
 • Se houve intervalo longo sem corrida: em qual horário foi? O que estava acontecendo?
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-Formato: exatamente 4 bullets numerados. Cada um: 1 ação + motivo em dados + valor estimado em R$.
-Estrutura de cada bullet: "N. [Verbo de ação] [especificidade] — porque [dado do dia] — vale aprox. R$ [valor calculado]."
+Formato: exatamente 4 bullets numerados. Cada um: 1 ação + motivo em dados.
+Estrutura de cada bullet: "N. [Verbo de ação] [especificidade] — porque [dado do dia]."
 PROIBIDO recomendação que qualquer motorista poderia receber sem ler esta análise.
 
 ## PROJEÇÃO DO MÊS
