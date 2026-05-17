@@ -519,7 +519,20 @@ function PainelDia({
       const nowD = nowInTZ();
       const diaAtual = nowD.getDate();
       const ultimoDia = endOfMonth(nowD).getDate();
-      const projMes = projecaoMensal(mMes.ganhoReal, diaAtual, ultimoDia, mMes.numCorridas) ?? mMes.ganhoReal;
+      // Projeção baseada em dias com atividade real no mês
+      const diasComCorridasSet = new Set<string>();
+      for (const r of rides) {
+        if (!r.data_corrida) continue;
+        const ref = new Date(r.data_corrida + "T12:00:00");
+        if (ref >= fromMes && ref <= toMes) diasComCorridasSet.add(r.data_corrida);
+      }
+      const diasComCorridas = diasComCorridasSet.size;
+      const diasTrabalhadosCfg = Number((vehicle as any)?.dias_trabalhados_mes) || 22;
+      let projMes: number | null = null;
+      if (diasComCorridas >= 3) {
+        const mediaPorDia = mMes.ganhoReal / diasComCorridas;
+        projMes = mediaPorDia * diasTrabalhadosCfg;
+      }
       const diasRestantes = Math.max(0, ultimoDia - diaAtual);
       const valorFaltante = Math.max(0, metaMensalCfg - mMes.ganhoReal);
       const valorPorDia = diasRestantes > 0 ? valorFaltante / diasRestantes : valorFaltante;
