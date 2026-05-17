@@ -146,6 +146,41 @@ async function saveAnalise(params: {
   }
 }
 
+async function fetchRateLimit(userId: string, periodo: "dia" | "semana" | "mes", refKey: string): Promise<Date | null> {
+  try {
+    const { data } = await supabase
+      .from("analise_rate_limit" as any)
+      .select("ultima_analise")
+      .eq("user_id", userId)
+      .eq("periodo", periodo)
+      .eq("periodo_referencia", refKey)
+      .maybeSingle();
+    const ts = (data as any)?.ultima_analise;
+    return ts ? new Date(ts) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function upsertRateLimit(userId: string, periodo: "dia" | "semana" | "mes", refKey: string) {
+  try {
+    await supabase
+      .from("analise_rate_limit" as any)
+      .upsert(
+        {
+          user_id: userId,
+          periodo,
+          periodo_referencia: refKey,
+          ultima_analise: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "user_id,periodo,periodo_referencia" } as any,
+      );
+  } catch {
+    /* best-effort */
+  }
+}
+
 export default function AnaliseIA() {
   const { user } = useAuth();
   const navigate = useNavigate();
