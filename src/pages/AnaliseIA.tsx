@@ -1045,6 +1045,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         payload,
         result,
       });
+      void upsertRateLimit(user.id, "mes", mesYYYYMM);
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
