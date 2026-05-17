@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      analise_rate_limit: {
+        Row: {
+          created_at: string
+          id: string
+          periodo: string
+          periodo_referencia: string
+          ultima_analise: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          periodo: string
+          periodo_referencia: string
+          ultima_analise?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          periodo?: string
+          periodo_referencia?: string
+          ultima_analise?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       analises_geradas: {
         Row: {
           created_at: string

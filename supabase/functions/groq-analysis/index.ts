@@ -56,11 +56,12 @@ interface PayloadDia extends ContextoBase {
   data_hoje: string;
   corrida_melhor: RideRef;
   corrida_pior: RideRef;
-  projecao_mensal: number;
+  projecao_mensal: number | null;
   meta_mensal: number;
   dias_restantes_mes: number;
   valor_faltante_meta: number;
   valor_necessario_por_dia: number;
+  dias_com_corridas_mes?: number;
   r_km_bom?: number;
   r_km_medio?: number;
   ticket_minimo?: number;
@@ -184,6 +185,8 @@ REGRAS DE LINGUAGEM (OBRIGATÓRIAS):
 - Termine sempre com afirmação concreta.
 - Tom: direto, como gestor de operações que quer resultado real.
 - Não é coach de vida. É analista de dados que respeita o tempo do motorista.
+- NUNCA use a palavra "vale" seguida de valor monetário (ex: "vale R$ 488", "vale aprox."). O impacto financeiro deve ser integrado naturalmente na frase como análise, não como rótulo.
+- Quando os dados do dia forem limitados (1 corrida, < 30 min online), reconheça isso em 1 frase e foque 100% das recomendações no que é possível concluir com os dados disponíveis. Não invente padrões que não existem.
 
 REGRAS DE QUALIDADE DA ANÁLISE:
 - Não reescreva os dados que já estão no dashboard. Interprete o que os dados significam.
@@ -321,8 +324,12 @@ ${tempoOcioso ? `Tempo ocioso: ${tempoOcioso}` : ""}
 ${eficiencia ? `Eficiência de jornada: ${eficiencia}` : ""}
 Melhor corrida: R$ ${fmt(d.corrida_melhor.valor)} | ${d.corrida_melhor.origem} → ${d.corrida_melhor.destino} | ${fmt(d.corrida_melhor.km)} km
 Pior corrida: R$ ${fmt(d.corrida_pior.valor)} | ${d.corrida_pior.origem} → ${d.corrida_pior.destino} | ${fmt(d.corrida_pior.km)} km
-Acumulado no mês: R$ ${fmt(d.ganho_real)} | Meta mensal: R$ ${fmt(d.meta_mensal)} | Projeção atual: R$ ${fmt(d.projecao_mensal)}
-Faltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) → necessário R$ ${fmt(d.valor_necessario_por_dia)}/dia
+Acumulado no mês: R$ ${fmt(d.ganho_real)} | Meta mensal: R$ ${fmt(d.meta_mensal)}
+${
+  d.projecao_mensal != null && d.projecao_mensal > 0
+    ? `Projeção atual: R$ ${fmt(d.projecao_mensal)}\nFaltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) → necessário R$ ${fmt(d.valor_necessario_por_dia)}/dia`
+    : `Dias com corridas no mês: ${d.dias_com_corridas_mes ?? 0} — dados insuficientes para projeção confiável.`
+}
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 MISSÃO: Encontre o que o motorista NÃO percebeu hoje. Ele já sabe quanto ganhou. Descubra o POR QUÊ e o QUANTO ficou na mesa.
@@ -339,8 +346,8 @@ Cada bullet deve responder uma destas perguntas com os dados reais:
 • Se houve intervalo longo sem corrida: em qual horário foi? O que estava acontecendo?
 
 ## RECOMENDAÇÕES PARA AMANHÃ
-Formato: exatamente 4 bullets numerados. Cada um: 1 ação + motivo em dados + valor estimado em R$.
-Estrutura de cada bullet: "N. [Verbo de ação] [especificidade] — porque [dado do dia] — vale aprox. R$ [valor calculado]."
+Formato: exatamente 4 bullets numerados. Cada um: 1 ação + motivo em dados.
+Estrutura de cada bullet: "N. [Verbo de ação] [especificidade] — porque [dado do dia]."
 PROIBIDO recomendação que qualquer motorista poderia receber sem ler esta análise.
 
 ## PROJEÇÃO DO MÊS

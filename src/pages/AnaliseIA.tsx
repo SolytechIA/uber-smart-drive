@@ -32,7 +32,6 @@ import {
   fmtBRL,
   fmtInTZ,
   nowInTZ,
-  projecaoMensal,
   sumJornadaHoursInRange,
   type Ride,
   type Vehicle,
@@ -143,6 +142,41 @@ async function saveAnalise(params: {
     } as any);
   } catch {
     /* save é best-effort */
+  }
+}
+
+async function fetchRateLimit(userId: string, periodo: "dia" | "semana" | "mes", refKey: string): Promise<Date | null> {
+  try {
+    const { data } = await supabase
+      .from("analise_rate_limit" as any)
+      .select("ultima_analise")
+      .eq("user_id", userId)
+      .eq("periodo", periodo)
+      .eq("periodo_referencia", refKey)
+      .maybeSingle();
+    const ts = (data as any)?.ultima_analise;
+    return ts ? new Date(ts) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function upsertRateLimit(userId: string, periodo: "dia" | "semana" | "mes", refKey: string) {
+  try {
+    await supabase
+      .from("analise_rate_limit" as any)
+      .upsert(
+        {
+          user_id: userId,
+          periodo,
+          periodo_referencia: refKey,
+          ultima_analise: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "user_id,periodo,periodo_referencia" } as any,
+      );
+  } catch {
+    /* best-effort */
   }
 }
 
@@ -326,14 +360,24 @@ function PainelDia({
     melhorJanela: string | null;
   } | null>(null);
 
-  // Reset ao trocar dia/semana/mês
+  // Reset + carrega rate limit do banco ao trocar dia
   useEffect(() => {
     setStatus("idle");
     setAnalysis(null);
     setGeneratedAt(null);
     setResumo(null);
     setSinais(null);
-  }, [cacheKey]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const refKey = format(selectedDay, "yyyy-MM-dd");
+      const last = await fetchRateLimit(user.id, "dia", refKey);
+      if (!cancelled && last) setGeneratedAt(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, user, selectedDay]);
 
   // Carrega resumo do dia (KPIs e comparação) independentemente da IA
   useEffect(() => {
@@ -519,7 +563,20 @@ function PainelDia({
       const nowD = nowInTZ();
       const diaAtual = nowD.getDate();
       const ultimoDia = endOfMonth(nowD).getDate();
-      const projMes = projecaoMensal(mMes.ganhoReal, diaAtual, ultimoDia, mMes.numCorridas) ?? mMes.ganhoReal;
+      // Projeção baseada em dias com atividade real no mês
+      const diasComCorridasSet = new Set<string>();
+      for (const r of rides) {
+        if (!r.data_corrida) continue;
+        const ref = new Date(r.data_corrida + "T12:00:00");
+        if (ref >= fromMes && ref <= toMes) diasComCorridasSet.add(r.data_corrida);
+      }
+      const diasComCorridas = diasComCorridasSet.size;
+      const diasTrabalhadosCfg = Number((vehicle as any)?.dias_trabalhados_mes) || 22;
+      let projMes: number | null = null;
+      if (diasComCorridas >= 3) {
+        const mediaPorDia = mMes.ganhoReal / diasComCorridas;
+        projMes = mediaPorDia * diasTrabalhadosCfg;
+      }
       const diasRestantes = Math.max(0, ultimoDia - diaAtual);
       const valorFaltante = Math.max(0, metaMensalCfg - mMes.ganhoReal);
       const valorPorDia = diasRestantes > 0 ? valorFaltante / diasRestantes : valorFaltante;
@@ -577,6 +634,7 @@ function PainelDia({
         corrida_melhor: refRide(melhor),
         corrida_pior: refRide(pior),
         projecao_mensal: projMes,
+        dias_com_corridas_mes: diasComCorridas,
         meta_mensal: metaMensalCfg,
         dias_restantes_mes: diasRestantes,
         valor_faltante_meta: valorFaltante,
@@ -618,6 +676,7 @@ function PainelDia({
         payload,
         result,
       });
+      void upsertRateLimit(user.id, "dia", format(selectedDay, "yyyy-MM-dd"));
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
@@ -697,12 +756,21 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
   const [meta, setMeta] = useState<any>(null);
   const [now, setNow] = useState<number>(Date.now());
 
-  // Reset ao trocar dia/semana/mês
+  // Reset + carrega rate limit do banco
   useEffect(() => {
     setStatus("idle");
     setAnalysis(null);
     setGeneratedAt(null);
-  }, [cacheKey]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const last = await fetchRateLimit(user.id, "semana", weekStartISO);
+      if (!cancelled && last) setGeneratedAt(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, user, weekStartISO]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
@@ -798,6 +866,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         payload,
         result,
       });
+      void upsertRateLimit(user.id, "semana", weekStartISO);
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
@@ -865,12 +934,21 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
   const [meta, setMeta] = useState<any>(null);
   const [now, setNow] = useState<number>(Date.now());
 
-  // Reset ao trocar dia/semana/mês
+  // Reset + carrega rate limit do banco
   useEffect(() => {
     setStatus("idle");
     setAnalysis(null);
     setGeneratedAt(null);
-  }, [cacheKey]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const last = await fetchRateLimit(user.id, "mes", mesYYYYMM);
+      if (!cancelled && last) setGeneratedAt(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, user, mesYYYYMM]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
@@ -966,6 +1044,7 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         payload,
         result,
       });
+      void upsertRateLimit(user.id, "mes", mesYYYYMM);
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
