@@ -322,8 +322,12 @@ ${tempoOcioso ? `Tempo ocioso: ${tempoOcioso}` : ""}
 ${eficiencia ? `Eficiência de jornada: ${eficiencia}` : ""}
 Melhor corrida: R$ ${fmt(d.corrida_melhor.valor)} | ${d.corrida_melhor.origem} → ${d.corrida_melhor.destino} | ${fmt(d.corrida_melhor.km)} km
 Pior corrida: R$ ${fmt(d.corrida_pior.valor)} | ${d.corrida_pior.origem} → ${d.corrida_pior.destino} | ${fmt(d.corrida_pior.km)} km
-Acumulado no mês: R$ ${fmt(d.ganho_real)} | Meta mensal: R$ ${fmt(d.meta_mensal)} | Projeção atual: R$ ${fmt(d.projecao_mensal)}
-Faltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) → necessário R$ ${fmt(d.valor_necessario_por_dia)}/dia
+Acumulado no mês: R$ ${fmt(d.ganho_real)} | Meta mensal: R$ ${fmt(d.meta_mensal)}
+${
+  d.projecao_mensal != null && d.projecao_mensal > 0
+    ? `Projeção atual: R$ ${fmt(d.projecao_mensal)}\nFaltam R$ ${fmt(d.valor_faltante_meta)} em ${d.dias_restantes_mes} dia(s) → necessário R$ ${fmt(d.valor_necessario_por_dia)}/dia`
+    : `Dias com corridas no mês: ${d.dias_com_corridas_mes ?? 0} — dados insuficientes para projeção confiável.`
+}
 ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 MISSÃO: Encontre o que o motorista NÃO percebeu hoje. Ele já sabe quanto ganhou. Descubra o POR QUÊ e o QUANTO ficou na mesa.
