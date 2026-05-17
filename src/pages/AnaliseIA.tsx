@@ -867,6 +867,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         payload,
         result,
       });
+      void upsertRateLimit(user.id, "semana", weekStartISO);
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
