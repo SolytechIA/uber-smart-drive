@@ -361,14 +361,24 @@ function PainelDia({
     melhorJanela: string | null;
   } | null>(null);
 
-  // Reset ao trocar dia/semana/mês
+  // Reset + carrega rate limit do banco ao trocar dia
   useEffect(() => {
     setStatus("idle");
     setAnalysis(null);
     setGeneratedAt(null);
     setResumo(null);
     setSinais(null);
-  }, [cacheKey]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const refKey = format(selectedDay, "yyyy-MM-dd");
+      const last = await fetchRateLimit(user.id, "dia", refKey);
+      if (!cancelled && last) setGeneratedAt(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, user, selectedDay]);
 
   // Carrega resumo do dia (KPIs e comparação) independentemente da IA
   useEffect(() => {
