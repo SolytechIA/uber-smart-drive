@@ -757,12 +757,21 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
   const [meta, setMeta] = useState<any>(null);
   const [now, setNow] = useState<number>(Date.now());
 
-  // Reset ao trocar dia/semana/mês
+  // Reset + carrega rate limit do banco
   useEffect(() => {
     setStatus("idle");
     setAnalysis(null);
     setGeneratedAt(null);
-  }, [cacheKey]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const last = await fetchRateLimit(user.id, "semana", weekStartISO);
+      if (!cancelled && last) setGeneratedAt(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, user, weekStartISO]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
