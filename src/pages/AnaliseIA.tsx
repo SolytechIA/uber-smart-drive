@@ -677,6 +677,7 @@ function PainelDia({
         payload,
         result,
       });
+      void upsertRateLimit(user.id, "dia", format(selectedDay, "yyyy-MM-dd"));
     } catch (e) {
       console.error(e);
       setErrorMsg((e as Error).message);
