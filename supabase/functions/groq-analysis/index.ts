@@ -502,34 +502,24 @@ function splitSections(text: string) {
       "recomendacoes",
       /(?:^|\n)\s*#{0,3}\s*(RECOMENDA[ÇC][ÕO]ES PARA AMANH[ÃA]|RECOMENDA[ÇC][ÕO]ES PARA A PR[ÓO]XIMA SEMANA|RECOMENDA[ÇC][ÕO]ES)\s*\n/i,
     ],
-    ["projecaomes", /(?:^|\n)\s*#{0,3}\s*(PROJE[ÇC][ÃA]O DO M[ÊE]S|PROJEÇÃO DO MÊS|PROJE[ÇC][ÃA]O SEMANAL)\s*\n/i],
+    ["projecaomes", /(?:^|\n)\s*#{0,3}\s*(PROJE[ÇC][ÃA]O DO M[ÊE]S|PROJE[ÇC][ÃA]O SEMANAL)\s*\n/i],
     ["dicaestrategica", /(?:^|\n)\s*#{0,3}\s*(DICA ESTRAT[ÉE]GICA(?:\s*DO DIA)?|INSIGHTS? DO M[ÊE]S)\s*\n/i],
   ];
 
-  // Divide o texto nos cabeçalhos para extrair cada seção sem contaminar a próxima
-  const allHeadings = /(?:^|\n)\s*#{0,3}\s*[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ][A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]+\s*\n/gi;
-  const positions: Array<{ key: keyof typeof sections; start: number; end: number }> = [];
-
+  const hits: Array<{ key: keyof typeof sections; start: number }> = [];
   for (const [key, re] of patterns) {
     const m = text.match(re);
     if (m && m.index !== undefined) {
-      positions.push({ key, start: m.index + m[0].length, end: text.length });
+      hits.push({ key, start: m.index + m[0].length });
     }
   }
+  hits.sort((a, b) => a.start - b.start);
 
-  // Ordena por posição de início para cortar cada seção até o próximo cabeçalho
-  positions.sort((a, b) => a.start - b.start);
-  for (let i = 0; i < positions.length; i++) {
-    const next = positions[i + 1];
-    const rawStart = positions[i].start;
-    const rawEnd = next ? next.start - (text.lastIndexOf("\n", next.start - 1) - rawStart) : text.length;
-    // Encontra o início do próximo cabeçalho para não vazar conteúdo
-    let cutAt = text.length;
-    if (next) {
-      const prevNewline = text.lastIndexOf("\n\n", next.start);
-      cutAt = prevNewline > rawStart ? prevNewline : next.start;
-    }
-    sections[positions[i].key] = text.slice(rawStart, cutAt).trim();
+  for (let i = 0; i < hits.length; i++) {
+    const nextStart = i + 1 < hits.length ? hits[i + 1].start : text.length;
+    const prevNewline = text.lastIndexOf("\n\n", nextStart - 1);
+    const cutAt = prevNewline > hits[i].start ? prevNewline : nextStart;
+    sections[hits[i].key] = text.slice(hits[i].start, cutAt).trim();
   }
 
   return sections;
