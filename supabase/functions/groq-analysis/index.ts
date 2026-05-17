@@ -490,20 +490,20 @@ function buildPrompt(p: Payload): string {
 
 function splitSections(text: string) {
   const sections = {
-    resumodia: "",
+    resumo_dia: "",
     recomendacoes: "",
-    projecaomes: "",
-    dicaestrategica: "",
+    projecao_mes: "",
+    dica_estrategica: "",
   };
 
   const patterns: Array<[keyof typeof sections, RegExp]> = [
-    ["resumodia", /(?:^|\n)\s*#{0,3}\s*(RESUMO DO DIA|RESUMO DA SEMANA|RESUMO DO M[ÊE]S|INSIGHTS DO M[ÊE]S)\s*\n/i],
+    ["resumo_dia", /(?:^|\n)\s*#{0,3}\s*(RESUMO DO DIA|RESUMO DA SEMANA|RESUMO DO M[ÊE]S|INSIGHTS DO M[ÊE]S)\s*\n/i],
     [
       "recomendacoes",
       /(?:^|\n)\s*#{0,3}\s*(RECOMENDA[ÇC][ÕO]ES PARA AMANH[ÃA]|RECOMENDA[ÇC][ÕO]ES PARA A PR[ÓO]XIMA SEMANA|RECOMENDA[ÇC][ÕO]ES)\s*\n/i,
     ],
-    ["projecaomes", /(?:^|\n)\s*#{0,3}\s*(PROJE[ÇC][ÃA]O DO M[ÊE]S|PROJE[ÇC][ÃA]O SEMANAL)\s*\n/i],
-    ["dicaestrategica", /(?:^|\n)\s*#{0,3}\s*(DICA ESTRAT[ÉE]GICA(?:\s*DO DIA)?|INSIGHTS? DO M[ÊE]S)\s*\n/i],
+    ["projecao_mes", /(?:^|\n)\s*#{0,3}\s*(PROJE[ÇC][ÃA]O DO M[ÊE]S|PROJE[ÇC][ÃA]O SEMANAL)\s*\n/i],
+    ["dica_estrategica", /(?:^|\n)\s*#{0,3}\s*(DICA ESTRAT[ÉE]GICA(?:\s*DO DIA)?|INSIGHTS? DO M[ÊE]S)\s*\n/i],
   ];
 
   const hits: Array<{ key: keyof typeof sections; start: number }> = [];
