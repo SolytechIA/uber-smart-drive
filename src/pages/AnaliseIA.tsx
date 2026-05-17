@@ -32,7 +32,7 @@ import {
   fmtBRL,
   fmtInTZ,
   nowInTZ,
-  nowInTZ,
+  sumJornadaHoursInRange,
   sumJornadaHoursInRange,
   type Ride,
   type Vehicle,
