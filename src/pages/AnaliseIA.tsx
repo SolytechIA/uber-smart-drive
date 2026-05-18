@@ -1545,14 +1545,14 @@ function AnaliseResultado({
   titleDica: string;
   footerProgress?: { realizado: number; meta: number; pct: number };
 }) {
-  const pResumo = extrairAcao(analysis.resumo_dia || "");
+  const pResumo = extrairAcao(analysis.resumo_Dia || "");
   const pRecs = extrairAcao(analysis.recomendacoes || "");
-  const pProj = extrairAcao(analysis.projecao_mes || "");
-  const pDica = extrairAcao(analysis.dica_estrategica || "");
+  const pProj = extrairAcao(analysis.projecao_Mes || "");
+  const pDica = extrairAcao(analysis.dica_Estrategica || "");
   const acao = pDica.acao || pRecs.acao || pResumo.acao || pProj.acao;
 
   const handleShare = async () => {
-    const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
+    const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_Dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_Mes}\n\n${titleDica}\n${analysis.dica_Estrategica}\n\nGerado pelo Drive IA 🚗`;
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
         await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
