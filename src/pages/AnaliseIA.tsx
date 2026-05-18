@@ -1048,18 +1048,12 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      const result = data as Analysis;
+      const result = normalizeAnalysis(data);
       const ts = Date.now();
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
-      void saveAnalise({
-        userId: user.id,
-        periodo: "mes",
-        dataRef: `${mesYYYYMM}-01`,
-        payload,
-        result,
-      });
+      // ⚠️ Análise textual NÃO é persistida — fica apenas no estado da sessão atual.
       void upsertRateLimit(user.id, "mes", mesYYYYMM);
     } catch (e) {
       console.error(e);
