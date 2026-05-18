@@ -163,10 +163,10 @@ async function saveAnalise(params: {
       periodo: params.periodo,
       data_referencia: params.dataRef,
       payload: params.payload,
-      resumo_dia: params.result.resumo_dia,
+      resumo_dia: params.result.resumo_Dia,
       recomendacoes: params.result.recomendacoes,
-      projecao_mes: params.result.projecao_mes,
-      dica_estrategica: params.result.dica_estrategica,
+      projecao_mes: params.result.projecao_Mes,
+      dica_estrategica: params.result.dica_Estrategica,
     } as any);
   } catch {
     /* save é best-effort */
