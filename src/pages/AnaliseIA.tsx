@@ -876,18 +876,12 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      const result = data as Analysis;
+      const result = normalizeAnalysis(data);
       const ts = Date.now();
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
-      void saveAnalise({
-        userId: user.id,
-        periodo: "semana",
-        dataRef: format(new Date(weekStartISO + "T12:00:00"), "yyyy-MM-dd"),
-        payload,
-        result,
-      });
+      // ⚠️ Análise textual NÃO é persistida — fica apenas no estado da sessão atual.
       void upsertRateLimit(user.id, "semana", weekStartISO);
     } catch (e) {
       console.error(e);
