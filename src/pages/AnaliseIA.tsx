@@ -692,18 +692,12 @@ function PainelDia({
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if (!data || (data as any).error) throw new Error((data as any)?.error || "Erro desconhecido");
-      const result = data as Analysis;
+      const result = normalizeAnalysis(data);
       const ts = Date.now();
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
-      void saveAnalise({
-        userId: user.id,
-        periodo: "dia",
-        dataRef: format(selectedDay, "yyyy-MM-dd"),
-        payload,
-        result,
-      });
+      // ⚠️ Análise textual NÃO é persistida — fica apenas no estado da sessão atual.
       void upsertRateLimit(user.id, "dia", format(selectedDay, "yyyy-MM-dd"));
     } catch (e) {
       console.error(e);
