@@ -481,13 +481,121 @@ ${blocoAnalisePersonalizada(d.analise_personalizada)}
 
 // ─── ORQUESTRAÇÃO ─────────────────────────────────────────────────────────────
 
+const JSON_OUTPUT_WRAP = `
+
+──────────────────────────────────────────────
+INSTRUÇÃO FINAL DE FORMATO (OBRIGATÓRIA):
+Ignore os cabeçalhos "## ..." acima na sua resposta — eles servem apenas para guiar o conteúdo.
+Responda APENAS com um objeto JSON válido, EXATAMENTE neste formato:
+
+{
+  "resumo_Dia": "<conteúdo do bloco RESUMO em texto puro, com quebras de linha e bullets iniciados por '•' ou '1.', '2.'>",
+  "recomendacoes": "<conteúdo do bloco RECOMENDAÇÕES em texto puro>",
+  "projecao_Mes": "<conteúdo do bloco PROJEÇÃO em texto puro>",
+  "dica_Estrategica": "<conteúdo do bloco DICA ESTRATÉGICA em texto puro, terminando com a linha '⚡ Ação para agora: <ação>'>"
+}
+
+Sem markdown. Sem crases. Sem texto antes ou depois do JSON. Sem comentários. Strings devem escapar quebras de linha como \\n.`;
+
 function buildPrompt(p: Payload): string {
-  if ((p as any).periodo === "semana") return buildPromptSemana(p as PayloadSemana);
-  if ((p as any).periodo === "mes") return buildPromptMes(p as PayloadMes);
-  return buildPromptDia(p as PayloadDia);
+  let base: string;
+  if ((p as any).periodo === "semana") base = buildPromptSemana(p as PayloadSemana);
+  else if ((p as any).periodo === "mes") base = buildPromptMes(p as PayloadMes);
+  else base = buildPromptDia(p as PayloadDia);
+  return base + JSON_OUTPUT_WRAP;
+}
+
+// ─── NORMALIZAÇÃO DE RESPOSTA ─────────────────────────────────────────────────
+
+interface AnaliseFinal {
+  resumo_Dia: string;
+  recomendacoes: string;
+  projecao_Mes: string;
+  dica_Estrategica: string;
+}
+
+function tryParseJson(raw: string): any | null {
+  if (!raw) return null;
+  // 1) parse direto
+  try {
+    return JSON.parse(raw);
+  } catch {
+    /* segue */
+  }
+  // 2) extrair primeiro bloco {...} balanceado
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start !== -1 && end > start) {
+    const slice = raw.slice(start, end + 1);
+    try {
+      return JSON.parse(slice);
+    } catch {
+      /* segue */
+    }
+  }
+  // 3) remover crases / fences markdown
+  const cleaned = raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+  if (cleaned !== raw) {
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      /* falhou */
+    }
+  }
+  return null;
+}
+
+function pickKey(obj: any, ...candidates: string[]): string {
+  if (!obj || typeof obj !== "object") return "";
+  for (const k of candidates) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (Array.isArray(v)) return v.filter(Boolean).join("\n");
+  }
+  return "";
+}
+
+/**
+ * Função única e defensiva de normalização.
+ * Aceita pequenas variações de nome de chave, mas sempre devolve
+ * { resumo_Dia, recomendacoes, projecao_Mes, dica_Estrategica }.
+ */
+function normalizeAnalysis(content: string): AnaliseFinal {
+  const parsed = tryParseJson(content);
+
+  if (parsed && typeof parsed === "object") {
+    return {
+      resumo_Dia: pickKey(parsed, "resumo_Dia", "resumo_dia", "resumoDia", "resumo"),
+      recomendacoes: pickKey(parsed, "recomendacoes", "recomendações", "recomendacao", "recommendations"),
+      projecao_Mes: pickKey(parsed, "projecao_Mes", "projecao_mes", "projecaoMes", "projecao", "projection"),
+      dica_Estrategica: pickKey(
+        parsed,
+        "dica_Estrategica",
+        "dica_estrategica",
+        "dicaEstrategica",
+        "dica",
+        "strategic_tip",
+      ),
+    };
+  }
+
+  // ── FALLBACK LEGADO (compatibilidade temporária) ──
+  // Usar splitSections somente se o modelo ignorou a instrução JSON.
+  const legacy = splitSections(content || "");
+  return {
+    resumo_Dia: legacy.resumo_dia || "",
+    recomendacoes: legacy.recomendacoes || "",
+    projecao_Mes: legacy.projecao_mes || "",
+    dica_Estrategica: legacy.dica_estrategica || "",
+  };
 }
 
 function splitSections(text: string) {
+  // ⚠️ FALLBACK LEGADO — não é o caminho principal de produção.
+  // Mantido apenas para o caso de o modelo retornar texto fora do JSON.
   const sections = {
     resumo_dia: "",
     recomendacoes: "",
@@ -526,6 +634,13 @@ function splitSections(text: string) {
 
 // ─── SERVIDOR ─────────────────────────────────────────────────────────────────
 
+const EMPTY_RESULT: AnaliseFinal = {
+  resumo_Dia: "",
+  recomendacoes: "",
+  projecao_Mes: "",
+  dica_Estrategica: "",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -555,6 +670,7 @@ Deno.serve(async (req) => {
         model: "llama-3.3-70b-versatile",
         temperature: 0.85,
         max_tokens: 3000,
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemContent },
           { role: "user", content: userPrompt },
@@ -573,15 +689,17 @@ Deno.serve(async (req) => {
 
     const data = await groqRes.json();
     const content: string = data?.choices?.[0]?.message?.content ?? "";
-    const parsed = splitSections(content);
+    const normalized = normalizeAnalysis(content);
 
-    return new Response(JSON.stringify(parsed), {
+    // SEMPRE devolver objeto estruturado com as 4 chaves. Nunca quebrar.
+    return new Response(JSON.stringify(normalized), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("groq-analysis error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+    // Mesmo em erro inesperado, devolver shape estruturado para o frontend renderizar "—".
+    return new Response(JSON.stringify({ ...EMPTY_RESULT, error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
