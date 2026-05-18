@@ -55,12 +55,40 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 
 interface Analysis {
-  resumo_dia: string;
+  resumo_Dia: string;
   recomendacoes: string;
-  projecao_mes: string;
-  dica_estrategica: string;
+  projecao_Mes: string;
+  dica_Estrategica: string;
 }
 type Status = "idle" | "loading" | "ok" | "error" | "empty";
+
+/**
+ * Helper único e defensivo. Aceita variações de nome de chave que possam vir
+ * do backend (legado, casing diferente, etc.) e devolve SEMPRE o contrato fixo
+ * { resumo_Dia, recomendacoes, projecao_Mes, dica_Estrategica }.
+ */
+function normalizeAnalysis(raw: any): Analysis {
+  const obj = raw && typeof raw === "object" ? raw : {};
+  const pick = (...keys: string[]): string => {
+    for (const k of keys) {
+      const v = obj[k];
+      if (typeof v === "string" && v.trim()) return v;
+      if (Array.isArray(v)) return v.filter(Boolean).join("\n");
+    }
+    return "";
+  };
+  return {
+    resumo_Dia: pick("resumo_Dia", "resumo_dia", "resumoDia", "resumo"),
+    recomendacoes: pick("recomendacoes", "recomendações", "recommendations"),
+    projecao_Mes: pick("projecao_Mes", "projecao_mes", "projecaoMes", "projecao"),
+    dica_Estrategica: pick(
+      "dica_Estrategica",
+      "dica_estrategica",
+      "dicaEstrategica",
+      "dica",
+    ),
+  };
+}
 
 const RATE_LIMIT_MS = 60 * 60 * 1000;
 
