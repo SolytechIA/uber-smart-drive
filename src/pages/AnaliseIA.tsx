@@ -55,12 +55,40 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 
 interface Analysis {
-  resumo_dia: string;
+  resumo_Dia: string;
   recomendacoes: string;
-  projecao_mes: string;
-  dica_estrategica: string;
+  projecao_Mes: string;
+  dica_Estrategica: string;
 }
 type Status = "idle" | "loading" | "ok" | "error" | "empty";
+
+/**
+ * Helper único e defensivo. Aceita variações de nome de chave que possam vir
+ * do backend (legado, casing diferente, etc.) e devolve SEMPRE o contrato fixo
+ * { resumo_Dia, recomendacoes, projecao_Mes, dica_Estrategica }.
+ */
+function normalizeAnalysis(raw: any): Analysis {
+  const obj = raw && typeof raw === "object" ? raw : {};
+  const pick = (...keys: string[]): string => {
+    for (const k of keys) {
+      const v = obj[k];
+      if (typeof v === "string" && v.trim()) return v;
+      if (Array.isArray(v)) return v.filter(Boolean).join("\n");
+    }
+    return "";
+  };
+  return {
+    resumo_Dia: pick("resumo_Dia", "resumo_dia", "resumoDia", "resumo"),
+    recomendacoes: pick("recomendacoes", "recomendações", "recommendations"),
+    projecao_Mes: pick("projecao_Mes", "projecao_mes", "projecaoMes", "projecao"),
+    dica_Estrategica: pick(
+      "dica_Estrategica",
+      "dica_estrategica",
+      "dicaEstrategica",
+      "dica",
+    ),
+  };
+}
 
 const RATE_LIMIT_MS = 60 * 60 * 1000;
 
@@ -135,10 +163,10 @@ async function saveAnalise(params: {
       periodo: params.periodo,
       data_referencia: params.dataRef,
       payload: params.payload,
-      resumo_dia: params.result.resumo_dia,
+      resumo_dia: params.result.resumo_Dia,
       recomendacoes: params.result.recomendacoes,
-      projecao_mes: params.result.projecao_mes,
-      dica_estrategica: params.result.dica_estrategica,
+      projecao_mes: params.result.projecao_Mes,
+      dica_estrategica: params.result.dica_Estrategica,
     } as any);
   } catch {
     /* save é best-effort */
@@ -664,18 +692,12 @@ function PainelDia({
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if (!data || (data as any).error) throw new Error((data as any)?.error || "Erro desconhecido");
-      const result = data as Analysis;
+      const result = normalizeAnalysis(data);
       const ts = Date.now();
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
-      void saveAnalise({
-        userId: user.id,
-        periodo: "dia",
-        dataRef: format(selectedDay, "yyyy-MM-dd"),
-        payload,
-        result,
-      });
+      // ⚠️ Análise textual NÃO é persistida — fica apenas no estado da sessão atual.
       void upsertRateLimit(user.id, "dia", format(selectedDay, "yyyy-MM-dd"));
     } catch (e) {
       console.error(e);
@@ -854,18 +876,12 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      const result = data as Analysis;
+      const result = normalizeAnalysis(data);
       const ts = Date.now();
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
-      void saveAnalise({
-        userId: user.id,
-        periodo: "semana",
-        dataRef: format(new Date(weekStartISO + "T12:00:00"), "yyyy-MM-dd"),
-        payload,
-        result,
-      });
+      // ⚠️ Análise textual NÃO é persistida — fica apenas no estado da sessão atual.
       void upsertRateLimit(user.id, "semana", weekStartISO);
     } catch (e) {
       console.error(e);
@@ -1032,18 +1048,12 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
       const { data, error } = await supabase.functions.invoke("groq-analysis", { body: payload });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      const result = data as Analysis;
+      const result = normalizeAnalysis(data);
       const ts = Date.now();
       setAnalysis(result);
       setGeneratedAt(new Date(ts));
       setStatus("ok");
-      void saveAnalise({
-        userId: user.id,
-        periodo: "mes",
-        dataRef: `${mesYYYYMM}-01`,
-        payload,
-        result,
-      });
+      // ⚠️ Análise textual NÃO é persistida — fica apenas no estado da sessão atual.
       void upsertRateLimit(user.id, "mes", mesYYYYMM);
     } catch (e) {
       console.error(e);
@@ -1517,14 +1527,14 @@ function AnaliseResultado({
   titleDica: string;
   footerProgress?: { realizado: number; meta: number; pct: number };
 }) {
-  const pResumo = extrairAcao(analysis.resumo_dia || "");
+  const pResumo = extrairAcao(analysis.resumo_Dia || "");
   const pRecs = extrairAcao(analysis.recomendacoes || "");
-  const pProj = extrairAcao(analysis.projecao_mes || "");
-  const pDica = extrairAcao(analysis.dica_estrategica || "");
+  const pProj = extrairAcao(analysis.projecao_Mes || "");
+  const pDica = extrairAcao(analysis.dica_Estrategica || "");
   const acao = pDica.acao || pRecs.acao || pResumo.acao || pProj.acao;
 
   const handleShare = async () => {
-    const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_mes}\n\n${titleDica}\n${analysis.dica_estrategica}\n\nGerado pelo Drive IA 🚗`;
+    const texto = `📊 Análise Drive IA — ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n${titleResumo}\n${analysis.resumo_Dia}\n\n${titleRecs}\n${analysis.recomendacoes}\n\n${titleProj}\n${analysis.projecao_Mes}\n\n${titleDica}\n${analysis.dica_Estrategica}\n\nGerado pelo Drive IA 🚗`;
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
         await (navigator as any).share({ title: "Minha Análise Drive IA", text: texto });
