@@ -13,6 +13,7 @@ import { StepVehicle } from "./onboarding/StepVehicle";
 import { StepCosts } from "./onboarding/StepCosts";
 import { StepGoals } from "./onboarding/StepGoals";
 import { ConectarUberTab } from "@/components/configuracoes/ConectarUberTab";
+import { PerfilTab } from "@/components/configuracoes/PerfilTab";
 import {
   initialCosts,
   initialGoals,
