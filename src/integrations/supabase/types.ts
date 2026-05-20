@@ -339,16 +339,20 @@ export type Database = {
         Row: {
           aceite_privacidade: boolean
           aceite_privacidade_em: string | null
+          ano_nascimento: number | null
           ativo: boolean
           cidade: string | null
           created_at: string
           email: string
+          estado: string | null
           id: string
           is_admin: boolean
           mp_subscription_id: string | null
           nome: string | null
           plano: string
+          sexo: string | null
           telefone: string | null
+          telefone_verificado: boolean
           trial_expira_em: string | null
           uber_conectado: boolean
           uber_cookie: string | null
@@ -359,16 +363,20 @@ export type Database = {
         Insert: {
           aceite_privacidade?: boolean
           aceite_privacidade_em?: string | null
+          ano_nascimento?: number | null
           ativo?: boolean
           cidade?: string | null
           created_at?: string
           email: string
+          estado?: string | null
           id: string
           is_admin?: boolean
           mp_subscription_id?: string | null
           nome?: string | null
           plano?: string
+          sexo?: string | null
           telefone?: string | null
+          telefone_verificado?: boolean
           trial_expira_em?: string | null
           uber_conectado?: boolean
           uber_cookie?: string | null
@@ -379,16 +387,20 @@ export type Database = {
         Update: {
           aceite_privacidade?: boolean
           aceite_privacidade_em?: string | null
+          ano_nascimento?: number | null
           ativo?: boolean
           cidade?: string | null
           created_at?: string
           email?: string
+          estado?: string | null
           id?: string
           is_admin?: boolean
           mp_subscription_id?: string | null
           nome?: string | null
           plano?: string
+          sexo?: string | null
           telefone?: string | null
+          telefone_verificado?: boolean
           trial_expira_em?: string | null
           uber_conectado?: boolean
           uber_cookie?: string | null
@@ -518,16 +530,20 @@ export type Database = {
         Returns: {
           aceite_privacidade: boolean
           aceite_privacidade_em: string | null
+          ano_nascimento: number | null
           ativo: boolean
           cidade: string | null
           created_at: string
           email: string
+          estado: string | null
           id: string
           is_admin: boolean
           mp_subscription_id: string | null
           nome: string | null
           plano: string
+          sexo: string | null
           telefone: string | null
+          telefone_verificado: boolean
           trial_expira_em: string | null
           uber_conectado: boolean
           uber_cookie: string | null

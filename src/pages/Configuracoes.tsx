@@ -13,6 +13,7 @@ import { StepVehicle } from "./onboarding/StepVehicle";
 import { StepCosts } from "./onboarding/StepCosts";
 import { StepGoals } from "./onboarding/StepGoals";
 import { ConectarUberTab } from "@/components/configuracoes/ConectarUberTab";
+import { PerfilTab } from "@/components/configuracoes/PerfilTab";
 import {
   initialCosts,
   initialGoals,
@@ -197,13 +198,19 @@ export default function Configuracoes() {
             <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Carregando…
           </div>
         ) : (
-          <Tabs defaultValue="vehicle" className="w-full">
-            <TabsList className="grid w-full max-w-2xl grid-cols-2 sm:grid-cols-4">
+          <Tabs defaultValue="perfil" className="w-full">
+            <TabsList className="grid w-full max-w-3xl grid-cols-2 sm:grid-cols-5">
+              <TabsTrigger value="perfil">Meu Perfil</TabsTrigger>
               <TabsTrigger value="vehicle">Veículo</TabsTrigger>
               <TabsTrigger value="costs">Custos</TabsTrigger>
               <TabsTrigger value="goals">Metas</TabsTrigger>
               <TabsTrigger value="uber">Conectar Uber</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="perfil">
+              <PerfilTab />
+            </TabsContent>
+
 
             <TabsContent value="vehicle">
               <Card className="mt-6 p-6 sm:p-8">
