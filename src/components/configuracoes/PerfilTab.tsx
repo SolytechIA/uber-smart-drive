@@ -100,14 +100,13 @@ export function PerfilTab() {
       }
     }
     setSaving(true);
-    const payload: Record<string, unknown> = {
+    const payload: any = {
       telefone: telefoneDigits || null,
       cidade: cidade.trim() || null,
       estado: estado || null,
       sexo: sexo || null,
       ano_nascimento: anoNascimento ? Number(anoNascimento) : null,
     };
-    // Se o telefone mudou, marcar como não verificado
     if (telefoneMudou) {
       payload.telefone_verificado = false;
       setTelefoneVerificado(false);
