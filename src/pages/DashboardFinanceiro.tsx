@@ -564,7 +564,7 @@ interface CompRow {
   bHasData: boolean;
 }
 
-function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
+function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfDay(now);
   const aTo = endOfDay(now);
@@ -572,34 +572,34 @@ function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jorna
   const bFrom = startOfDay(ontem);
   const bTo = endOfDay(ontem);
   return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
     { includeTicket: true },
   );
 }
 
-function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
+function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   const bTo = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
     { includeTicket: true },
   );
 }
 
-function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
+function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfMonth(now);
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
   const bTo = endOfMonth(subMonths(now, 1));
   return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
     { includeTicket: true },
   );
 }
