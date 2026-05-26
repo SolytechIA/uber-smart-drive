@@ -122,7 +122,7 @@ export default function Relatorios() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
-  const [jornadas, setJornadas, passes] = useState<JornadaRecord[]>([]);
+  const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
   const [passes, setPasses] = useState<UberPasse[]>([]);
 
   useEffect(() => {
