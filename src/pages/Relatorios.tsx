@@ -50,6 +50,7 @@ import {
   JornadaRecord,
   Ride,
   TZ,
+  UberPasse,
   Vehicle,
   buildDailySeries,
   calcCustoCombustivel,
