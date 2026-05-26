@@ -73,6 +73,7 @@ export default function DashboardFinanceiro() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [goals, setGoals] = useState<Goals | null>(null);
   const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
+  const [passes, setPasses] = useState<UberPasse[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function DashboardFinanceiro() {
     let cancel = false;
     (async () => {
       setLoading(true);
-      const [rRes, vRes, gRes, jRes] = await Promise.all([
+      const [rRes, vRes, gRes, jRes, pRes] = await Promise.all([
         supabase
           .from("rides")
           .select("id,data_corrida,horario_inicio,horario_fim,valor_bruto,km_passageiro,km_deslocamento,km_total,duracao_minutos,classificacao,bairro_origem,bairro_destino")
@@ -90,12 +91,14 @@ export default function DashboardFinanceiro() {
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("jornadas" as any).select("*").eq("user_id", user.id).limit(2000),
+        supabase.from("uber_passes" as any).select("*").eq("user_id", user.id).limit(500),
       ]);
       if (cancel) return;
       setRides((rRes.data as Ride[]) || []);
       setVehicle((vRes.data as Vehicle) || null);
       setGoals((gRes.data as Goals) || null);
       setJornadas(((jRes.data as any) || []) as JornadaRecord[]);
+      setPasses(((pRes.data as any) || []) as UberPasse[]);
       setLoading(false);
     })();
     return () => {
