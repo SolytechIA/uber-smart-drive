@@ -325,7 +325,7 @@ function AbaDiario({
           positive={m.ganhoReal > 0}
           negative={m.ganhoReal < 0}
         />
-        <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+        <ResumoCard label="Custo/corrida" value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"} hint="Combustível + fixo + passe" />
         <ResumoCard label="Corridas" value={String(m.numCorridas)} />
       </div>
 
@@ -578,7 +578,7 @@ function AbaSemanal({
               positive={m.ganhoReal > 0}
               negative={m.ganhoReal < 0}
             />
-            <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+            <ResumoCard label="Custo/corrida" value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"} hint="Combustível + fixo + passe" />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
@@ -888,7 +888,7 @@ function AbaMensal({
               positive={m.ganhoReal > 0}
               negative={m.ganhoReal < 0}
             />
-            <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+            <ResumoCard label="Custo/corrida" value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"} hint="Combustível + fixo + passe" />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
