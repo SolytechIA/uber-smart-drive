@@ -107,7 +107,7 @@ export default function DashboardFinanceiro() {
   }, [user]);
 
   const range = useMemo(() => getPeriodRange(periodo, custom), [periodo, custom]);
-  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas, passes), [rides, vehicle, range, jornadas]);
+  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas, passes), [rides, vehicle, range, jornadas, passes]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, range.from, range.to), [rides, vehicle, range]);
   const metas = useMemo(() => resolveGoals(goals, vehicle), [goals, vehicle]);
 
@@ -119,17 +119,13 @@ export default function DashboardFinanceiro() {
   const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
   const ganhoPorKm = ganhoRealKm;
   const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  // Ticket médio por corrida
   const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
 
   // Comparativos
-  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
-  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
-  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
+  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
+  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
+  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
 
-  // Série para o gráfico "Evolução do ganho real":
-  // - Filtro "hoje": eixo X por hora (00h..hora atual)
-  // - Demais: por dia (mantém buildDailySeries)
   const evolucaoSeries = useMemo(() => {
     if (periodo !== "hoje") return series;
     return buildHourlySeriesToday(rides, range.from, range.to);
@@ -139,22 +135,22 @@ export default function DashboardFinanceiro() {
   const donutData = [
     { name: "Combustível/Energia", value: Math.max(0, metrics.custoCombustivel), color: "hsl(var(--warning))" },
     { name: "Custos fixos", value: Math.max(0, metrics.custoFixoProporcional), color: "hsl(var(--primary))" },
-    { name: "Comissão Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
+    { name: "Passe Uber", value: Math.max(0, metrics.custoPasseUber), color: "hsl(var(--accent))" },
+    { name: "Comissão/Passe Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
   ].filter((d) => d.value > 0);
 
-  // Métricas para cards de meta (sempre exibe diária, semanal, mensal)
   const metricsHoje = useMemo(() => {
     const r = getPeriodRange("hoje");
     return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
-  }, [rides, vehicle, jornadas]);
+  }, [rides, vehicle, jornadas, passes]);
   const metricsSemana = useMemo(() => {
     const r = getPeriodRange("semana");
     return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
-  }, [rides, vehicle, jornadas]);
+  }, [rides, vehicle, jornadas, passes]);
   const metricsMes = useMemo(() => {
     const r = getPeriodRange("mes");
     return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
-  }, [rides, vehicle, jornadas]);
+  }, [rides, vehicle, jornadas, passes]);
 
   // Meta do período (sempre usa o valor FIXO configurado pelo motorista,
   // nunca recalcula proporcional ao número de dias do filtro).
