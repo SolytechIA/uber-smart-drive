@@ -208,9 +208,6 @@ function AbaDiario({
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
   passes: UberPasse[];
-  passes: UberPasse[];
-  passes: UberPasse[];
-  passes: UberPasse[];
   loading: boolean;
 }) {
   const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
