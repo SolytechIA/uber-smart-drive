@@ -342,10 +342,24 @@ function AbaDiario({
         <CardContent>
           <div className="h-72 w-full">
             <ResponsiveContainer>
-              <BarChart data={hourSeries}>
+              <AreaChart data={(() => {
+                // Limita a janela: 1h antes da primeira hora com corridas até 1h depois da última
+                const idx = hourSeries.map((h, i) => ({ ...h, _i: i }));
+                const ativos = idx.filter((h) => h.corridas > 0);
+                if (ativos.length === 0) return hourSeries;
+                const start = Math.max(0, ativos[0]._i - 1);
+                const end = Math.min(23, ativos[ativos.length - 1]._i + 1);
+                return hourSeries.slice(start, end + 1);
+              })()} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="hourFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="hora" tick={{ fontSize: 11 }} interval={2} />
+                <YAxis yAxisId="l" tick={{ fontSize: 11 }} allowDecimals={false} />
                 <YAxis
                   yAxisId="r"
                   orientation="right"
@@ -358,9 +372,9 @@ function AbaDiario({
                   }
                 />
                 <Legend />
-                <Bar yAxisId="l" dataKey="corridas" name="Corridas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="r" dataKey="valorTotal" name="Valor total" fill="#22C55E" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Area yAxisId="l" type="monotone" dataKey="corridas" name="Corridas" stroke="#3B82F6" strokeWidth={2} fill="url(#hourFill)" dot={{ r: 2 }} />
+                <Line yAxisId="r" type="monotone" dataKey="valorTotal" name="Valor total" stroke="#22C55E" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
