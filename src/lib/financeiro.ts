@@ -187,12 +187,73 @@ export function filterRidesInRange(rides: Ride[], from: Date, to: Date): Ride[] 
   });
 }
 
+export interface UberPasse {
+  id: string;
+  tipo: "tempo" | "ganhos";
+  duracao_horas: number | null;
+  teto_ganhos: number | null;
+  valor_pago: number;
+  iniciado_em: string;
+  encerrado_em: string | null;
+}
+
+/** Retorna { custoTotal, corridasAfetadas } do custo de passes rateado sobre as corridas do período [from, to]. */
+export function calcPasseUberCusto(
+  passes: UberPasse[] | null | undefined,
+  rides: Ride[],
+  from: Date,
+  to: Date,
+): { custoTotal: number; rateioPorRide: Record<string, number> } {
+  const rateio: Record<string, number> = {};
+  if (!passes || passes.length === 0) return { custoTotal: 0, rateioPorRide: rateio };
+
+  const ridesInPeriod = filterRidesInRange(rides, from, to);
+  const ridesInPeriodIds = new Set(ridesInPeriod.map((r) => r.id));
+
+  for (const p of passes) {
+    const ini = new Date(p.iniciado_em).getTime();
+    let coveredRides: Ride[] = [];
+
+    if (p.tipo === "tempo" && p.encerrado_em) {
+      const fim = new Date(p.encerrado_em).getTime();
+      coveredRides = rides.filter((r) => {
+        const t = r.horario_inicio ? new Date(r.horario_inicio).getTime() : null;
+        return t !== null && t >= ini && t <= fim;
+      });
+    } else if (p.tipo === "ganhos" && p.teto_ganhos) {
+      // corridas a partir de iniciado_em ordenadas crescentes, até somar o teto
+      const sorted = rides
+        .filter((r) => r.horario_inicio && new Date(r.horario_inicio).getTime() >= ini)
+        .sort((a, b) => new Date(a.horario_inicio!).getTime() - new Date(b.horario_inicio!).getTime());
+      let acc = 0;
+      for (const r of sorted) {
+        if (acc >= Number(p.teto_ganhos)) break;
+        coveredRides.push(r);
+        acc += Number(r.valor_bruto || 0);
+      }
+    }
+
+    if (coveredRides.length === 0) continue;
+    const perRide = Number(p.valor_pago) / coveredRides.length;
+    for (const r of coveredRides) {
+      rateio[r.id] = (rateio[r.id] || 0) + perRide;
+    }
+  }
+
+  let custoTotal = 0;
+  for (const [rideId, custo] of Object.entries(rateio)) {
+    if (ridesInPeriodIds.has(rideId)) custoTotal += custo;
+  }
+  return { custoTotal, rateioPorRide: rateio };
+}
+
 export interface PeriodMetrics {
   ganhoBruto: number;
   comissaoUber: number;
   ganhoLiquido: number;
   custoCombustivel: number;
   custoFixoProporcional: number;
+  custoPasseUber: number;
   custoTotal: number;
   ganhoReal: number;
   kmTotal: number;
@@ -208,6 +269,8 @@ export interface PeriodMetrics {
   ganhoBrutoPorHora: number;
   /** Faturamento bruto / soma(km_passageiro + km_deslocamento). */
   ganhoBrutoPorKm: number;
+  /** Custo médio por corrida (combustível + fixo proporcional + passe rateado). */
+  custoPorCorrida: number;
 }
 
 /** Limita uma data ao fim do dia atual em SP, para evitar contar dias futuros. */
