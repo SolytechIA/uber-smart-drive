@@ -341,6 +341,7 @@ export default function DashboardFinanceiro() {
                         formatter={(v: any, name: string) => [fmtBRL(Number(v)), name]}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="ganhoBruto" name="Ganho bruto" fill="#06B6D4" />
                       <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" />
                       <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" />
                       <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" />
