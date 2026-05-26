@@ -335,6 +335,42 @@ export type Database = {
         }
         Relationships: []
       }
+      uber_passes: {
+        Row: {
+          created_at: string
+          duracao_horas: number | null
+          encerrado_em: string | null
+          id: string
+          iniciado_em: string
+          teto_ganhos: number | null
+          tipo: string
+          user_id: string
+          valor_pago: number
+        }
+        Insert: {
+          created_at?: string
+          duracao_horas?: number | null
+          encerrado_em?: string | null
+          id?: string
+          iniciado_em: string
+          teto_ganhos?: number | null
+          tipo: string
+          user_id: string
+          valor_pago: number
+        }
+        Update: {
+          created_at?: string
+          duracao_horas?: number | null
+          encerrado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          teto_ganhos?: number | null
+          tipo?: string
+          user_id?: string
+          valor_pago?: number
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           aceite_privacidade: boolean
