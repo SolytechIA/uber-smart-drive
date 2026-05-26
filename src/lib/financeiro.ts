@@ -279,16 +279,23 @@ export function clampToTodayTZ(to: Date): Date {
   return to > todayEnd ? todayEnd : to;
 }
 
-export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: Date, to: Date, jornadas?: JornadaRecord[]): PeriodMetrics {
+export function calcPeriodMetrics(
+  rides: Ride[],
+  vehicle: Vehicle | null,
+  from: Date,
+  to: Date,
+  jornadas?: JornadaRecord[],
+  passes?: UberPasse[] | null,
+): PeriodMetrics {
   const toClamped = clampToTodayTZ(to);
   // Se o período ainda não começou, retorna zeros
   if (from > toClamped) {
     return {
       ganhoBruto: 0, comissaoUber: 0, ganhoLiquido: 0, custoCombustivel: 0,
-      custoFixoProporcional: 0, custoTotal: 0, ganhoReal: 0, kmTotal: 0,
+      custoFixoProporcional: 0, custoPasseUber: 0, custoTotal: 0, ganhoReal: 0, kmTotal: 0,
       kmPassageiro: 0, kmDeslocamento: 0, horasTrabalhadas: 0, numCorridas: 0,
       diasNoPeriodo: 0, custoFixoDiario: 0, custoCombustivelDiario: 0,
-      pontoEquilibrioDiario: 0, ganhoBrutoPorHora: 0, ganhoBrutoPorKm: 0,
+      pontoEquilibrioDiario: 0, ganhoBrutoPorHora: 0, ganhoBrutoPorKm: 0, custoPorCorrida: 0,
     };
   }
   to = toClamped;
@@ -300,7 +307,6 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
 
   const kmPassageiro = inRange.reduce((s, r) => s + Number(r.km_passageiro || 0), 0);
   const kmDeslocamento = inRange.reduce((s, r) => s + Number(r.km_deslocamento || 0), 0);
-  // Sempre usa passageiro + deslocamento (km vazio entra no denominador)
   const kmTotal = inRange.reduce(
     (s, r) => s + (Number(r.km_passageiro || 0) + Number(r.km_deslocamento || 0)),
     0
@@ -318,19 +324,19 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
   const diasNoPeriodo = Math.max(1, differenceInCalendarDays(to, from) + 1);
   const custoFixoProporcional = custoFixoDiario * diasNoPeriodo;
 
-  const custoTotal = custoCombustivel + custoFixoProporcional;
+  const { custoTotal: custoPasseUber } = calcPasseUberCusto(passes ?? null, rides, from, to);
+
+  const custoTotal = custoCombustivel + custoFixoProporcional + custoPasseUber;
   const ganhoReal = ganhoLiquido - custoTotal;
 
-  // Custo de combustível diário: km médio/dia (baseado em dias trabalhados configurados)
-  // × custo por km de combustível. Estima quanto se gasta por dia trabalhado.
   const custoPorKmCombustivel = kmTotal > 0 ? custoCombustivel / kmTotal : 0;
   const kmMedioDia = diasNoPeriodo > 0 ? kmTotal / diasNoPeriodo : 0;
   const custoCombustivelDiario = kmMedioDia * custoPorKmCombustivel;
   const pontoEquilibrioDiario = custoFixoDiario + custoCombustivelDiario;
 
-  // Métricas de produtividade bruta (não dependem de custos/metas)
   const ganhoBrutoPorHora = horasTrabalhadas > 0 ? ganhoBruto / horasTrabalhadas : 0;
   const ganhoBrutoPorKm = kmTotal > 0 ? ganhoBruto / kmTotal : 0;
+  const custoPorCorrida = inRange.length > 0 ? custoTotal / inRange.length : 0;
 
   return {
     ganhoBruto,
@@ -338,6 +344,7 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
     ganhoLiquido,
     custoCombustivel,
     custoFixoProporcional,
+    custoPasseUber,
     custoTotal,
     ganhoReal,
     kmTotal,
@@ -351,6 +358,7 @@ export function calcPeriodMetrics(rides: Ride[], vehicle: Vehicle | null, from: 
     pontoEquilibrioDiario,
     ganhoBrutoPorHora,
     ganhoBrutoPorKm,
+    custoPorCorrida,
   };
 }
 
