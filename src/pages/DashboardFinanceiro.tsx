@@ -262,7 +262,7 @@ export default function DashboardFinanceiro() {
                     </div>
                     <Progress value={percentualMeta} className="h-3" />
                     <p className="text-xs text-muted-foreground">
-                      {percentualMeta.toFixed(0)}% da meta de {fmtBRL(metaDoPeriodo)} atingida
+                      {percentualMeta.toFixed(0)}% da meta de {fmtBRL(metaDoPeriodo)} atingida <span className="opacity-70">(base: ganho bruto)</span>
                     </p>
                   </div>
                 </div>
