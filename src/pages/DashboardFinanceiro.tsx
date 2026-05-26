@@ -62,6 +62,7 @@ import {
   Vehicle,
   Goals,
   JornadaRecord,
+  UberPasse,
 } from "@/lib/financeiro";
 
 export default function DashboardFinanceiro() {
