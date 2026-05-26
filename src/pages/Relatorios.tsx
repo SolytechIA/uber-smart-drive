@@ -488,6 +488,7 @@ function AbaSemanal({
   rides: Ride[];
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
+  passes: UberPasse[];
   loading: boolean;
 }) {
   const [date, setDate] = useState<Date>(() => nowInTZ());
