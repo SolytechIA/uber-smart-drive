@@ -50,6 +50,7 @@ import {
   JornadaRecord,
   Ride,
   TZ,
+  UberPasse,
   Vehicle,
   buildDailySeries,
   calcCustoCombustivel,
@@ -122,13 +123,14 @@ export default function Relatorios() {
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
+  const [passes, setPasses] = useState<UberPasse[]>([]);
 
   useEffect(() => {
     if (!user) return;
     let cancel = false;
     (async () => {
       setLoading(true);
-      const [rRes, vRes, gRes, jRes] = await Promise.all([
+      const [rRes, vRes, gRes, jRes, pRes] = await Promise.all([
         supabase
           .from("rides")
           .select(
@@ -140,12 +142,14 @@ export default function Relatorios() {
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("jornadas").select("*").eq("user_id", user.id),
+        supabase.from("uber_passes" as any).select("*").eq("user_id", user.id).limit(500),
       ]);
       if (cancel) return;
       setRides(((rRes.data as any[]) || []) as Ride[]);
       setVehicle((vRes.data as Vehicle) || null);
       setGoals((gRes.data as Goals) || null);
       setJornadas(((jRes.data as any[]) || []) as JornadaRecord[]);
+      setPasses(((pRes.data as any[]) || []) as UberPasse[]);
       setLoading(false);
     })();
     return () => {
@@ -172,16 +176,16 @@ export default function Relatorios() {
           </TabsList>
 
           <TabsContent value="diario">
-            <AbaDiario rides={rides} vehicle={vehicle} jornadas={jornadas} loading={loading} />
+            <AbaDiario rides={rides} vehicle={vehicle} jornadas={jornadas} passes={passes} loading={loading} />
           </TabsContent>
           <TabsContent value="semanal">
-            <AbaSemanal rides={rides} vehicle={vehicle} jornadas={jornadas} loading={loading} />
+            <AbaSemanal rides={rides} vehicle={vehicle} jornadas={jornadas} passes={passes} loading={loading} />
           </TabsContent>
           <TabsContent value="mensal">
-            <AbaMensal rides={rides} vehicle={vehicle} jornadas={jornadas} goals={goals} loading={loading} />
+            <AbaMensal rides={rides} vehicle={vehicle} jornadas={jornadas} passes={passes} goals={goals} loading={loading} />
           </TabsContent>
           <TabsContent value="acumulado">
-            <AbaAcumulado rides={rides} vehicle={vehicle} jornadas={jornadas} goals={goals} loading={loading} />
+            <AbaAcumulado rides={rides} vehicle={vehicle} jornadas={jornadas} passes={passes} goals={goals} loading={loading} />
           </TabsContent>
         </Tabs>
       </div>
@@ -197,11 +201,13 @@ function AbaDiario({
   rides,
   vehicle,
   jornadas,
+  passes,
   loading,
 }: {
   rides: Ride[];
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
+  passes: UberPasse[];
   loading: boolean;
 }) {
   const [range, setRange] = useState<{ from: Date; to: Date }>(() => {
@@ -212,7 +218,7 @@ function AbaDiario({
   const to = range.to;
   const isSingleDay = useMemo(() => format(from, "yyyy-MM-dd") === format(to, "yyyy-MM-dd"), [from, to]);
 
-  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
+  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas, passes), [rides, vehicle, from, to, jornadas, passes]);
   const dayRides = useMemo(() => filterRidesInRange(rides, from, to), [rides, from, to]);
 
   const rPorHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
@@ -316,7 +322,7 @@ function AbaDiario({
           positive={m.ganhoReal > 0}
           negative={m.ganhoReal < 0}
         />
-        <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+        <ResumoCard label="Custo/corrida" value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"} hint="Combustível + fixo + passe" />
         <ResumoCard label="Corridas" value={String(m.numCorridas)} />
       </div>
 
@@ -336,10 +342,24 @@ function AbaDiario({
         <CardContent>
           <div className="h-72 w-full">
             <ResponsiveContainer>
-              <BarChart data={hourSeries}>
+              <AreaChart data={(() => {
+                // Limita a janela: 1h antes da primeira hora com corridas até 1h depois da última
+                const idx = hourSeries.map((h, i) => ({ ...h, _i: i }));
+                const ativos = idx.filter((h) => h.corridas > 0);
+                if (ativos.length === 0) return hourSeries;
+                const start = Math.max(0, ativos[0]._i - 1);
+                const end = Math.min(23, ativos[ativos.length - 1]._i + 1);
+                return hourSeries.slice(start, end + 1);
+              })()} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="hourFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="hora" tick={{ fontSize: 11 }} interval={2} />
+                <YAxis yAxisId="l" tick={{ fontSize: 11 }} allowDecimals={false} />
                 <YAxis
                   yAxisId="r"
                   orientation="right"
@@ -352,9 +372,9 @@ function AbaDiario({
                   }
                 />
                 <Legend />
-                <Bar yAxisId="l" dataKey="corridas" name="Corridas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="r" dataKey="valorTotal" name="Valor total" fill="#22C55E" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Area yAxisId="l" type="monotone" dataKey="corridas" name="Corridas" stroke="#3B82F6" strokeWidth={2} fill="url(#hourFill)" dot={{ r: 2 }} />
+                <Line yAxisId="r" type="monotone" dataKey="valorTotal" name="Valor total" stroke="#22C55E" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
@@ -476,18 +496,20 @@ function AbaSemanal({
   rides,
   vehicle,
   jornadas,
+  passes,
   loading,
 }: {
   rides: Ride[];
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
+  passes: UberPasse[];
   loading: boolean;
 }) {
   const [date, setDate] = useState<Date>(() => nowInTZ());
   const from = startOfWeek(date, { weekStartsOn: 1 });
   const to = endOfWeek(date, { weekStartsOn: 1 });
 
-  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
+  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas, passes), [rides, vehicle, from, to, jornadas, passes]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, from, to), [rides, vehicle, from, to]);
 
   const mediaDiariaGanho = m.numCorridas > 0 && m.diasNoPeriodo > 0 ? m.ganhoReal / m.diasNoPeriodo : 0;
@@ -497,7 +519,7 @@ function AbaSemanal({
     return eachDayOfInterval({ start: from, end: to }).map((day) => {
       const dStart = startOfDay(day);
       const dEnd = endOfDay(day);
-      const dm = calcPeriodMetrics(rides, vehicle, dStart, dEnd, jornadas);
+      const dm = calcPeriodMetrics(rides, vehicle, dStart, dEnd, jornadas, passes);
       const ticket = dm.numCorridas > 0 ? dm.ganhoBruto / dm.numCorridas : 0;
       const rHora = dm.horasTrabalhadas > 0 ? dm.ganhoBruto / dm.horasTrabalhadas : 0;
       return {
@@ -512,7 +534,7 @@ function AbaSemanal({
         ticket,
       };
     });
-  }, [from, to, rides, vehicle, jornadas]);
+  }, [from, to, rides, vehicle, jornadas, passes]);
 
   const melhor = porDia.reduce<(typeof porDia)[number] | null>(
     (best, d) => (!best || d.ganhoReal > best.ganhoReal ? d : best),
@@ -568,7 +590,7 @@ function AbaSemanal({
               positive={m.ganhoReal > 0}
               negative={m.ganhoReal < 0}
             />
-            <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+            <ResumoCard label="Custo/corrida" value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"} hint="Combustível + fixo + passe" />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
@@ -721,12 +743,14 @@ function AbaMensal({
   rides,
   vehicle,
   jornadas,
+  passes,
   goals,
   loading,
 }: {
   rides: Ride[];
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
+  passes: UberPasse[];
   goals: Goals | null;
   loading: boolean;
 }) {
@@ -734,7 +758,7 @@ function AbaMensal({
   const from = startOfMonth(date);
   const to = endOfMonth(date);
 
-  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas), [rides, vehicle, from, to, jornadas]);
+  const m = useMemo(() => calcPeriodMetrics(rides, vehicle, from, to, jornadas, passes), [rides, vehicle, from, to, jornadas, passes]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, from, to), [rides, vehicle, from, to]);
   const metas = resolveGoals(goals, vehicle);
 
@@ -745,7 +769,7 @@ function AbaMensal({
       const wEnd = endOfWeek(wStart, { weekStartsOn: 1 });
       const realStart = wStart < from ? from : wStart;
       const realEnd = wEnd > to ? to : wEnd;
-      const wm = calcPeriodMetrics(rides, vehicle, realStart, realEnd, jornadas);
+      const wm = calcPeriodMetrics(rides, vehicle, realStart, realEnd, jornadas, passes);
       return {
         label: `S${idx + 1}`,
         ganhoReal: Math.round(wm.ganhoReal * 100) / 100,
@@ -757,14 +781,14 @@ function AbaMensal({
         km: wm.kmTotal,
       };
     });
-  }, [from, to, rides, vehicle, jornadas]);
+  }, [from, to, rides, vehicle, jornadas, passes]);
 
   // Mês anterior (comparativo)
   const prevFrom = startOfMonth(subMonths(date, 1));
   const prevTo = endOfMonth(subMonths(date, 1));
   const mPrev = useMemo(
-    () => calcPeriodMetrics(rides, vehicle, prevFrom, prevTo, jornadas),
-    [rides, vehicle, prevFrom, prevTo, jornadas],
+    () => calcPeriodMetrics(rides, vehicle, prevFrom, prevTo, jornadas, passes),
+    [rides, vehicle, prevFrom, prevTo, jornadas, passes],
   );
 
   // Análise: melhor semana, melhor dia da semana histórico, horário de pico
@@ -877,7 +901,7 @@ function AbaMensal({
               positive={m.ganhoReal > 0}
               negative={m.ganhoReal < 0}
             />
-            <ResumoCard label="Km total" value={`${fmtNumber(m.kmTotal, 1)} km`} />
+            <ResumoCard label="Custo/corrida" value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"} hint="Combustível + fixo + passe" />
             <ResumoCard label="Corridas" value={String(m.numCorridas)} />
             <ResumoCard label="Horas trabalhadas" value={formatHorasHHMM(m.horasTrabalhadas)} />
             <ResumoCard label="R$/hora" value={fmtBRL(rH)} hint="(tempo online)" />
@@ -935,6 +959,7 @@ function AbaMensal({
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${Math.round(v)}`} />
                 <RechartsTooltip formatter={(v: number) => fmtBRL(v)} />
                 <Legend />
+                <Bar dataKey="ganhoBruto" name="Ganho bruto" fill="#06B6D4" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
@@ -1067,12 +1092,14 @@ function AbaAcumulado({
   rides,
   vehicle,
   jornadas,
+  passes,
   goals,
   loading,
 }: {
   rides: Ride[];
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
+  passes: UberPasse[];
   goals: Goals | null;
   loading: boolean;
 }) {
@@ -1091,8 +1118,8 @@ function AbaAcumulado({
   const toAll = endOfDay(nowInTZ());
 
   const m = useMemo(
-    () => calcPeriodMetrics(rides, vehicle, fromAll, toAll, jornadas),
-    [rides, vehicle, fromAll, toAll, jornadas],
+    () => calcPeriodMetrics(rides, vehicle, fromAll, toAll, jornadas, passes),
+    [rides, vehicle, fromAll, toAll, jornadas, passes],
   );
   const ticket = m.numCorridas > 0 ? m.ganhoBruto / m.numCorridas : 0;
   const rHora = m.horasTrabalhadas > 0 ? m.ganhoBruto / m.horasTrabalhadas : 0;
@@ -1120,7 +1147,7 @@ function AbaAcumulado({
       if (!best || dm.ganhoReal > best.ganhoReal) best = { date: key, ganhoReal: dm.ganhoReal };
     });
     return best;
-  }, [ridesByDay, rides, vehicle, jornadas]);
+  }, [ridesByDay, rides, vehicle, jornadas, passes]);
 
   // Recorde semana / mês
   const recordeSemana = useMemo(() => {
@@ -1129,13 +1156,13 @@ function AbaAcumulado({
     let best: { label: string; ganhoReal: number } | null = null;
     weeks.forEach((wStart) => {
       const wEnd = endOfWeek(wStart, { weekStartsOn: 1 });
-      const dm = calcPeriodMetrics(rides, vehicle, wStart, wEnd, jornadas);
+      const dm = calcPeriodMetrics(rides, vehicle, wStart, wEnd, jornadas, passes);
       if (dm.numCorridas > 0 && (!best || dm.ganhoReal > best.ganhoReal)) {
         best = { label: `${format(wStart, "dd/MM")} – ${format(wEnd, "dd/MM")}`, ganhoReal: dm.ganhoReal };
       }
     });
     return best;
-  }, [sorted, fromAll, toAll, rides, vehicle, jornadas]);
+  }, [sorted, fromAll, toAll, rides, vehicle, jornadas, passes]);
 
   const recordeMes = useMemo(() => {
     if (!sorted.length) return null;
@@ -1148,13 +1175,13 @@ function AbaAcumulado({
     let best: { label: string; ganhoReal: number } | null = null;
     months.forEach((mStart) => {
       const mEnd = endOfMonth(mStart);
-      const dm = calcPeriodMetrics(rides, vehicle, mStart, mEnd, jornadas);
+      const dm = calcPeriodMetrics(rides, vehicle, mStart, mEnd, jornadas, passes);
       if (dm.numCorridas > 0 && (!best || dm.ganhoReal > best.ganhoReal)) {
         best = { label: format(mStart, "MMM/yyyy", { locale: ptBR }), ganhoReal: dm.ganhoReal };
       }
     });
     return best;
-  }, [sorted, fromAll, toAll, rides, vehicle, jornadas]);
+  }, [sorted, fromAll, toAll, rides, vehicle, jornadas, passes]);
 
   // Série mensal (últimos 12 meses ou todos)
   const monthlySeries = useMemo(() => {
@@ -1177,7 +1204,7 @@ function AbaAcumulado({
     const last = months.slice(-12);
     return last.map((mStart) => {
       const mEnd = endOfMonth(mStart);
-      const dm = calcPeriodMetrics(rides, vehicle, mStart, mEnd, jornadas);
+      const dm = calcPeriodMetrics(rides, vehicle, mStart, mEnd, jornadas, passes);
       return {
         label: format(mStart, "MMM/yy", { locale: ptBR }),
         mStart,
@@ -1188,7 +1215,7 @@ function AbaAcumulado({
         km: dm.kmTotal,
       };
     });
-  }, [sorted, fromAll, toAll, rides, vehicle, jornadas]);
+  }, [sorted, fromAll, toAll, rides, vehicle, jornadas, passes]);
 
   // Distribuição classificação
   const classDist = useMemo(() => {

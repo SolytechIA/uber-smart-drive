@@ -62,6 +62,7 @@ import {
   Vehicle,
   Goals,
   JornadaRecord,
+  UberPasse,
 } from "@/lib/financeiro";
 
 export default function DashboardFinanceiro() {
@@ -72,6 +73,7 @@ export default function DashboardFinanceiro() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [goals, setGoals] = useState<Goals | null>(null);
   const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
+  const [passes, setPasses] = useState<UberPasse[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function DashboardFinanceiro() {
     let cancel = false;
     (async () => {
       setLoading(true);
-      const [rRes, vRes, gRes, jRes] = await Promise.all([
+      const [rRes, vRes, gRes, jRes, pRes] = await Promise.all([
         supabase
           .from("rides")
           .select("id,data_corrida,horario_inicio,horario_fim,valor_bruto,km_passageiro,km_deslocamento,km_total,duracao_minutos,classificacao,bairro_origem,bairro_destino")
@@ -89,12 +91,14 @@ export default function DashboardFinanceiro() {
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("jornadas" as any).select("*").eq("user_id", user.id).limit(2000),
+        supabase.from("uber_passes" as any).select("*").eq("user_id", user.id).limit(500),
       ]);
       if (cancel) return;
       setRides((rRes.data as Ride[]) || []);
       setVehicle((vRes.data as Vehicle) || null);
       setGoals((gRes.data as Goals) || null);
       setJornadas(((jRes.data as any) || []) as JornadaRecord[]);
+      setPasses(((pRes.data as any) || []) as UberPasse[]);
       setLoading(false);
     })();
     return () => {
@@ -103,7 +107,7 @@ export default function DashboardFinanceiro() {
   }, [user]);
 
   const range = useMemo(() => getPeriodRange(periodo, custom), [periodo, custom]);
-  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas), [rides, vehicle, range, jornadas]);
+  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas, passes), [rides, vehicle, range, jornadas, passes]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, range.from, range.to), [rides, vehicle, range]);
   const metas = useMemo(() => resolveGoals(goals, vehicle), [goals, vehicle]);
 
@@ -115,17 +119,13 @@ export default function DashboardFinanceiro() {
   const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
   const ganhoPorKm = ganhoRealKm;
   const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  // Ticket médio por corrida
   const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
 
   // Comparativos
-  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
-  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
-  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas), [rides, vehicle, jornadas]);
+  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
+  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
+  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
 
-  // Série para o gráfico "Evolução do ganho real":
-  // - Filtro "hoje": eixo X por hora (00h..hora atual)
-  // - Demais: por dia (mantém buildDailySeries)
   const evolucaoSeries = useMemo(() => {
     if (periodo !== "hoje") return series;
     return buildHourlySeriesToday(rides, range.from, range.to);
@@ -135,22 +135,22 @@ export default function DashboardFinanceiro() {
   const donutData = [
     { name: "Combustível/Energia", value: Math.max(0, metrics.custoCombustivel), color: "hsl(var(--warning))" },
     { name: "Custos fixos", value: Math.max(0, metrics.custoFixoProporcional), color: "hsl(var(--primary))" },
-    { name: "Comissão Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
+    { name: "Passe Uber", value: Math.max(0, metrics.custoPasseUber), color: "hsl(var(--accent))" },
+    { name: "Comissão/Passe Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
   ].filter((d) => d.value > 0);
 
-  // Métricas para cards de meta (sempre exibe diária, semanal, mensal)
   const metricsHoje = useMemo(() => {
     const r = getPeriodRange("hoje");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
-  }, [rides, vehicle, jornadas]);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
+  }, [rides, vehicle, jornadas, passes]);
   const metricsSemana = useMemo(() => {
     const r = getPeriodRange("semana");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
-  }, [rides, vehicle, jornadas]);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
+  }, [rides, vehicle, jornadas, passes]);
   const metricsMes = useMemo(() => {
     const r = getPeriodRange("mes");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
-  }, [rides, vehicle, jornadas]);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
+  }, [rides, vehicle, jornadas, passes]);
 
   // Meta do período (sempre usa o valor FIXO configurado pelo motorista,
   // nunca recalcula proporcional ao número de dias do filtro).
@@ -213,7 +213,7 @@ export default function DashboardFinanceiro() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Line2 label="Ganho bruto total" value={fmtBRL(metrics.ganhoBruto)} />
-                  <Line2 label="Comissão Uber descontada" value={fmtBRL(metrics.comissaoUber)} muted />
+                  <Line2 label="Comissão/Passe Uber" value={fmtBRL(metrics.comissaoUber)} muted />
                   <Line2 label="Ganho líquido após comissão" value={fmtBRL(metrics.ganhoLiquido)} bold />
                 </CardContent>
               </Card>
@@ -225,6 +225,9 @@ export default function DashboardFinanceiro() {
                 <CardContent className="space-y-3">
                   <Line2 label="Combustível / energia" value={fmtBRL(metrics.custoCombustivel)} />
                   <Line2 label="Custo fixo proporcional" value={fmtBRL(metrics.custoFixoProporcional)} />
+                  {metrics.custoPasseUber > 0 && (
+                    <Line2 label="🎫 Passe Uber (rateado)" value={fmtBRL(metrics.custoPasseUber)} />
+                  )}
                   <Line2 label="Custo total do período" value={fmtBRL(metrics.custoTotal)} bold />
                 </CardContent>
               </Card>
@@ -259,7 +262,7 @@ export default function DashboardFinanceiro() {
                     </div>
                     <Progress value={percentualMeta} className="h-3" />
                     <p className="text-xs text-muted-foreground">
-                      {percentualMeta.toFixed(0)}% da meta de {fmtBRL(metaDoPeriodo)} atingida
+                      {percentualMeta.toFixed(0)}% da meta de {fmtBRL(metaDoPeriodo)} atingida <span className="opacity-70">(base: ganho bruto)</span>
                     </p>
                   </div>
                 </div>
@@ -338,6 +341,7 @@ export default function DashboardFinanceiro() {
                         formatter={(v: any, name: string) => [fmtBRL(Number(v)), name]}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="ganhoBruto" name="Ganho bruto" fill="#06B6D4" />
                       <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" />
                       <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" />
                       <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" />
@@ -564,7 +568,7 @@ interface CompRow {
   bHasData: boolean;
 }
 
-function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
+function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfDay(now);
   const aTo = endOfDay(now);
@@ -572,34 +576,34 @@ function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jorna
   const bFrom = startOfDay(ontem);
   const bTo = endOfDay(ontem);
   return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
     { includeTicket: true },
   );
 }
 
-function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
+function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfWeek(now, { weekStartsOn: 1 });
   const aTo = endOfWeek(now, { weekStartsOn: 1 });
   const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   const bTo = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
     { includeTicket: true },
   );
 }
 
-function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[]): CompRow[] {
+function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
   const now = nowInTZ();
   const aFrom = startOfMonth(now);
   const aTo = endOfMonth(now);
   const bFrom = startOfMonth(subMonths(now, 1));
   const bTo = endOfMonth(subMonths(now, 1));
   return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas),
+    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
+    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
     { includeTicket: true },
   );
 }

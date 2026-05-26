@@ -14,6 +14,7 @@ import { StepCosts } from "./onboarding/StepCosts";
 import { StepGoals } from "./onboarding/StepGoals";
 import { ConectarUberTab } from "@/components/configuracoes/ConectarUberTab";
 import { PerfilTab } from "@/components/configuracoes/PerfilTab";
+import { PassesUberSection } from "@/components/configuracoes/PassesUberSection";
 import {
   initialCosts,
   initialGoals,
@@ -229,19 +230,20 @@ export default function Configuracoes() {
             </TabsContent>
 
             <TabsContent value="costs">
-              <Card className="mt-6 p-6 sm:p-8">
+              <Card className="mt-6 p-6 sm:p-8 space-y-6">
                 <StepCosts
                   data={costs}
                   vehicle={vehicle}
                   onChange={(p) => setCosts((c) => ({ ...c, ...p }))}
                   errors={{}}
                 />
-                <div className="mt-6 flex justify-end border-t border-border/60 pt-6">
+                <div className="flex justify-end border-t border-border/60 pt-6">
                   <Button variant="gradient" onClick={saveCosts} disabled={saving === "costs"}>
                     {saving === "costs" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Salvar alterações
                   </Button>
                 </div>
+                <PassesUberSection />
               </Card>
             </TabsContent>
 
