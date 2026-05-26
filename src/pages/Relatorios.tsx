@@ -946,6 +946,7 @@ function AbaMensal({
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${Math.round(v)}`} />
                 <RechartsTooltip formatter={(v: number) => fmtBRL(v)} />
                 <Legend />
+                <Bar dataKey="ganhoBruto" name="Ganho bruto" fill="#06B6D4" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
