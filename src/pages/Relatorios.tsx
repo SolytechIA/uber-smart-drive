@@ -736,6 +736,7 @@ function AbaMensal({
   rides: Ride[];
   vehicle: Vehicle | null;
   jornadas: JornadaRecord[];
+  passes: UberPasse[];
   goals: Goals | null;
   loading: boolean;
 }) {
