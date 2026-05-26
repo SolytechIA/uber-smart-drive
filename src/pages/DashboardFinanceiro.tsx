@@ -213,7 +213,7 @@ export default function DashboardFinanceiro() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Line2 label="Ganho bruto total" value={fmtBRL(metrics.ganhoBruto)} />
-                  <Line2 label="Comissão Uber descontada" value={fmtBRL(metrics.comissaoUber)} muted />
+                  <Line2 label="Comissão/Passe Uber" value={fmtBRL(metrics.comissaoUber)} muted />
                   <Line2 label="Ganho líquido após comissão" value={fmtBRL(metrics.ganhoLiquido)} bold />
                 </CardContent>
               </Card>
@@ -225,6 +225,9 @@ export default function DashboardFinanceiro() {
                 <CardContent className="space-y-3">
                   <Line2 label="Combustível / energia" value={fmtBRL(metrics.custoCombustivel)} />
                   <Line2 label="Custo fixo proporcional" value={fmtBRL(metrics.custoFixoProporcional)} />
+                  {metrics.custoPasseUber > 0 && (
+                    <Line2 label="🎫 Passe Uber (rateado)" value={fmtBRL(metrics.custoPasseUber)} />
+                  )}
                   <Line2 label="Custo total do período" value={fmtBRL(metrics.custoTotal)} bold />
                 </CardContent>
               </Card>
