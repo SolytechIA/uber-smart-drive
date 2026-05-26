@@ -107,7 +107,7 @@ export default function DashboardFinanceiro() {
   }, [user]);
 
   const range = useMemo(() => getPeriodRange(periodo, custom), [periodo, custom]);
-  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas), [rides, vehicle, range, jornadas]);
+  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas, passes), [rides, vehicle, range, jornadas]);
   const series = useMemo(() => buildDailySeries(rides, vehicle, range.from, range.to), [rides, vehicle, range]);
   const metas = useMemo(() => resolveGoals(goals, vehicle), [goals, vehicle]);
 
@@ -145,15 +145,15 @@ export default function DashboardFinanceiro() {
   // Métricas para cards de meta (sempre exibe diária, semanal, mensal)
   const metricsHoje = useMemo(() => {
     const r = getPeriodRange("hoje");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
   }, [rides, vehicle, jornadas]);
   const metricsSemana = useMemo(() => {
     const r = getPeriodRange("semana");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
   }, [rides, vehicle, jornadas]);
   const metricsMes = useMemo(() => {
     const r = getPeriodRange("mes");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas);
+    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
   }, [rides, vehicle, jornadas]);
 
   // Meta do período (sempre usa o valor FIXO configurado pelo motorista,
