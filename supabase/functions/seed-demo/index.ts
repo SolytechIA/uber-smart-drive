@@ -303,7 +303,6 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         email: DEMO_EMAIL,
-        password: DEMO_PASSWORD,
         user_id: userId,
         rides_inserted: inserted,
         days_covered: totalDays,
