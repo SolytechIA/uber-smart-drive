@@ -111,6 +111,14 @@ const DIAS_NO_MES: Record<string, number> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
+    // Shared-secret guard.
+    const seedSecret = Deno.env.get("SEED_SECRET");
+    if (!seedSecret || req.headers.get("Authorization") !== `Bearer ${seedSecret}`) {
+      return new Response(
+        JSON.stringify({ error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -214,7 +222,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      ok: true, email: DEMO_EMAIL, password: DEMO_PASSWORD,
+      ok: true, email: DEMO_EMAIL,
       user_id: userId, rides_inserted: inserted,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {

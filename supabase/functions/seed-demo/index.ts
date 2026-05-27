@@ -142,6 +142,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    // Shared-secret guard: prevents anonymous abuse of this destructive admin endpoint.
+    const seedSecret = Deno.env.get("SEED_SECRET");
+    if (!seedSecret || req.headers.get("Authorization") !== `Bearer ${seedSecret}`) {
+      return new Response(
+        JSON.stringify({ error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -294,7 +303,6 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         email: DEMO_EMAIL,
-        password: DEMO_PASSWORD,
         user_id: userId,
         rides_inserted: inserted,
         days_covered: totalDays,
