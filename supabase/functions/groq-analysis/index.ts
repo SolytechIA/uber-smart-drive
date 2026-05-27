@@ -764,24 +764,6 @@ Deno.serve(async (req) => {
     const systemContent =
       SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises, (payload as any).historico_semanal);
 
-    const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.85,
-        max_tokens: 3000,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemContent },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
     let groqData;
     try {
       const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -825,8 +807,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const data = await groqRes.json();
-    const content: string = data?.choices?.[0]?.message?.content ?? "";
+    const content: string = groqData?.choices?.[0]?.message?.content ?? "";
     const normalized = normalizeAnalysis(content);
 
     // ── 4) Record rate-limit usage server-side (service role) ──────────────
