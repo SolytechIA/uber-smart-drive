@@ -764,35 +764,50 @@ Deno.serve(async (req) => {
     const systemContent =
       SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises, (payload as any).historico_semanal);
 
-    const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.85,
-        max_tokens: 3000,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemContent },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!groqRes.ok) {
-      const errText = await groqRes.text();
-      console.error("Groq error:", groqRes.status, errText);
-      return new Response(JSON.stringify({ error: "Falha ao chamar Groq", details: errText }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let groqData;
+    try {
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.85,
+          max_tokens: 3000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemContent },
+            { role: "user", content: userPrompt },
+          ],
+        }),
       });
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        console.error("[groq-analysis] Groq API error:", groqRes.status, errText);
+        const status = groqRes.status;
+        let clientStatus = 500;
+        if (status === 429) clientStatus = 429;
+        else if (status >= 400 && status < 500) clientStatus = 500;
+        else if (status >= 500) clientStatus = 500;
+        return new Response(
+          JSON.stringify({ error: "Não foi possível gerar a análise agora. Tente novamente em instantes." }),
+          { status: clientStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      groqData = await groqRes.json();
+    } catch (groqErr) {
+      console.error("[groq-analysis] Groq fetch exception:", groqErr);
+      return new Response(
+        JSON.stringify({ error: "Não foi possível gerar a análise agora. Tente novamente em instantes." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const data = await groqRes.json();
-    const content: string = data?.choices?.[0]?.message?.content ?? "";
+    const content: string = groqData?.choices?.[0]?.message?.content ?? "";
     const normalized = normalizeAnalysis(content);
 
     // ── 4) Record rate-limit usage server-side (service role) ──────────────
@@ -815,10 +830,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("groq-analysis error:", e);
-    return new Response(JSON.stringify({ ...EMPTY_RESULT, error: (e as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[groq-analysis] unhandled error:", e);
+    return new Response(
+      JSON.stringify({ ...EMPTY_RESULT, error: "Não foi possível gerar a análise agora. Tente novamente em instantes." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
