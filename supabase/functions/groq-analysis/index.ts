@@ -652,7 +652,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const apiKey = Deno.env.get("GROQ_API_KEY");
+
+    if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {
+      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "GROQ_API_KEY não configurada" }), {
         status: 500,
@@ -660,7 +670,96 @@ Deno.serve(async (req) => {
       });
     }
 
-    const payload = (await req.json()) as Payload & { historico_analises?: any; historico_semanal?: any };
+    // ── 1) AUTH: validate caller JWT ────────────────────────────────────────
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = userData.user.id;
+
+    // Admin client for plan + rate-limit checks (bypasses RLS)
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // ── 2) PLAN CHECK: must be pro or active trial ──────────────────────────
+    const { data: profile, error: profileErr } = await admin
+      .from("users")
+      .select("plano, trial_expira_em, ativo")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileErr || !profile) {
+      return new Response(JSON.stringify({ error: "user profile not found" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (profile.ativo === false) {
+      return new Response(JSON.stringify({ error: "account inactive" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const plano = profile.plano as string;
+    const trialExpiry = profile.trial_expira_em ? new Date(profile.trial_expira_em).getTime() : null;
+    const planActive =
+      plano === "pro" ||
+      (plano === "trial" && trialExpiry !== null && trialExpiry > Date.now());
+    if (!planActive) {
+      return new Response(JSON.stringify({ error: "plan required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const payload = (await req.json()) as Payload & {
+      historico_analises?: any;
+      historico_semanal?: any;
+      periodo_referencia?: string;
+    };
+
+    // ── 3) SERVER-SIDE RATE LIMIT ──────────────────────────────────────────
+    const periodo = (payload as any).periodo || "dia";
+    const periodoRef =
+      (payload as any).periodo_referencia ||
+      (payload as any).data_hoje ||
+      (payload as any).rotulo_periodo ||
+      "default";
+    const { data: rl } = await admin
+      .from("analise_rate_limit")
+      .select("ultima_analise")
+      .eq("user_id", userId)
+      .eq("periodo", periodo)
+      .eq("periodo_referencia", periodoRef)
+      .maybeSingle();
+    if (rl?.ultima_analise) {
+      const elapsed = Date.now() - new Date(rl.ultima_analise).getTime();
+      if (elapsed < RATE_LIMIT_WINDOW_MS) {
+        const retryInMs = RATE_LIMIT_WINDOW_MS - elapsed;
+        return new Response(
+          JSON.stringify({
+            error: "rate_limited",
+            retry_in_seconds: Math.ceil(retryInMs / 1000),
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
     const userPrompt = buildPrompt(payload);
     const systemContent =
       SYSTEM_PROMPT + buildHistoricoTexto((payload as any).historico_analises, (payload as any).historico_semanal);
@@ -696,6 +795,20 @@ Deno.serve(async (req) => {
     const content: string = data?.choices?.[0]?.message?.content ?? "";
     const normalized = normalizeAnalysis(content);
 
+    // ── 4) Record rate-limit usage server-side (service role) ──────────────
+    await admin
+      .from("analise_rate_limit")
+      .upsert(
+        {
+          user_id: userId,
+          periodo,
+          periodo_referencia: periodoRef,
+          ultima_analise: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,periodo,periodo_referencia" },
+      );
+
     // SEMPRE devolver objeto estruturado com as 4 chaves. Nunca quebrar.
     return new Response(JSON.stringify(normalized), {
       status: 200,
@@ -703,7 +816,6 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("groq-analysis error:", e);
-    // Mesmo em erro inesperado, devolver shape estruturado para o frontend renderizar "—".
     return new Response(JSON.stringify({ ...EMPTY_RESULT, error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
