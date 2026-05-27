@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      ok: true, email: DEMO_EMAIL, password: DEMO_PASSWORD,
+      ok: true, email: DEMO_EMAIL,
       user_id: userId, rides_inserted: inserted,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
