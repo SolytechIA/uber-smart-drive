@@ -830,10 +830,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("groq-analysis error:", e);
-    return new Response(JSON.stringify({ ...EMPTY_RESULT, error: (e as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[groq-analysis] unhandled error:", e);
+    return new Response(
+      JSON.stringify({ ...EMPTY_RESULT, error: "Não foi possível gerar a análise agora. Tente novamente em instantes." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
