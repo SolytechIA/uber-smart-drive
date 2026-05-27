@@ -391,9 +391,6 @@ export type Database = {
           telefone_verificado: boolean
           trial_expira_em: string | null
           uber_conectado: boolean
-          uber_cookie: string | null
-          uber_csrf_token: string | null
-          uber_earnings_seed: string | null
           uber_ultimo_sync: string | null
         }
         Insert: {
@@ -415,9 +412,6 @@ export type Database = {
           telefone_verificado?: boolean
           trial_expira_em?: string | null
           uber_conectado?: boolean
-          uber_cookie?: string | null
-          uber_csrf_token?: string | null
-          uber_earnings_seed?: string | null
           uber_ultimo_sync?: string | null
         }
         Update: {
@@ -439,9 +433,6 @@ export type Database = {
           telefone_verificado?: boolean
           trial_expira_em?: string | null
           uber_conectado?: boolean
-          uber_cookie?: string | null
-          uber_csrf_token?: string | null
-          uber_earnings_seed?: string | null
           uber_ultimo_sync?: string | null
         }
         Relationships: []
@@ -582,9 +573,6 @@ export type Database = {
           telefone_verificado: boolean
           trial_expira_em: string | null
           uber_conectado: boolean
-          uber_cookie: string | null
-          uber_csrf_token: string | null
-          uber_earnings_seed: string | null
           uber_ultimo_sync: string | null
         }[]
         SetofOptions: {
