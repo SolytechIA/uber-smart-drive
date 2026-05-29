@@ -443,15 +443,20 @@ export default function DashboardOperacional() {
       </div>
 
       {/* FAB mobile */}
-      <Button
-        variant="gradient"
-        size="icon"
-        className="fixed bottom-20 right-4 z-20 h-14 w-14 rounded-full shadow-glow sm:hidden"
-        onClick={() => setShowNew(true)}
-        aria-label="Nova corrida"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      <ActionMenu
+        onNovaCorrida={() => setShowNew(true)}
+        onLancarGanho={() => setLancamentoTipo("ganho")}
+        onLancarCusto={() => setLancamentoTipo("custo")}
+        triggerClassName="fixed bottom-20 right-4 z-20 h-14 w-14 rounded-full shadow-glow sm:hidden"
+        triggerIconOnly
+      />
+
+      <LancamentoModal
+        open={lancamentoTipo !== null}
+        tipo={lancamentoTipo ?? "ganho"}
+        onOpenChange={(o) => !o && setLancamentoTipo(null)}
+        defaultDate={range.from}
+      />
 
       <NewRideModal
         open={showNew}
