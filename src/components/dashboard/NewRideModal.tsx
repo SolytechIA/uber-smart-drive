@@ -35,6 +35,7 @@ export interface EditingRide {
   rua_destino: string | null;
   bairro_destino: string | null;
   observacao: string | null;
+  plataforma?: string | null;
 }
 
 interface NewRideModalProps {
