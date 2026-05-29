@@ -84,6 +84,10 @@ const fmtHora = (iso: string | null) => {
   return new Date(iso).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+};
+
 const fmtDataHoje = () => formatLongDateSP();
 
 const plataformaIcon = (p: string | null | undefined): string => {
@@ -94,8 +98,6 @@ const plataformaIcon = (p: string | null | undefined): string => {
     case "Particular": return "🚖";
     default: return "➕";
   }
-};
-  });
 };
 
 const fmtDataHoje = () => formatLongDateSP();
