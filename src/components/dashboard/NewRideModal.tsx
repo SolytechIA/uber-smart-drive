@@ -302,6 +302,20 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
               </Popover>
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="plat">Plataforma</Label>
+              <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v)}>
+                <SelectTrigger id="plat">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLATAFORMAS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="hi">Horário início</Label>
