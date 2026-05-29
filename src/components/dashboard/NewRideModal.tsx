@@ -83,7 +83,6 @@ const makeInitial = (defaultDate?: Date): FormState => ({
   bairro_destino: "",
   observacao: "",
 });
-});
 
 const toTimeStr = (iso: string | null) => {
   if (!iso) return "";
