@@ -99,10 +99,11 @@ export default function DashboardOperacional() {
   const [nome, setNome] = useState<string>("");
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [editing, setEditing] = useState<EditingRide | null>(null);
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [lancamentoTipo, setLancamentoTipo] = useState<LancamentoTipo | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   // Modo do filtro: "today" (dia atual, padrão) ou "custom" (intervalo personalizado).
   // CASO DE USO MOTORISTA NOTURNO: ao selecionar "ontem + hoje" (ex: 13/05 + 14/05),
   // o sistema mostra o consolidado das duas datas, permitindo ver o resultado de uma
