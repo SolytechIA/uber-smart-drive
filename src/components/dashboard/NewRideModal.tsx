@@ -123,9 +123,9 @@ const spWallToUTC = (dateYmd: string, timeHm: string): Date => {
 const fromEditing = (e: EditingRide): FormState => {
   const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : nowInTZ();
   return {
-  return {
     data_corrida: dia,
     plataforma: e.plataforma || "Uber",
+    horario_inicio: toTimeStr(e.horario_inicio),
     horario_fim: toTimeStr(e.horario_fim),
     valor_bruto: numToStr(e.valor_bruto),
     km_passageiro: numToStr(e.km_passageiro),
