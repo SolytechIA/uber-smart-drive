@@ -99,9 +99,6 @@ const plataformaIcon = (p: string | null | undefined): string => {
     default: return "➕";
   }
 };
-
-const fmtDataHoje = () => formatLongDateSP();
-
 export default function DashboardOperacional() {
   const { user } = useAuth();
   const navigate = useNavigate();
