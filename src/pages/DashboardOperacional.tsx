@@ -173,7 +173,7 @@ export default function DashboardOperacional() {
       supabase
         .from("rides")
         .select(
-          "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem",
+          "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem, plataforma",
         )
         .eq("user_id", user.id)
         .gte("data_corrida", fromStr)
