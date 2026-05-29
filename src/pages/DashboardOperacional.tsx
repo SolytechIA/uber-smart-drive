@@ -64,6 +64,7 @@ interface RideRow {
   bairro_origem: string | null;
   bairro_destino: string | null;
   origem?: string | null;
+  plataforma?: string | null;
 }
 
 const DEFAULT_PARAMS: ClassifyParams = {
