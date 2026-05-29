@@ -493,6 +493,47 @@ export default function DashboardOperacional() {
   );
 }
 
+function ActionMenu({
+  onNovaCorrida,
+  onLancarGanho,
+  onLancarCusto,
+  triggerClassName,
+  triggerIconOnly,
+}: {
+  onNovaCorrida: () => void;
+  onLancarGanho: () => void;
+  onLancarCusto: () => void;
+  triggerClassName?: string;
+  triggerIconOnly?: boolean;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {triggerIconOnly ? (
+          <Button variant="gradient" size="icon" className={triggerClassName} aria-label="Adicionar">
+            <Plus className="h-6 w-6" />
+          </Button>
+        ) : (
+          <Button variant="gradient" className={triggerClassName}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar
+          </Button>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={onNovaCorrida}>
+          🚗 Registrar corrida
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onLancarGanho}>
+          💰 Lançar ganho
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onLancarCusto}>
+          💸 Lançar custo
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function SummaryCard({
   icon: Icon,
   label,
