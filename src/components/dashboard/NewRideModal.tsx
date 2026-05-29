@@ -46,9 +46,9 @@ interface NewRideModalProps {
   editing?: EditingRide | null;
   defaultDate?: Date;
 }
-
 interface FormState {
   data_corrida: Date;
+  plataforma: string;
   horario_inicio: string;
   horario_fim: string;
   valor_bruto: string;
@@ -61,8 +61,17 @@ interface FormState {
   observacao: string;
 }
 
+const PLATAFORMAS = [
+  { value: "Uber", label: "🟡 Uber" },
+  { value: "99", label: "🔵 99" },
+  { value: "InDrive", label: "🟢 InDrive" },
+  { value: "Particular", label: "🚖 Particular" },
+  { value: "Outras", label: "➕ Outras" },
+];
+
 const makeInitial = (defaultDate?: Date): FormState => ({
   data_corrida: defaultDate ?? nowInTZ(),
+  plataforma: "Uber",
   horario_inicio: "",
   horario_fim: "",
   valor_bruto: "",
@@ -73,6 +82,7 @@ const makeInitial = (defaultDate?: Date): FormState => ({
   rua_destino: "",
   bairro_destino: "",
   observacao: "",
+});
 });
 
 const toTimeStr = (iso: string | null) => {
