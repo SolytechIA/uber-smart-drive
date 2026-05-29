@@ -282,13 +282,14 @@ export default function DashboardOperacional() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold sm:text-3xl">Olá, {nome || "motorista"}! 👋</h1>
+            <p className="text-sm text-muted-foreground">{fmtDataHoje()}</p>
+          </div>
           <ActionMenu
             onNovaCorrida={() => setShowNew(true)}
             onLancarGanho={() => setLancamentoTipo("ganho")}
             onLancarCusto={() => setLancamentoTipo("custo")}
             triggerClassName="hidden sm:inline-flex"
           />
-          </Button>
         </div>
 
         {isToday && <JornadaTimer onChange={() => setJornadaTick((t) => t + 1)} />}
