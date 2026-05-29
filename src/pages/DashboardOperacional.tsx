@@ -50,6 +50,8 @@ import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
 import { formatHorasHHMM } from "@/lib/formatters";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LancamentoModal, type LancamentoTipo } from "@/components/dashboard/LancamentoModal";
 
 interface RideRow {
   id: string;
