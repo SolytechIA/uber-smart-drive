@@ -198,12 +198,11 @@ export default function Configuracoes() {
           </div>
         ) : (
           <Tabs defaultValue="perfil" className="w-full">
-            <TabsList className="grid w-full max-w-3xl grid-cols-2 sm:grid-cols-5">
+            <TabsList className="grid w-full max-w-3xl grid-cols-2 sm:grid-cols-4">
               <TabsTrigger value="perfil">Meu Perfil</TabsTrigger>
               <TabsTrigger value="vehicle">Veículo</TabsTrigger>
               <TabsTrigger value="costs">Custos</TabsTrigger>
               <TabsTrigger value="goals">Metas</TabsTrigger>
-              <TabsTrigger value="uber">Conectar Uber</TabsTrigger>
             </TabsList>
 
             <TabsContent value="perfil">
@@ -241,7 +240,6 @@ export default function Configuracoes() {
                     Salvar alterações
                   </Button>
                 </div>
-                <PassesUberSection />
               </Card>
             </TabsContent>
 
@@ -260,10 +258,7 @@ export default function Configuracoes() {
                 </div>
               </Card>
             </TabsContent>
-
-            <TabsContent value="uber">
-              <ConectarUberTab />
-            </TabsContent>
+          </Tabs>
           </Tabs>
         )}
       </main>
