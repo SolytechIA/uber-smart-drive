@@ -186,8 +186,10 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
     );
 
     setSaving(true);
+    setSaving(true);
     const payload = {
       data_corrida: dia,
+      plataforma: form.plataforma || "Uber",
       horario_inicio: inicio.toISOString(),
       horario_fim: fim.toISOString(),
       duracao_minutos: duracao,
@@ -213,7 +215,6 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
       ({ error } = await supabase.from("rides").insert({
         ...payload,
         user_id: user.id,
-        plataforma: "Uber",
         fonte: "manual",
       }));
     }
