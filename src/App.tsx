@@ -94,15 +94,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/configuracoes/conectar-uber"
-              element={
-                <ProtectedRoute requireVehicle>
-                  <ConectarUber />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/admin"
               element={
                 <ProtectedRoute requireAdmin>
