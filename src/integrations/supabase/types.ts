@@ -169,6 +169,39 @@ export type Database = {
         }
         Relationships: []
       }
+      lancamentos: {
+        Row: {
+          conta: string
+          created_at: string
+          data: string
+          descricao: string | null
+          id: string
+          tipo: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          conta: string
+          created_at?: string
+          data: string
+          descricao?: string | null
+          id?: string
+          tipo: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          conta?: string
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          tipo?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       rides: {
         Row: {
           bairro_destino: string | null
@@ -302,39 +335,6 @@ export type Database = {
           },
         ]
       }
-      uber_connections: {
-        Row: {
-          atualizado_em: string
-          criado_em: string
-          id: string
-          status: string
-          uber_cookie: string | null
-          uber_email: string | null
-          ultima_sincronizacao: string | null
-          user_id: string
-        }
-        Insert: {
-          atualizado_em?: string
-          criado_em?: string
-          id?: string
-          status?: string
-          uber_cookie?: string | null
-          uber_email?: string | null
-          ultima_sincronizacao?: string | null
-          user_id: string
-        }
-        Update: {
-          atualizado_em?: string
-          criado_em?: string
-          id?: string
-          status?: string
-          uber_cookie?: string | null
-          uber_email?: string | null
-          ultima_sincronizacao?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       uber_passes: {
         Row: {
           created_at: string
@@ -390,8 +390,6 @@ export type Database = {
           telefone: string | null
           telefone_verificado: boolean
           trial_expira_em: string | null
-          uber_conectado: boolean
-          uber_ultimo_sync: string | null
         }
         Insert: {
           aceite_privacidade?: boolean
@@ -411,8 +409,6 @@ export type Database = {
           telefone?: string | null
           telefone_verificado?: boolean
           trial_expira_em?: string | null
-          uber_conectado?: boolean
-          uber_ultimo_sync?: string | null
         }
         Update: {
           aceite_privacidade?: boolean
@@ -432,8 +428,6 @@ export type Database = {
           telefone?: string | null
           telefone_verificado?: boolean
           trial_expira_em?: string | null
-          uber_conectado?: boolean
-          uber_ultimo_sync?: string | null
         }
         Relationships: []
       }
@@ -572,8 +566,6 @@ export type Database = {
           telefone: string | null
           telefone_verificado: boolean
           trial_expira_em: string | null
-          uber_conectado: boolean
-          uber_ultimo_sync: string | null
         }[]
         SetofOptions: {
           from: "*"

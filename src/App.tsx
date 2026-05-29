@@ -16,7 +16,6 @@ import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Relatorios from "./pages/Relatorios";
 import AnaliseIA from "./pages/AnaliseIA";
-import ConectarUber from "./pages/ConectarUber";
 import Admin from "./pages/Admin";
 import Planos from "./pages/Planos";
 import Privacidade from "./pages/Privacidade";
@@ -92,14 +91,6 @@ const App = () => (
               element={
                 <ProtectedRoute requireVehicle>
                   <Configuracoes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/configuracoes/conectar-uber"
-              element={
-                <ProtectedRoute requireVehicle>
-                  <ConectarUber />
                 </ProtectedRoute>
               }
             />

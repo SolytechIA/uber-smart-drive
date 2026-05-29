@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,7 @@ export interface EditingRide {
   rua_destino: string | null;
   bairro_destino: string | null;
   observacao: string | null;
+  plataforma?: string | null;
 }
 
 interface NewRideModalProps {
@@ -44,9 +46,9 @@ interface NewRideModalProps {
   editing?: EditingRide | null;
   defaultDate?: Date;
 }
-
 interface FormState {
   data_corrida: Date;
+  plataforma: string;
   horario_inicio: string;
   horario_fim: string;
   valor_bruto: string;
@@ -59,8 +61,17 @@ interface FormState {
   observacao: string;
 }
 
+const PLATAFORMAS = [
+  { value: "Uber", label: "🟡 Uber" },
+  { value: "99", label: "🔵 99" },
+  { value: "InDrive", label: "🟢 InDrive" },
+  { value: "Particular", label: "🚖 Particular" },
+  { value: "Outras", label: "➕ Outras" },
+];
+
 const makeInitial = (defaultDate?: Date): FormState => ({
   data_corrida: defaultDate ?? nowInTZ(),
+  plataforma: "Uber",
   horario_inicio: "",
   horario_fim: "",
   valor_bruto: "",
@@ -113,6 +124,7 @@ const fromEditing = (e: EditingRide): FormState => {
   const dia = e.data_corrida ? new Date(`${e.data_corrida}T12:00:00`) : nowInTZ();
   return {
     data_corrida: dia,
+    plataforma: e.plataforma || "Uber",
     horario_inicio: toTimeStr(e.horario_inicio),
     horario_fim: toTimeStr(e.horario_fim),
     valor_bruto: numToStr(e.valor_bruto),
@@ -174,8 +186,10 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
     );
 
     setSaving(true);
+    setSaving(true);
     const payload = {
       data_corrida: dia,
+      plataforma: form.plataforma || "Uber",
       horario_inicio: inicio.toISOString(),
       horario_fim: fim.toISOString(),
       duracao_minutos: duracao,
@@ -201,7 +215,6 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
       ({ error } = await supabase.from("rides").insert({
         ...payload,
         user_id: user.id,
-        plataforma: "Uber",
         fonte: "manual",
       }));
     }
@@ -287,6 +300,20 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="plat">Plataforma</Label>
+              <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v)}>
+                <SelectTrigger id="plat">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLATAFORMAS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

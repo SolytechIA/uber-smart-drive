@@ -2,12 +2,3 @@ project_id = "vwopgexrjqiocnpbfiws"
 
 [functions.mp-webhook]
 verify_jwt = false
-
-[functions.sync-rides]
-verify_jwt = false
-
-[functions.seed-demo]
-verify_jwt = false
-
-[functions.seed-demo2]
-verify_jwt = false

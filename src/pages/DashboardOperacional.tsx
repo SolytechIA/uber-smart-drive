@@ -50,6 +50,8 @@ import { JornadaTimer } from "@/components/dashboard/JornadaTimer";
 import { formatHorasHHMM } from "@/lib/formatters";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LancamentoModal, type LancamentoTipo } from "@/components/dashboard/LancamentoModal";
 
 interface RideRow {
   id: string;
@@ -62,6 +64,7 @@ interface RideRow {
   bairro_origem: string | null;
   bairro_destino: string | null;
   origem?: string | null;
+  plataforma?: string | null;
 }
 
 const DEFAULT_PARAMS: ClassifyParams = {
@@ -87,6 +90,15 @@ const fmtHora = (iso: string | null) => {
 
 const fmtDataHoje = () => formatLongDateSP();
 
+const plataformaIcon = (p: string | null | undefined): string => {
+  switch (p) {
+    case "Uber": return "🟡";
+    case "99": return "🔵";
+    case "InDrive": return "🟢";
+    case "Particular": return "🚖";
+    default: return "➕";
+  }
+};
 export default function DashboardOperacional() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -100,6 +112,7 @@ export default function DashboardOperacional() {
   const [editing, setEditing] = useState<EditingRide | null>(null);
   const [viewing, setViewing] = useState<ViewRide | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [lancamentoTipo, setLancamentoTipo] = useState<LancamentoTipo | null>(null);
   // Modo do filtro: "today" (dia atual, padrão) ou "custom" (intervalo personalizado).
   // CASO DE USO MOTORISTA NOTURNO: ao selecionar "ontem + hoje" (ex: 13/05 + 14/05),
   // o sistema mostra o consolidado das duas datas, permitindo ver o resultado de uma
@@ -143,7 +156,7 @@ export default function DashboardOperacional() {
     const { data, error } = await supabase
       .from("rides")
       .select(
-        "id, data_corrida, horario_inicio, horario_fim, valor_bruto, km_passageiro, km_deslocamento, rua_origem, bairro_origem, rua_destino, bairro_destino, observacao",
+        "id, data_corrida, horario_inicio, horario_fim, valor_bruto, km_passageiro, km_deslocamento, rua_origem, bairro_origem, rua_destino, bairro_destino, observacao, plataforma",
       )
       .eq("id", id)
       .maybeSingle();
@@ -170,7 +183,7 @@ export default function DashboardOperacional() {
       supabase
         .from("rides")
         .select(
-          "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem",
+          "id, horario_inicio, duracao_minutos, valor_bruto, km_passageiro, km_deslocamento, classificacao, bairro_origem, bairro_destino, origem, plataforma",
         )
         .eq("user_id", user.id)
         .gte("data_corrida", fromStr)
@@ -280,9 +293,12 @@ export default function DashboardOperacional() {
             <h1 className="font-display text-2xl font-bold sm:text-3xl">Olá, {nome || "motorista"}! 👋</h1>
             <p className="text-sm text-muted-foreground">{fmtDataHoje()}</p>
           </div>
-          <Button variant="gradient" onClick={() => setShowNew(true)} className="hidden sm:inline-flex">
-            <Plus className="mr-2 h-4 w-4" /> Nova corrida
-          </Button>
+          <ActionMenu
+            onNovaCorrida={() => setShowNew(true)}
+            onLancarGanho={() => setLancamentoTipo("ganho")}
+            onLancarCusto={() => setLancamentoTipo("custo")}
+            triggerClassName="hidden sm:inline-flex"
+          />
         </div>
 
         {isToday && <JornadaTimer onChange={() => setJornadaTick((t) => t + 1)} />}
@@ -436,15 +452,20 @@ export default function DashboardOperacional() {
       </div>
 
       {/* FAB mobile */}
-      <Button
-        variant="gradient"
-        size="icon"
-        className="fixed bottom-20 right-4 z-20 h-14 w-14 rounded-full shadow-glow sm:hidden"
-        onClick={() => setShowNew(true)}
-        aria-label="Nova corrida"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      <ActionMenu
+        onNovaCorrida={() => setShowNew(true)}
+        onLancarGanho={() => setLancamentoTipo("ganho")}
+        onLancarCusto={() => setLancamentoTipo("custo")}
+        triggerClassName="fixed bottom-20 right-4 z-20 h-14 w-14 rounded-full shadow-glow sm:hidden"
+        triggerIconOnly
+      />
+
+      <LancamentoModal
+        open={lancamentoTipo !== null}
+        tipo={lancamentoTipo ?? "ganho"}
+        onOpenChange={(o) => !o && setLancamentoTipo(null)}
+        defaultDate={range.from}
+      />
 
       <NewRideModal
         open={showNew}
@@ -478,6 +499,47 @@ export default function DashboardOperacional() {
         </AlertDialogContent>
       </AlertDialog>
     </AppLayout>
+  );
+}
+
+function ActionMenu({
+  onNovaCorrida,
+  onLancarGanho,
+  onLancarCusto,
+  triggerClassName,
+  triggerIconOnly,
+}: {
+  onNovaCorrida: () => void;
+  onLancarGanho: () => void;
+  onLancarCusto: () => void;
+  triggerClassName?: string;
+  triggerIconOnly?: boolean;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {triggerIconOnly ? (
+          <Button variant="gradient" size="icon" className={triggerClassName} aria-label="Adicionar">
+            <Plus className="h-6 w-6" />
+          </Button>
+        ) : (
+          <Button variant="gradient" className={triggerClassName}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar
+          </Button>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={onNovaCorrida}>
+          🚗 Registrar corrida
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onLancarGanho}>
+          💰 Lançar ganho
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onLancarCusto}>
+          💸 Lançar custo
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -537,14 +599,14 @@ function RideItem({
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-lg font-bold">{fmtBRL(valor)}</span>
+            {ride.plataforma && (
+              <Badge variant="outline" className="text-[10px]">
+                {plataformaIcon(ride.plataforma)} {ride.plataforma}
+              </Badge>
+            )}
             <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>
               {classificacaoLabel[c]}
             </Badge>
-            {ride.origem === "uber_sync" && (
-              <span title="Sincronizada automaticamente da Uber" className="text-xs">
-                🔄
-              </span>
-            )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {fmtKm(kmPax)} + {fmtKm(kmDesl)} vazio · {dur}min
