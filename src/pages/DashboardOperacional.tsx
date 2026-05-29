@@ -146,7 +146,7 @@ export default function DashboardOperacional() {
     const { data, error } = await supabase
       .from("rides")
       .select(
-        "id, data_corrida, horario_inicio, horario_fim, valor_bruto, km_passageiro, km_deslocamento, rua_origem, bairro_origem, rua_destino, bairro_destino, observacao",
+        "id, data_corrida, horario_inicio, horario_fim, valor_bruto, km_passageiro, km_deslocamento, rua_origem, bairro_origem, rua_destino, bairro_destino, observacao, plataforma",
       )
       .eq("id", id)
       .maybeSingle();
