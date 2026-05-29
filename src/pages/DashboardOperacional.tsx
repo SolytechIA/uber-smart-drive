@@ -590,14 +590,14 @@ function RideItem({
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-lg font-bold">{fmtBRL(valor)}</span>
+            {ride.plataforma && (
+              <Badge variant="outline" className="text-[10px]">
+                {plataformaIcon(ride.plataforma)} {ride.plataforma}
+              </Badge>
+            )}
             <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>
               {classificacaoLabel[c]}
             </Badge>
-            {ride.origem === "uber_sync" && (
-              <span title="Sincronizada automaticamente da Uber" className="text-xs">
-                🔄
-              </span>
-            )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {fmtKm(kmPax)} + {fmtKm(kmDesl)} vazio · {dur}min
