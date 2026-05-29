@@ -259,7 +259,6 @@ export default function Configuracoes() {
               </Card>
             </TabsContent>
           </Tabs>
-          </Tabs>
         )}
       </main>
     </div>
