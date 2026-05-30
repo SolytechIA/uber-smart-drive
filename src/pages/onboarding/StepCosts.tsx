@@ -119,7 +119,7 @@ export function StepCosts({ data, vehicle, onChange, errors }: Props) {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium">Outros custos (opcional)</p>
+          <p className="mb-2 text-sm font-medium">Outros custos fixos mensais (opcional)</p>
           <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
             <Input placeholder="Descrição (ex: aluguel garagem)"
               maxLength={80}
