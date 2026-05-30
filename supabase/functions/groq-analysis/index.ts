@@ -768,11 +768,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const payload = (await req.json()) as Payload & {
+    const rawPayload = (await req.json()) as Payload & {
       historico_analises?: any;
       historico_semanal?: any;
       periodo_referencia?: string;
     };
+    const payload = sanitizePayload(rawPayload);
 
     // ── 3) SERVER-SIDE RATE LIMIT ──────────────────────────────────────────
     const periodo = (payload as any).periodo || "dia";
