@@ -9,6 +9,51 @@ const corsHeaders = {
 // Server-side rate limit window: 1 analysis per (user, periodo, periodo_referencia) per 60 min.
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
+// ─── PROMPT INJECTION SANITIZATION ────────────────────────────────────────────
+function sanitize(input: unknown, maxLen = 100): string {
+  return String(input ?? "")
+    .slice(0, maxLen)
+    .replace(/[<>{}\[\]|\\`]/g, "")
+    .replace(/ignore previous instructions/gi, "")
+    .replace(/you are now/gi, "")
+    .replace(/act as/gi, "");
+}
+
+function sanitizeRideRef(r: any) {
+  if (!r || typeof r !== "object") return r;
+  return { ...r, origem: sanitize(r.origem, 60), destino: sanitize(r.destino, 60) };
+}
+
+function sanitizePayload(p: any) {
+  if (!p || typeof p !== "object") return p;
+  const c: any = { ...p };
+  if (c.nome_motorista !== undefined) c.nome_motorista = sanitize(c.nome_motorista, 60);
+  if (c.contexto_temporal !== undefined) c.contexto_temporal = sanitize(c.contexto_temporal, 100);
+  if (c.periodo_referencia !== undefined) c.periodo_referencia = sanitize(c.periodo_referencia, 60);
+  if (c.periodo_atual !== undefined) c.periodo_atual = sanitize(c.periodo_atual, 60);
+  if (c.rotulo_periodo !== undefined) c.rotulo_periodo = sanitize(c.rotulo_periodo, 60);
+  if (c.tipo_combustivel !== undefined) c.tipo_combustivel = sanitize(c.tipo_combustivel, 30);
+  if (c.hora_pico !== undefined) c.hora_pico = sanitize(c.hora_pico, 20);
+  if (c.corrida_melhor) c.corrida_melhor = sanitizeRideRef(c.corrida_melhor);
+  if (c.corrida_pior) c.corrida_pior = sanitizeRideRef(c.corrida_pior);
+  if (c.melhor_dia && typeof c.melhor_dia === "object") {
+    c.melhor_dia = { ...c.melhor_dia, rotulo: sanitize(c.melhor_dia.rotulo, 30) };
+  }
+  if (c.pior_dia && typeof c.pior_dia === "object") {
+    c.pior_dia = { ...c.pior_dia, rotulo: sanitize(c.pior_dia.rotulo, 30) };
+  }
+  if (c.analise_personalizada && typeof c.analise_personalizada === "object") {
+    const ap = c.analise_personalizada;
+    const cb = (b: any) => b && typeof b === "object"
+      ? { ...b, titulo: sanitize(b.titulo, 100), descricao: sanitize(b.descricao, 300) }
+      : b;
+    c.analise_personalizada = { eliminar: cb(ap.eliminar), manter: cb(ap.manter), melhorar: cb(ap.melhorar) };
+  }
+  if (Array.isArray(c.historico_analises)) c.historico_analises = c.historico_analises.slice(-3);
+  if (Array.isArray(c.historico_semanal)) c.historico_semanal = c.historico_semanal.slice(-3);
+  return c;
+}
+
 // ─── INTERFACES ───────────────────────────────────────────────────────────────
 
 interface RideRef {
