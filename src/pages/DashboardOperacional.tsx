@@ -90,15 +90,8 @@ const fmtHora = (iso: string | null) => {
 
 const fmtDataHoje = () => formatLongDateSP();
 
-const plataformaIcon = (p: string | null | undefined): string => {
-  switch (p) {
-    case "Uber": return "🟡";
-    case "99": return "🔵";
-    case "InDrive": return "🟢";
-    case "Particular": return "🚖";
-    default: return "➕";
-  }
-};
+// Bolinha colorida agora vem do helper compartilhado em @/lib/plataformas
+import { PlataformaDot } from "@/lib/plataformas";
 export default function DashboardOperacional() {
   const { user } = useAuth();
   const navigate = useNavigate();
