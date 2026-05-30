@@ -61,13 +61,7 @@ interface FormState {
   observacao: string;
 }
 
-const PLATAFORMAS = [
-  { value: "Uber", label: "🟡 Uber" },
-  { value: "99", label: "🔵 99" },
-  { value: "InDrive", label: "🟢 InDrive" },
-  { value: "Particular", label: "🚖 Particular" },
-  { value: "Outras", label: "➕ Outras" },
-];
+import { PLATAFORMAS_LIST, PlataformaDot } from "@/lib/plataformas";
 
 const makeInitial = (defaultDate?: Date): FormState => ({
   data_corrida: defaultDate ?? nowInTZ(),
