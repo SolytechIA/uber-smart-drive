@@ -30,7 +30,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: "/dashboard/operacional", label: "Operacional", icon: Activity },
   { to: "/dashboard/financeiro", label: "Financeiro", icon: DollarSign },
-  { to: "/relatorios", label: "Relatórios", icon: FileText },
+  { to: "/relatorios", label: "Cards e Relatórios", icon: FileText },
   { to: "/analise-ia", label: "Análise IA", icon: Brain },
   { to: "/configuracoes", label: "Config.", icon: Settings },
 ];
