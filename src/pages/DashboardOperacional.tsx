@@ -90,15 +90,8 @@ const fmtHora = (iso: string | null) => {
 
 const fmtDataHoje = () => formatLongDateSP();
 
-const plataformaIcon = (p: string | null | undefined): string => {
-  switch (p) {
-    case "Uber": return "🟡";
-    case "99": return "🔵";
-    case "InDrive": return "🟢";
-    case "Particular": return "🚖";
-    default: return "➕";
-  }
-};
+// Bolinha colorida agora vem do helper compartilhado em @/lib/plataformas
+import { PlataformaDot } from "@/lib/plataformas";
 export default function DashboardOperacional() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -600,8 +593,9 @@ function RideItem({
           <div className="flex items-baseline gap-2">
             <span className="font-display text-lg font-bold">{fmtBRL(valor)}</span>
             {ride.plataforma && (
-              <Badge variant="outline" className="text-[10px]">
-                {plataformaIcon(ride.plataforma)} {ride.plataforma}
+              <Badge variant="outline" className="text-[10px] gap-1.5">
+                <PlataformaDot plataforma={ride.plataforma} size={8} />
+                {ride.plataforma}
               </Badge>
             )}
             <Badge variant="outline" className={cn("text-[10px]", classificacaoColor[c])}>

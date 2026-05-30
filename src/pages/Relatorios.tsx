@@ -161,11 +161,15 @@ export default function Relatorios() {
     <AppLayout>
       <div className="container mx-auto max-w-7xl space-y-6 p-4 md:p-6">
         <header className="space-y-1">
-          <h1 className="text-2xl font-bold md:text-3xl">Relatórios</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">Cards e Relatórios</h1>
           <p className="text-sm text-muted-foreground">
-            Análises detalhadas do seu desempenho — todas no fuso de São Paulo.
+            KPIs por período e análises detalhadas do seu desempenho — fuso de São Paulo.
           </p>
         </header>
+
+        {/* KPIs migrados do antigo Financeiro */}
+        <RelatorioKpiPanel rides={rides} vehicle={vehicle} jornadas={jornadas} passes={passes} />
+
 
         <Tabs defaultValue="diario" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 md:w-auto md:inline-flex">

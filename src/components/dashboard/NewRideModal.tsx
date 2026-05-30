@@ -61,13 +61,7 @@ interface FormState {
   observacao: string;
 }
 
-const PLATAFORMAS = [
-  { value: "Uber", label: "🟡 Uber" },
-  { value: "99", label: "🔵 99" },
-  { value: "InDrive", label: "🟢 InDrive" },
-  { value: "Particular", label: "🚖 Particular" },
-  { value: "Outras", label: "➕ Outras" },
-];
+import { PLATAFORMAS_LIST, PlataformaDot } from "@/lib/plataformas";
 
 const makeInitial = (defaultDate?: Date): FormState => ({
   data_corrida: defaultDate ?? nowInTZ(),
@@ -306,11 +300,21 @@ export function NewRideModal({ open, onOpenChange, onSaved, params, editing, def
               <Label htmlFor="plat">Plataforma</Label>
               <Select value={form.plataforma} onValueChange={(v) => set("plataforma", v)}>
                 <SelectTrigger id="plat">
-                  <SelectValue />
+                  <SelectValue>
+                    <span className="inline-flex items-center gap-2">
+                      <PlataformaDot plataforma={form.plataforma} />
+                      {form.plataforma}
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {PLATAFORMAS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  {PLATAFORMAS_LIST.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      <span className="inline-flex items-center gap-2">
+                        <PlataformaDot plataforma={p.value} />
+                        {p.label}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

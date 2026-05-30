@@ -106,12 +106,6 @@ export function StepCosts({ data, vehicle, onChange, errors }: Props) {
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Taxa da Uber sobre corridas (%)" tooltip="Percentual que a Uber retém de cada corrida. O padrão é 25%, mas pode variar.">
-            <Input type="number" step="0.1" min={0} max={100} placeholder="25"
-              value={data.taxa_uber_percent}
-              onChange={(e) => onChange({ taxa_uber_percent: e.target.value ? Number(e.target.value) : 0 })} />
-          </Field>
-
           <Field label="Dias trabalhados por mês">
             <Select value={data.dias_trabalhados_mes.toString()} onValueChange={(v) => onChange({ dias_trabalhados_mes: Number(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -125,7 +119,7 @@ export function StepCosts({ data, vehicle, onChange, errors }: Props) {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium">Outros custos (opcional)</p>
+          <p className="mb-2 text-sm font-medium">Outros custos fixos mensais (opcional)</p>
           <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
             <Input placeholder="Descrição (ex: aluguel garagem)"
               maxLength={80}

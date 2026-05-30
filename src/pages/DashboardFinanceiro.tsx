@@ -1,740 +1,567 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfDay,
-  endOfDay,
-  subDays,
-  subWeeks,
-  subMonths,
-  getDate,
-  getDaysInMonth,
-  format,
+  startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
+  format, parseISO,
 } from "date-fns";
-import { CalendarIcon, TrendingDown, TrendingUp, Trophy, ArrowDown, ArrowUp, Minus } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  Pie,
-  PieChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CalendarIcon, Plus, Trophy } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  buildDailySeries,
-  calcPeriodMetrics,
-  diasRestantesSemana,
-  filterRidesInRange,
-  fmtBRL,
-  fmtNumber,
-  getPeriodRange,
-  metaPeriodo,
-  nowInTZ,
-  Periodo,
-  projecaoFimDia,
-  projecaoMensal,
-  projecaoSemanal,
-  resolveGoals,
-  TZ,
-  Ride,
-  Vehicle,
-  Goals,
-  JornadaRecord,
-  UberPasse,
-} from "@/lib/financeiro";
+import { fmtBRL, nowInTZ, resolveGoals, type Goals, type Vehicle } from "@/lib/financeiro";
+import { PlataformaDot, plataformaColor } from "@/lib/plataformas";
+import { LancamentoModal, type LancamentoTipo } from "@/components/dashboard/LancamentoModal";
+
+type Periodo = "hoje" | "semana" | "mes" | "acumulado" | "personalizado";
+
+interface RideRow {
+  id: string;
+  data_corrida: string | null;
+  horario_inicio: string | null;
+  valor_bruto: number | null;
+  plataforma: string | null;
+  bairro_origem: string | null;
+  bairro_destino: string | null;
+}
+
+interface Lancamento {
+  id: string;
+  user_id: string;
+  tipo: "ganho" | "custo";
+  conta: string;
+  descricao: string | null;
+  valor: number;
+  data: string;
+  created_at: string;
+}
+
+const ORDEM_GANHOS = [
+  "Ganhos Uber", "Ganhos 99", "Ganhos InDrive",
+  "Transfers", "Gorjetas", "Particular", "Outros Ganhos",
+];
+
+const ORDEM_CUSTOS = [
+  "Taxa/Passe Uber", "Taxa/Passe 99", "Taxa/Passe InDrive",
+  "Financiamento de Veículo", "Aluguel de Veículo",
+  "Combustível", "Estacionamentos", "Pedágio", "IPVA",
+  "Manutenção Veículo", "Seguro Veículo", "Lavagem/Higienização",
+  "Plano Celular", "Despesas com Alimentação", "Outros Custos Diversos",
+];
+
+const PLAT_TO_CONTA: Record<string, string> = {
+  Uber: "Ganhos Uber",
+  "99": "Ganhos 99",
+  InDrive: "Ganhos InDrive",
+  Particular: "Particular",
+};
+
+function getRange(periodo: Periodo, custom?: { from: Date; to: Date }): { from: Date; to: Date } {
+  const n = nowInTZ();
+  switch (periodo) {
+    case "hoje": return { from: startOfDay(n), to: endOfDay(n) };
+    case "semana": return { from: startOfWeek(n, { weekStartsOn: 1 }), to: endOfWeek(n, { weekStartsOn: 1 }) };
+    case "mes": return { from: startOfMonth(n), to: endOfMonth(n) };
+    case "acumulado": return { from: new Date(2000, 0, 1), to: new Date(2999, 11, 31) };
+    case "personalizado":
+      return custom
+        ? { from: startOfDay(custom.from), to: endOfDay(custom.to) }
+        : { from: startOfDay(n), to: endOfDay(n) };
+  }
+}
+
+function rideDateKey(r: RideRow): string | null {
+  return r.data_corrida ?? (r.horario_inicio ? r.horario_inicio.slice(0, 10) : null);
+}
+
+function inRangeStr(dateStr: string | null, from: Date, to: Date): boolean {
+  if (!dateStr) return false;
+  const f = format(from, "yyyy-MM-dd");
+  const t = format(to, "yyyy-MM-dd");
+  return dateStr >= f && dateStr <= t;
+}
 
 export default function DashboardFinanceiro() {
   const { user } = useAuth();
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
   const [custom, setCustom] = useState<{ from: Date; to: Date } | undefined>();
-  const [rides, setRides] = useState<Ride[]>([]);
+  const [rides, setRides] = useState<RideRow[]>([]);
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [goals, setGoals] = useState<Goals | null>(null);
-  const [jornadas, setJornadas] = useState<JornadaRecord[]>([]);
-  const [passes, setPasses] = useState<UberPasse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lancamentoTipo, setLancamentoTipo] = useState<LancamentoTipo | null>(null);
+  const [drillConta, setDrillConta] = useState<{ conta: string; tipo: "ganho" | "custo" } | null>(null);
+
+  const refresh = async () => {
+    if (!user) return;
+    const [rRes, lRes, vRes, gRes] = await Promise.all([
+      supabase.from("rides")
+        .select("id,data_corrida,horario_inicio,valor_bruto,plataforma,bairro_origem,bairro_destino")
+        .eq("user_id", user.id)
+        .order("data_corrida", { ascending: false })
+        .limit(5000),
+      supabase.from("lancamentos" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("data", { ascending: false })
+        .limit(5000),
+      supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
+      supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
+    ]);
+    setRides(((rRes.data as RideRow[]) || []));
+    setLancamentos(((lRes.data as any[]) || []) as Lancamento[]);
+    setVehicle((vRes.data as Vehicle) || null);
+    setGoals((gRes.data as Goals) || null);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    if (!user) return;
-    let cancel = false;
-    (async () => {
-      setLoading(true);
-      const [rRes, vRes, gRes, jRes, pRes] = await Promise.all([
-        supabase
-          .from("rides")
-          .select("id,data_corrida,horario_inicio,horario_fim,valor_bruto,km_passageiro,km_deslocamento,km_total,duracao_minutos,classificacao,bairro_origem,bairro_destino")
-          .eq("user_id", user.id)
-          .order("data_corrida", { ascending: false })
-          .limit(2000),
-        supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("goals").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("jornadas" as any).select("*").eq("user_id", user.id).limit(2000),
-        supabase.from("uber_passes" as any).select("*").eq("user_id", user.id).limit(500),
-      ]);
-      if (cancel) return;
-      setRides((rRes.data as Ride[]) || []);
-      setVehicle((vRes.data as Vehicle) || null);
-      setGoals((gRes.data as Goals) || null);
-      setJornadas(((jRes.data as any) || []) as JornadaRecord[]);
-      setPasses(((pRes.data as any) || []) as UberPasse[]);
-      setLoading(false);
-    })();
-    return () => {
-      cancel = true;
-    };
+    setLoading(true);
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const range = useMemo(() => getPeriodRange(periodo, custom), [periodo, custom]);
-  const metrics = useMemo(() => calcPeriodMetrics(rides, vehicle, range.from, range.to, jornadas, passes), [rides, vehicle, range, jornadas, passes]);
-  const series = useMemo(() => buildDailySeries(rides, vehicle, range.from, range.to), [rides, vehicle, range]);
+  const range = useMemo(() => getRange(periodo, custom), [periodo, custom]);
   const metas = useMemo(() => resolveGoals(goals, vehicle), [goals, vehicle]);
 
-  // Indicadores por km/hora
-  const custoTotalKm = metrics.kmTotal > 0 ? metrics.custoTotal / metrics.kmTotal : 0;
-  const custoCombKm = metrics.kmTotal > 0 ? metrics.custoCombustivel / metrics.kmTotal : 0;
-  const kmTotalPeriodo = metrics.kmTotal;
-  const receitaBrutaPeriodo = metrics.ganhoBruto;
-  const ganhoRealKm = kmTotalPeriodo > 0 ? receitaBrutaPeriodo / kmTotalPeriodo : 0;
-  const ganhoPorKm = ganhoRealKm;
-  const ganhoPorHora = metrics.ganhoBrutoPorHora;
-  const ticketMedio = metrics.numCorridas > 0 ? receitaBrutaPeriodo / metrics.numCorridas : 0;
-
-  // Comparativos
-  const comparativoHojeOntem = useMemo(() => buildComparativoHojeOntem(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
-  const comparativoSemanas = useMemo(() => buildComparativoSemanas(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
-  const comparativoMeses = useMemo(() => buildComparativoMeses(rides, vehicle, jornadas, passes), [rides, vehicle, jornadas, passes]);
-
-  const evolucaoSeries = useMemo(() => {
-    if (periodo !== "hoje") return series;
-    return buildHourlySeriesToday(rides, range.from, range.to);
-  }, [periodo, series, rides, range]);
-
-  // Donut data
-  const donutData = [
-    { name: "Combustível/Energia", value: Math.max(0, metrics.custoCombustivel), color: "hsl(var(--warning))" },
-    { name: "Custos fixos", value: Math.max(0, metrics.custoFixoProporcional), color: "hsl(var(--primary))" },
-    { name: "Passe Uber", value: Math.max(0, metrics.custoPasseUber), color: "hsl(var(--accent))" },
-    { name: "Comissão/Passe Uber", value: Math.max(0, metrics.comissaoUber), color: "hsl(var(--destructive))" },
-  ].filter((d) => d.value > 0);
-
-  const metricsHoje = useMemo(() => {
-    const r = getPeriodRange("hoje");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
-  }, [rides, vehicle, jornadas, passes]);
-  const metricsSemana = useMemo(() => {
-    const r = getPeriodRange("semana");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
-  }, [rides, vehicle, jornadas, passes]);
-  const metricsMes = useMemo(() => {
-    const r = getPeriodRange("mes");
-    return calcPeriodMetrics(rides, vehicle, r.from, r.to, jornadas, passes);
-  }, [rides, vehicle, jornadas, passes]);
-
-  // Meta do período (sempre usa o valor FIXO configurado pelo motorista,
-  // nunca recalcula proporcional ao número de dias do filtro).
-  const metaDoPeriodo =
-    periodo === "hoje"
-      ? metas.diaria
-      : periodo === "semana"
-      ? metas.semanal
-      : periodo === "mes"
-      ? metas.mensal
-      : metas.mensal; // personalizado: sempre meta mensal
-  const percentualMeta = metaDoPeriodo > 0 ? Math.min(100, (metrics.ganhoBruto / metaDoPeriodo) * 100) : 0;
-
-  const horasMetaDia = Number(goals?.horas_meta_dia || 8);
-  const projDia = projecaoFimDia(metricsHoje.ganhoBruto, metricsHoje.horasTrabalhadas, horasMetaDia, metricsHoje.numCorridas);
-  const projSem = projecaoSemanal(metricsSemana.ganhoBruto, metricsSemana.numCorridas);
-  const diasRestSem = diasRestantesSemana();
-  const hojeTZ = nowInTZ();
-  const projMes = projecaoMensal(
-    metricsMes.ganhoBruto,
-    hojeTZ.getDate(),
-    new Date(hojeTZ.getFullYear(), hojeTZ.getMonth() + 1, 0).getDate(),
-    metricsMes.numCorridas
+  const ridesNoPeriodo = useMemo(
+    () => rides.filter((r) => inRangeStr(rideDateKey(r), range.from, range.to)),
+    [rides, range],
   );
+  const lancsNoPeriodo = useMemo(
+    () => lancamentos.filter((l) => inRangeStr(l.data, range.from, range.to)),
+    [lancamentos, range],
+  );
+
+  // Totais por conta de GANHO (corridas agrupadas por plataforma + lançamentos tipo=ganho)
+  const ganhosPorConta = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const r of ridesNoPeriodo) {
+      const conta = PLAT_TO_CONTA[r.plataforma || "Uber"] || "Outros Ganhos";
+      map[conta] = (map[conta] || 0) + Number(r.valor_bruto || 0);
+    }
+    for (const l of lancsNoPeriodo.filter((x) => x.tipo === "ganho")) {
+      map[l.conta] = (map[l.conta] || 0) + Number(l.valor || 0);
+    }
+    return map;
+  }, [ridesNoPeriodo, lancsNoPeriodo]);
+
+  const custosPorConta = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const l of lancsNoPeriodo.filter((x) => x.tipo === "custo")) {
+      map[l.conta] = (map[l.conta] || 0) + Number(l.valor || 0);
+    }
+    return map;
+  }, [lancsNoPeriodo]);
+
+  const ganhoBruto = Object.values(ganhosPorConta).reduce((a, b) => a + b, 0);
+  const custoTotal = Object.values(custosPorConta).reduce((a, b) => a + b, 0);
+  const ganhoLiquido = ganhoBruto - custoTotal;
+
+  // Metas
+  const ganhoBrutoHoje = useMemo(() => calcGanhoBrutoSimples(rides, lancamentos, getRange("hoje")), [rides, lancamentos]);
+  const ganhoBrutoSem = useMemo(() => calcGanhoBrutoSimples(rides, lancamentos, getRange("semana")), [rides, lancamentos]);
+  const ganhoBrutoMes = useMemo(() => calcGanhoBrutoSimples(rides, lancamentos, getRange("mes")), [rides, lancamentos]);
+
+  // Extrato unificado (corridas + lançamentos)
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [periodo, custom]);
+  const PAGE_SIZE = 20;
+
+  const extrato = useMemo(() => {
+    type Linha = {
+      key: string;
+      data: string;
+      tipo: "Corrida" | "Ganho" | "Custo";
+      conta: string;
+      descricao: string;
+      valor: number;
+      cor: "verde" | "vermelho";
+      plataforma?: string | null;
+    };
+    const linhas: Linha[] = [];
+    for (const r of ridesNoPeriodo) {
+      const d = rideDateKey(r) || "";
+      linhas.push({
+        key: `r-${r.id}`,
+        data: d,
+        tipo: "Corrida",
+        conta: r.plataforma || "Uber",
+        descricao: [r.bairro_origem, r.bairro_destino].filter(Boolean).join(" → ") || "—",
+        valor: Number(r.valor_bruto || 0),
+        cor: "verde",
+        plataforma: r.plataforma,
+      });
+    }
+    for (const l of lancsNoPeriodo) {
+      linhas.push({
+        key: `l-${l.id}`,
+        data: l.data,
+        tipo: l.tipo === "ganho" ? "Ganho" : "Custo",
+        conta: l.conta,
+        descricao: l.descricao || "—",
+        valor: Number(l.valor || 0),
+        cor: l.tipo === "ganho" ? "verde" : "vermelho",
+      });
+    }
+    linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
+    return linhas;
+  }, [ridesNoPeriodo, lancsNoPeriodo]);
+
+  const totalPages = Math.max(1, Math.ceil(extrato.length / PAGE_SIZE));
+  const pageRows = extrato.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const hoje = format(nowInTZ(), "yyyy-MM-dd");
+
+  // Lançamentos que compõem uma conta no drill
+  const drillRows = useMemo(() => {
+    if (!drillConta) return [];
+    if (drillConta.tipo === "custo") {
+      return lancsNoPeriodo
+        .filter((l) => l.tipo === "custo" && l.conta === drillConta.conta)
+        .map((l) => ({ data: l.data, descricao: l.descricao || "—", plataforma: "—", valor: l.valor }));
+    }
+    // ganho
+    const linhas: { data: string; descricao: string; plataforma: string; valor: number }[] = [];
+    const plat = Object.entries(PLAT_TO_CONTA).find(([, c]) => c === drillConta.conta)?.[0];
+    if (plat) {
+      for (const r of ridesNoPeriodo.filter((r) => (r.plataforma || "Uber") === plat)) {
+        linhas.push({
+          data: rideDateKey(r) || "",
+          descricao: [r.bairro_origem, r.bairro_destino].filter(Boolean).join(" → ") || "Corrida",
+          plataforma: plat,
+          valor: Number(r.valor_bruto || 0),
+        });
+      }
+    }
+    for (const l of lancsNoPeriodo.filter((l) => l.tipo === "ganho" && l.conta === drillConta.conta)) {
+      linhas.push({ data: l.data, descricao: l.descricao || "—", plataforma: "—", valor: l.valor });
+    }
+    linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
+    return linhas;
+  }, [drillConta, ridesNoPeriodo, lancsNoPeriodo]);
+
   return (
     <AppLayout>
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold">Dashboard Financeiro</h1>
-            <p className="text-muted-foreground text-sm mt-1">Acompanhe receitas, custos e lucro real do período</p>
+            <h1 className="text-2xl md:text-3xl font-display font-bold">Financeiro</h1>
+            <p className="text-muted-foreground text-sm mt-1">Demonstrativo financeiro completo com ganhos, custos e lucro líquido real.</p>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <Tabs value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
               <TabsList>
                 <TabsTrigger value="hoje">Hoje</TabsTrigger>
-                <TabsTrigger value="semana">Esta semana</TabsTrigger>
-                <TabsTrigger value="mes">Este mês</TabsTrigger>
+                <TabsTrigger value="semana">Semana</TabsTrigger>
+                <TabsTrigger value="mes">Mês</TabsTrigger>
+                <TabsTrigger value="acumulado">Acumulado</TabsTrigger>
                 <TabsTrigger value="personalizado">Personalizado</TabsTrigger>
               </TabsList>
             </Tabs>
             {periodo === "personalizado" && (
               <CustomRangePicker custom={custom} onApply={setCustom} />
             )}
+            <LancarDropdown onPick={setLancamentoTipo} />
           </div>
         </div>
 
         {loading ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">Carregando dados financeiros…</CardContent>
-          </Card>
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Carregando…</CardContent></Card>
         ) : (
           <>
-            {/* RESULTADO DO PERÍODO */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="border-emerald-500/20 bg-emerald-500/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Receitas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Line2 label="Ganho bruto total" value={fmtBRL(metrics.ganhoBruto)} />
-                  <Line2 label="Comissão/Passe Uber" value={fmtBRL(metrics.comissaoUber)} muted />
-                  <Line2 label="Ganho líquido após comissão" value={fmtBRL(metrics.ganhoLiquido)} bold />
-                </CardContent>
-              </Card>
-
-              <Card className="border-rose-500/20 bg-rose-500/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-rose-700 dark:text-rose-400">Custos</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Line2 label="Combustível / energia" value={fmtBRL(metrics.custoCombustivel)} />
-                  <Line2 label="Custo fixo proporcional" value={fmtBRL(metrics.custoFixoProporcional)} />
-                  {metrics.custoPasseUber > 0 && (
-                    <Line2 label="🎫 Passe Uber (rateado)" value={fmtBRL(metrics.custoPasseUber)} />
-                  )}
-                  <Line2 label="Custo total do período" value={fmtBRL(metrics.custoTotal)} bold />
-                </CardContent>
-              </Card>
+            {/* 3 CARDS PRINCIPAIS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <BigCard title="💰 Ganho Bruto" value={ganhoBruto} positive />
+              <BigCard title="💸 Custo Total" value={custoTotal} negative />
+              <BigCard title="✅ Ganho Líquido" value={ganhoLiquido} positive={ganhoLiquido >= 0} negative={ganhoLiquido < 0} />
             </div>
-
-            {/* GANHO REAL DESTAQUE */}
-            <Card className={cn("overflow-hidden", metrics.ganhoReal >= 0 ? "border-emerald-500/40" : "border-destructive/40")}> 
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground uppercase tracking-wide">Ganho real do período</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {metrics.ganhoReal >= 0 ? (
-                        <TrendingUp className="h-7 w-7 text-emerald-500" />
-                      ) : (
-                        <TrendingDown className="h-7 w-7 text-destructive" />
-                      )}
-                      <span
-                        className={cn(
-                          "font-display font-bold text-4xl md:text-5xl",
-                          metrics.ganhoReal >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                        )}
-                      >
-                        {fmtBRL(metrics.ganhoReal)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="md:w-1/2 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Progresso da meta</span>
-                      <span className="font-semibold">{percentualMeta.toFixed(0)}%</span>
-                    </div>
-                    <Progress value={percentualMeta} className="h-3" />
-                    <p className="text-xs text-muted-foreground">
-                      {percentualMeta.toFixed(0)}% da meta de {fmtBRL(metaDoPeriodo)} atingida <span className="opacity-70">(base: ganho bruto)</span>
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* INDICADORES POR KM E HORA */}
-            <div>
-              <h2 className="text-lg font-semibold mb-3">Indicadores por km e hora</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <MiniCard title="Custo total por km" value={`R$ ${fmtNumber(custoTotalKm)}/km`} />
-                <MiniCard title="Custo combustível por km" value={`R$ ${fmtNumber(custoCombKm)}/km`} hint="Use para avaliar corridas" />
-                <MiniCard title="Ganho real por km" value={`R$ ${fmtNumber(ganhoPorKm)}/km`} positive={ganhoPorKm >= 0} hint="Bruto ÷ km totais (com vazio)" />
-                <MiniCard title="Ganho real por hora" value={`R$ ${fmtNumber(ganhoPorHora)}/h`} positive={ganhoPorHora >= 0} hint="Bruto ÷ horas ao volante" />
-                <MiniCard title="Ponto de equilíbrio diário" value={fmtBRL(metrics.pontoEquilibrioDiario)} hint="Mínimo para cobrir custos" />
-                <MiniCard
-                  title="Ticket médio por corrida"
-                  value={metrics.numCorridas > 0 ? fmtBRL(ticketMedio) : "—"}
-                  positive={metrics.numCorridas > 0}
-                  hint="Receita média por corrida"
-                />
-              </div>
-            </div>
-
-            {/* GRÁFICOS */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Evolução do ganho real</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72 w-full">
-                  <ResponsiveContainer>
-                    <AreaChart data={evolucaoSeries}>
-                      <defs>
-                        <linearGradient id="ganhoFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-                      <RechartsTooltip
-                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                        formatter={(v: any, name: string) => {
-                          if (name === "Corridas" || name === "Horas") return [v, name];
-                          return [fmtBRL(Number(v)), name];
-                        }}
-                      />
-                      {periodo !== "hoje" && metas.diaria > 0 && (
-                        <ReferenceLine y={metas.diaria} stroke="hsl(var(--warning))" strokeDasharray="4 4" label={{ value: "Meta diária", position: "right", fill: "hsl(var(--warning))", fontSize: 11 }} />
-                      )}
-                      <Area type="monotone" dataKey="ganhoReal" name={periodo === "hoje" ? "Ganho na hora" : "Ganho real"} stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#ganhoFill)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                      {periodo !== "hoje" && (
-                        <Line type="monotone" dataKey="ganhoBruto" name="Ganho bruto" stroke="hsl(var(--success))" strokeWidth={1.5} dot={false} />
-                      )}
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Composição por dia</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72 w-full">
-                  <ResponsiveContainer>
-                    <BarChart data={series}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-                      <RechartsTooltip
-                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                        formatter={(v: any, name: string) => [fmtBRL(Number(v)), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="ganhoBruto" name="Ganho bruto" fill="#06B6D4" />
-                      <Bar dataKey="ganhoReal" name="Ganho real" fill="#22C55E" />
-                      <Bar dataKey="custoCombustivel" name="Combustível" fill="#F97316" />
-                      <Bar dataKey="custoFixo" name="Custo fixo" fill="#8B5CF6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Composição dos custos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {donutData.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">Nenhum custo registrado no período.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div className="h-64 w-full relative">
-                      <ResponsiveContainer>
-                        <PieChart>
-                          <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={2}>
-                            {donutData.map((d, i) => (
-                              <Cell key={i} fill={d.color} />
-                            ))}
-                          </Pie>
-                          <RechartsTooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-xs text-muted-foreground">Total</span>
-                        <span className="font-display font-bold text-xl">{fmtBRL(metrics.custoTotal)}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      {donutData.map((d) => {
-                        const pct = metrics.custoTotal > 0 ? (d.value / metrics.custoTotal) * 100 : 0;
-                        return (
-                          <div key={d.name} className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-2">
-                              <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
-                              <span className="text-sm">{d.name}</span>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold text-sm">{fmtBRL(d.value)}</div>
-                              <div className="text-xs text-muted-foreground">{pct.toFixed(1)}%</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
             {/* METAS */}
             <div>
-              <h2 className="text-lg font-semibold mb-3">Metas</h2>
+              <h2 className="text-lg font-semibold mb-3">Metas (base: ganho bruto)</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <MetaCard titulo="Meta diária" atual={metricsHoje.ganhoBruto} meta={metas.diaria} />
-                <MetaCard titulo="Meta semanal" atual={metricsSemana.ganhoBruto} meta={metas.semanal} />
-                <MetaCard titulo="Meta mensal" atual={metricsMes.ganhoBruto} meta={metas.mensal} />
+                <MetaCard titulo="Meta diária" atual={ganhoBrutoHoje} meta={metas.diaria} />
+                <MetaCard titulo="Meta semanal" atual={ganhoBrutoSem} meta={metas.semanal} />
+                <MetaCard titulo="Meta mensal" atual={ganhoBrutoMes} meta={metas.mensal} />
               </div>
             </div>
 
-            {/* COMPARATIVOS */}
+            {/* DEMONSTRATIVO FINANCEIRO */}
             <Card>
               <CardHeader>
-                <CardTitle>Hoje vs. ontem</CardTitle>
+                <CardTitle className="text-base">📊 Demonstrativo Financeiro</CardTitle>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <ComparativoTable rows={comparativoHojeOntem} colA="Hoje" colB="Ontem" />
+              <CardContent className="space-y-6">
+                <DRESecao
+                  titulo="GANHO TOTAL NO PERÍODO"
+                  total={ganhoBruto}
+                  ordem={ORDEM_GANHOS}
+                  valores={ganhosPorConta}
+                  totalColor="text-emerald-500"
+                  onClickConta={(c) => setDrillConta({ conta: c, tipo: "ganho" })}
+                />
+                <DRESecao
+                  titulo="CUSTO TOTAL NO PERÍODO"
+                  total={custoTotal}
+                  ordem={ORDEM_CUSTOS}
+                  valores={custosPorConta}
+                  totalColor="text-rose-500"
+                  onClickConta={(c) => setDrillConta({ conta: c, tipo: "custo" })}
+                />
+                <div className="flex items-center justify-between border-t border-border/60 pt-4">
+                  <span className="font-display font-bold uppercase tracking-wide">GANHO LÍQUIDO TOTAL</span>
+                  <span className={cn("font-display font-bold text-xl tabular-nums", ganhoLiquido >= 0 ? "text-emerald-500" : "text-destructive")}>
+                    {fmtBRL(ganhoLiquido)}
+                  </span>
+                </div>
               </CardContent>
             </Card>
 
+            {/* EXTRATO ANALÍTICO */}
             <Card>
               <CardHeader>
-                <CardTitle>Esta semana vs. semana passada</CardTitle>
+                <CardTitle className="text-base">📋 Extrato de Lançamentos</CardTitle>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <ComparativoTable rows={comparativoSemanas} colA="Esta semana" colB="Semana passada" />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Este mês vs. mês passado</CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <ComparativoTable rows={comparativoMeses} colA="Este mês" colB="Mês passado" />
+              <CardContent>
+                {extrato.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">Nenhum lançamento no período.</p>
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Conta</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pageRows.map((row) => (
+                          <TableRow key={row.key}>
+                            <TableCell className="whitespace-nowrap text-xs">
+                              {fmtData(row.data)}
+                              {row.data > hoje && (
+                                <Badge variant="outline" className="ml-2 text-[9px]">📅 Previsto</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs">{row.tipo}</TableCell>
+                            <TableCell className="text-xs">
+                              {row.tipo === "Corrida" ? (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <PlataformaDot plataforma={row.plataforma} size={8} />
+                                  {row.conta}
+                                </span>
+                              ) : row.conta}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[260px] truncate">{row.descricao}</TableCell>
+                            <TableCell className={cn(
+                              "text-right tabular-nums font-semibold text-xs",
+                              row.cor === "verde" ? "text-emerald-500" : "text-rose-500",
+                            )}>
+                              {row.cor === "vermelho" ? "-" : ""}{fmtBRL(row.valor)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="flex items-center justify-between pt-4 text-xs text-muted-foreground">
+                      <span>{extrato.length} lançamento(s)</span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
+                        <span>Página {page} de {totalPages}</span>
+                        <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </>
         )}
       </div>
+
+      {/* Modais */}
+      {lancamentoTipo && (
+        <LancamentoModal
+          open
+          tipo={lancamentoTipo}
+          onOpenChange={(o) => !o && setLancamentoTipo(null)}
+          onSaved={refresh}
+        />
+      )}
+
+      <Dialog open={!!drillConta} onOpenChange={(o) => !o && setDrillConta(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{drillConta?.conta}</DialogTitle>
+            <DialogDescription>Lançamentos que compõem este valor no período.</DialogDescription>
+          </DialogHeader>
+          {drillRows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Sem lançamentos.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Plataforma</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {drillRows.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-xs whitespace-nowrap">{fmtData(r.data)}</TableCell>
+                    <TableCell className="text-xs">{r.descricao}</TableCell>
+                    <TableCell className="text-xs">{r.plataforma}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums font-semibold">{fmtBRL(r.valor)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
 
-function Line2({ label, value, bold, muted }: { label: string; value: string; bold?: boolean; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className={cn("text-sm", muted ? "text-muted-foreground" : "")}>{label}</span>
-      <span className={cn("tabular-nums", bold ? "font-display font-bold text-lg" : "font-semibold")}>{value}</span>
-    </div>
-  );
+function calcGanhoBrutoSimples(rides: RideRow[], lancs: Lancamento[], r: { from: Date; to: Date }): number {
+  let total = 0;
+  for (const ride of rides) {
+    if (inRangeStr(rideDateKey(ride), r.from, r.to)) total += Number(ride.valor_bruto || 0);
+  }
+  for (const l of lancs) {
+    if (l.tipo === "ganho" && inRangeStr(l.data, r.from, r.to)) total += Number(l.valor || 0);
+  }
+  return total;
 }
 
-function MiniCard({ title, value, hint, positive }: { title: string; value: string; hint?: string; positive?: boolean }) {
+function fmtData(yyyyMmDd: string): string {
+  try {
+    return format(parseISO(yyyyMmDd), "dd/MM/yyyy");
+  } catch {
+    return yyyyMmDd;
+  }
+}
+
+function BigCard({ title, value, positive, negative }: { title: string; value: number; positive?: boolean; negative?: boolean }) {
   return (
     <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{title}</p>
-        <p
-          className={cn(
-            "text-lg font-display font-bold mt-1 tabular-nums",
-            positive === true && "text-emerald-600 dark:text-emerald-400",
-            positive === false && "text-destructive"
-          )}
-        >
-          {value}
+      <CardContent className="p-5">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{title}</p>
+        <p className={cn(
+          "mt-2 font-display font-bold text-3xl tabular-nums",
+          positive && "text-emerald-500",
+          negative && "text-rose-500",
+        )}>
+          {fmtBRL(value)}
         </p>
-        {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
       </CardContent>
     </Card>
   );
 }
 
+function DRESecao({
+  titulo, total, ordem, valores, totalColor, onClickConta,
+}: {
+  titulo: string;
+  total: number;
+  ordem: string[];
+  valores: Record<string, number>;
+  totalColor: string;
+  onClickConta: (c: string) => void;
+}) {
+  const linhas = ordem.filter((k) => (valores[k] || 0) > 0);
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between border-b border-border/60 pb-2">
+        <span className="font-display font-bold text-sm uppercase tracking-wide">{titulo}</span>
+        <span className={cn("font-display font-bold tabular-nums", totalColor)}>{fmtBRL(total)}</span>
+      </div>
+      {linhas.map((conta) => (
+        <button
+          key={conta}
+          type="button"
+          onClick={() => onClickConta(conta)}
+          className="w-full flex items-center justify-between py-1.5 px-2 text-sm rounded hover:bg-muted/50 transition-colors"
+        >
+          <span className="text-muted-foreground">{conta}</span>
+          <span className="tabular-nums font-medium">{fmtBRL(valores[conta])}</span>
+        </button>
+      ))}
+      {linhas.length === 0 && <p className="text-xs text-muted-foreground italic py-1.5 px-2">Sem lançamentos no período.</p>}
+    </div>
+  );
+}
+
 function MetaCard({ titulo, atual, meta }: { titulo: string; atual: number; meta: number }) {
-  // Sem meta configurada
   if (!meta || meta <= 0) {
     return (
       <Card>
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-4 space-y-2">
           <p className="text-sm font-medium">{titulo}</p>
-          <div className="flex items-baseline justify-between">
-            <span className="font-display font-bold text-xl tabular-nums">{fmtBRL(atual)}</span>
-            <span className="text-xs text-muted-foreground">/ —</span>
-          </div>
+          <p className="font-display font-bold text-xl tabular-nums">{fmtBRL(atual)}</p>
           <p className="text-xs text-muted-foreground italic">Meta não configurada</p>
         </CardContent>
       </Card>
     );
   }
-
-  const pctRaw = (atual / meta) * 100;
-  const atingida = pctRaw >= 100;
-  const pctClamped = Math.min(100, Math.max(0, pctRaw));
-
-  // Cor conforme faixa
-  const corHex =
-    pctRaw >= 100 ? "#22C55E" :
-    pctRaw >= 80 ? "#EAB308" :
-    pctRaw >= 50 ? "#F97316" :
-    "#EF4444";
-
-  // Gradiente da barra (ajusta intensidade até a posição atingida)
-  const gradiente = atingida
-    ? "linear-gradient(90deg, #22C55E 0%, #22C55E 100%)"
-    : "linear-gradient(90deg, #EF4444 0%, #F97316 50%, #EAB308 80%, #22C55E 100%)";
-
+  const pct = Math.min(100, (atual / meta) * 100);
+  const atingida = atual >= meta;
   return (
-    <Card className={cn("transition-all", atingida && "border-emerald-500 shadow-[0_0_24px_-4px_rgba(34,197,94,0.5)]")}>
-      <CardContent className="p-4 space-y-3">
+    <Card className={cn(atingida && "border-emerald-500/60")}>
+      <CardContent className="p-4 space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">{titulo}</p>
-          {atingida && <Trophy className="h-5 w-5 text-emerald-500" />}
+          {atingida && <Trophy className="h-4 w-4 text-emerald-500" />}
         </div>
-
         <div className="flex items-baseline justify-between">
           <span className="font-display font-bold text-xl tabular-nums">{fmtBRL(atual)}</span>
           <span className="text-xs text-muted-foreground">/ {fmtBRL(meta)}</span>
         </div>
-
-        {/* Termômetro */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold tabular-nums w-12 shrink-0" style={{ color: corHex }}>
-            {atingida ? "100%+" : `${Math.round(pctRaw)}%`}
-          </span>
-
-          <div className="relative flex-1 pt-3">
-            {/* Marcador triangular */}
-            <div
-              className="absolute -top-0.5 -translate-x-1/2 transition-all"
-              style={{ left: `${pctClamped}%` }}
-              aria-hidden="true"
-            >
-              <div
-                className="w-0 h-0"
-                style={{
-                  borderLeft: "5px solid transparent",
-                  borderRight: "5px solid transparent",
-                  borderTop: `7px solid ${corHex}`,
-                }}
-              />
-            </div>
-
-            {/* Trilha + preenchimento */}
-            <div className="relative h-2 rounded-full overflow-hidden" style={{ background: "#2A2D3A" }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${pctClamped}%`,
-                  background: gradiente,
-                  backgroundSize: atingida ? "100% 100%" : `${100 / (pctClamped / 100 || 1)}% 100%`,
-                  boxShadow: atingida ? "0 0 10px rgba(34,197,94,0.6)" : undefined,
-                }}
-              />
-            </div>
-          </div>
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500" style={{ width: `${pct}%` }} />
         </div>
+        <p className="text-xs text-muted-foreground">{pct.toFixed(0)}% da meta</p>
       </CardContent>
     </Card>
   );
 }
 
-interface CompRow {
-  metric: string;
-  a: number;
-  b: number;
-  format: "brl" | "num" | "rkm" | "rh";
-  aHasData: boolean;
-  bHasData: boolean;
-}
-
-function buildComparativoHojeOntem(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
-  const now = nowInTZ();
-  const aFrom = startOfDay(now);
-  const aTo = endOfDay(now);
-  const ontem = subDays(now, 1);
-  const bFrom = startOfDay(ontem);
-  const bTo = endOfDay(ontem);
-  return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
-    { includeTicket: true },
-  );
-}
-
-function buildComparativoSemanas(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
-  const now = nowInTZ();
-  const aFrom = startOfWeek(now, { weekStartsOn: 1 });
-  const aTo = endOfWeek(now, { weekStartsOn: 1 });
-  const bFrom = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-  const bTo = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-  return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
-    { includeTicket: true },
-  );
-}
-
-function buildComparativoMeses(rides: Ride[], vehicle: Vehicle | null, jornadas: JornadaRecord[], passes: UberPasse[]): CompRow[] {
-  const now = nowInTZ();
-  const aFrom = startOfMonth(now);
-  const aTo = endOfMonth(now);
-  const bFrom = startOfMonth(subMonths(now, 1));
-  const bTo = endOfMonth(subMonths(now, 1));
-  return makeComp(
-    calcPeriodMetrics(rides, vehicle, aFrom, aTo, jornadas, passes),
-    calcPeriodMetrics(rides, vehicle, bFrom, bTo, jornadas, passes),
-    { includeTicket: true },
-  );
-}
-
-function makeComp(
-  a: ReturnType<typeof calcPeriodMetrics>,
-  b: ReturnType<typeof calcPeriodMetrics>,
-  opts: { includeTicket?: boolean } = {},
-): CompRow[] {
-  const aHas = a.numCorridas > 0;
-  const bHas = b.numCorridas > 0;
-  const ticketA = a.numCorridas > 0 ? a.ganhoBruto / a.numCorridas : 0;
-  const ticketB = b.numCorridas > 0 ? b.ganhoBruto / b.numCorridas : 0;
-  const rows: CompRow[] = [
-    { metric: "Ganho real", a: a.ganhoBruto, b: b.ganhoBruto, format: "brl", aHasData: aHas, bHasData: bHas },
-    { metric: "Corridas realizadas", a: a.numCorridas, b: b.numCorridas, format: "num", aHasData: aHas, bHasData: bHas },
-    { metric: "Km rodados", a: a.kmTotal, b: b.kmTotal, format: "num", aHasData: aHas, bHasData: bHas },
-    { metric: "R$ / hora", a: a.ganhoBrutoPorHora, b: b.ganhoBrutoPorHora, format: "rh", aHasData: aHas, bHasData: bHas },
-    { metric: "R$ / km", a: a.ganhoBrutoPorKm, b: b.ganhoBrutoPorKm, format: "rkm", aHasData: aHas, bHasData: bHas },
-  ];
-  if (opts.includeTicket) {
-    rows.push({ metric: "Ticket médio", a: ticketA, b: ticketB, format: "brl", aHasData: aHas, bHasData: bHas });
-  }
-  return rows;
-}
-
-/** Constrói série horária para o filtro "hoje": uma barra/ponto por hora (00h..23h),
- *  somando o valor das corridas iniciadas naquela hora (em America/Sao_Paulo). */
-function buildHourlySeriesToday(rides: Ride[], from: Date, to: Date) {
-  const dayRides = filterRidesInRange(rides, from, to);
-  const buckets: Record<number, { ganho: number; n: number }> = {};
-  for (const r of dayRides) {
-    let hour = 0;
-    if (r.horario_inicio) {
-      const parts = new Intl.DateTimeFormat("en-GB", {
-        timeZone: TZ,
-        hour: "2-digit",
-        hour12: false,
-      }).formatToParts(new Date(r.horario_inicio));
-      hour = Number(parts.find((p) => p.type === "hour")?.value || 0);
-      if (hour === 24) hour = 0;
-    }
-    if (!buckets[hour]) buckets[hour] = { ganho: 0, n: 0 };
-    buckets[hour].ganho += Number(r.valor_bruto || 0);
-    buckets[hour].n += 1;
-  }
-  // Eixo X fixo: 00h..23h (24 horas completas), independentemente da hora atual.
-  const out: { date: string; label: string; ganhoReal: number; ganhoBruto: number; numCorridas: number }[] = [];
-  for (let h = 0; h <= 23; h++) {
-    const b = buckets[h] || { ganho: 0, n: 0 };
-    out.push({
-      date: String(h),
-      label: `${String(h).padStart(2, "0")}h`,
-      ganhoReal: b.ganho,
-      ganhoBruto: b.ganho,
-      numCorridas: b.n,
-    });
-  }
-  return out;
-}
-
-function ComparativoTable({ rows, colA, colB }: { rows: CompRow[]; colA: string; colB: string }) {
+function LancarDropdown({ onPick }: { onPick: (t: LancamentoTipo) => void }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Métrica</TableHead>
-          <TableHead className="text-right">{colA}</TableHead>
-          <TableHead className="text-right">{colB}</TableHead>
-          <TableHead className="text-right">Variação</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => {
-          const semBase = !r.bHasData;
-          const diff = r.a - r.b;
-          const pct = !semBase && r.b !== 0 ? (diff / Math.abs(r.b)) * 100 : 0;
-          const up = diff > 0;
-          const flat = diff === 0;
-          return (
-            <TableRow key={r.metric}>
-              <TableCell className="font-medium">{r.metric}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {r.aHasData ? formatVal(r.a, r.format) : <span className="text-muted-foreground">—</span>}
-              </TableCell>
-              <TableCell className="text-right tabular-nums text-muted-foreground">
-                {r.bHasData ? formatVal(r.b, r.format) : "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {semBase ? (
-                  <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
-                    <Minus className="h-3 w-3" />
-                    <span className="tabular-nums">—</span>
-                    <span className="hidden sm:inline text-xs">Sem dados anteriores</span>
-                  </span>
-                ) : (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 tabular-nums font-semibold text-sm",
-                      flat ? "text-muted-foreground" : up ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                    )}
-                  >
-                    {flat ? <Minus className="h-3 w-3" /> : up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                    {pct.toFixed(1)}%
-                  </span>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="gradient" size="sm" className="gap-2">
+          <Plus className="h-4 w-4" /> Lançar
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={() => onPick("ganho")}>💰 Lançar ganho</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("custo")}>💸 Lançar custo</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
-}
-
-function formatVal(v: number, fmt: CompRow["format"]): string {
-  switch (fmt) {
-    case "brl":
-      return fmtBRL(v);
-    case "num":
-      return fmtNumber(v, v % 1 === 0 ? 0 : 1);
-    case "rkm":
-      return `R$ ${fmtNumber(v)}/km`;
-    case "rh":
-      return `R$ ${fmtNumber(v)}/h`;
-  }
 }
 
 function CustomRangePicker({
-  custom,
-  onApply,
+  custom, onApply,
 }: {
   custom: { from: Date; to: Date } | undefined;
   onApply: (r: { from: Date; to: Date } | undefined) => void;
@@ -743,17 +570,9 @@ function CustomRangePicker({
   const [draft, setDraft] = useState<{ from?: Date; to?: Date } | undefined>(
     custom ? { from: custom.from, to: custom.to } : undefined,
   );
-
   useEffect(() => {
     if (open) setDraft(custom ? { from: custom.from, to: custom.to } : undefined);
   }, [open, custom]);
-
-  const handleApply = () => {
-    if (draft?.from && draft?.to) {
-      onApply({ from: draft.from, to: draft.to });
-      setOpen(false);
-    }
-  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -775,15 +594,15 @@ function CustomRangePicker({
           <div className="text-xs text-muted-foreground">
             {draft?.from && draft?.to
               ? `${format(draft.from, "dd/MM/yyyy")} → ${format(draft.to, "dd/MM/yyyy")}`
-              : "Selecione data inicial e final"}
+              : "Inclui datas futuras p/ provisão"}
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button size="sm" onClick={handleApply} disabled={!draft?.from || !draft?.to}>
-              Aplicar período
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button
+              size="sm"
+              disabled={!draft?.from || !draft?.to}
+              onClick={() => { if (draft?.from && draft?.to) { onApply({ from: draft.from, to: draft.to }); setOpen(false); } }}
+            >Aplicar</Button>
           </div>
         </div>
       </PopoverContent>
