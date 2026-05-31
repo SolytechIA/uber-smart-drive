@@ -65,6 +65,7 @@ import {
 } from "@/lib/financeiro";
 import { exportCSV } from "@/lib/csvExport";
 import { formatHorasHHMM } from "@/lib/formatters";
+import { RelatorioKpiPanel } from "@/components/RelatorioKpiPanel";
 
 // ============================================================
 // Helpers
