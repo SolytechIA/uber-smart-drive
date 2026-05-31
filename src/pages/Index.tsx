@@ -79,13 +79,13 @@ export default function Index() {
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div className="flex flex-col justify-center">
             <Badge variant="outline" className="mb-4 w-fit border-primary/30 bg-primary/5 text-primary">
-              <Sparkles className="mr-1 h-3 w-3" /> Análise por IA • Dados em tempo real • Fácil de usar
+              🚗 Uber • 99 • InDrive • Qualquer plataforma
             </Badge>
             <h1 className="font-display text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
               Transforme cada corrida em <span className="gradient-text">lucro real</span>
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
-              Painel inteligente para motoristas Uber. Controle seus ganhos, reduza custos e tome decisões com dados reais e inteligência artificial.
+              Painel inteligente para motoristas de aplicativo. Funciona com Uber, 99, InDrive e qualquer plataforma. Controle seus ganhos reais, reduza custos e tome decisões com inteligência artificial.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link to="/cadastro">
