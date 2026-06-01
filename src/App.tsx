@@ -73,13 +73,31 @@ const App = () => (
               }
             />
             <Route
-              path="/relatorios"
+              path="/dashboard/painel-de-cards"
               element={
                 <ProtectedRoute requireVehicle>
                   <Relatorios />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/dashboard/graficos-financeiros"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <GraficosFinanceiros />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/graficos-performance"
+              element={
+                <ProtectedRoute requireVehicle>
+                  <GraficosPerformance />
+                </ProtectedRoute>
+              }
+            />
+            {/* Redireciona a rota antiga */}
+            <Route path="/relatorios" element={<Navigate to="/dashboard/painel-de-cards" replace />} />
             <Route
               path="/analise-ia"
               element={
