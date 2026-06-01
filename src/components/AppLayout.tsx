@@ -2,14 +2,17 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
+  BarChart3,
   Brain,
   ChevronLeft,
   DollarSign,
-  FileText,
+  Gauge,
+  LayoutGrid,
   LogOut,
   Menu,
   Settings,
   Shield,
+  TrendingUp,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -27,10 +30,12 @@ interface NavItem {
   icon: typeof Activity;
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { to: "/dashboard/operacional", label: "Operacional", icon: Activity },
   { to: "/dashboard/financeiro", label: "Financeiro", icon: DollarSign },
-  { to: "/relatorios", label: "Cards e Relatórios", icon: FileText },
+  { to: "/dashboard/graficos-financeiros", label: "Gráficos Financeiros", icon: TrendingUp },
+  { to: "/dashboard/painel-de-cards", label: "Painel de Cards", icon: LayoutGrid },
+  { to: "/dashboard/graficos-performance", label: "Gráficos de Performance", icon: Gauge },
   { to: "/analise-ia", label: "Análise IA", icon: Brain },
   { to: "/configuracoes", label: "Config.", icon: Settings },
 ];
