@@ -200,19 +200,6 @@ export default function GraficosFinanceiros() {
     })).sort((a,b) => b.ticket - a.ticket);
   }, [ridesIn]);
 
-  // Combustível vs bruto (por dia)
-  const combVsBruto = useMemo(() => {
-    return daySeries.map(d => {
-      // Find combustível entries for that day label
-      return d;
-    }).map(d => {
-      const dayStr = Object.entries(
-        ridesIn.reduce((acc, r) => { const k = rideDateKey(r); if (k) acc[k] = (acc[k]||0); return acc; }, {} as Record<string, number>)
-      );
-      return d;
-    });
-  }, [daySeries, ridesIn]);
-
   const combVsBrutoData = useMemo(() => {
     const combByDay: Record<string, number> = {};
     for (const l of lancsIn) {
