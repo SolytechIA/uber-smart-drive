@@ -151,13 +151,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              {isAdmin && (
-                <Link to="/admin" title="Admin">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Shield className="h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
               <ThemeToggle />
               <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
