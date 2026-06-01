@@ -3,7 +3,7 @@ import {
   startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   format, parseISO,
 } from "date-fns";
-import { CalendarIcon, Plus, Trophy } from "lucide-react";
+import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,17 +13,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtBRL, nowInTZ, resolveGoals, type Goals, type Vehicle } from "@/lib/financeiro";
 import { PlataformaDot, plataformaColor } from "@/lib/plataformas";
-import { LancamentoModal, type LancamentoTipo } from "@/components/dashboard/LancamentoModal";
+import { LancamentoModal, type LancamentoTipo, type LancamentoEditData } from "@/components/dashboard/LancamentoModal";
 
 type Periodo = "hoje" | "semana" | "mes" | "acumulado" | "personalizado";
 
