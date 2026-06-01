@@ -42,15 +42,24 @@ const CONTAS_CUSTO = [
   "Outros Custos Diversos",
 ];
 
+export interface LancamentoEditData {
+  id: string;
+  conta: string;
+  descricao: string | null;
+  valor: number;
+  data: string;
+}
+
 interface LancamentoModalProps {
   open: boolean;
   tipo: LancamentoTipo;
   onOpenChange: (o: boolean) => void;
   onSaved?: () => void;
   defaultDate?: Date;
+  editing?: LancamentoEditData | null;
 }
 
-export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate }: LancamentoModalProps) {
+export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate, editing }: LancamentoModalProps) {
   const { user } = useAuth();
   const contas = tipo === "ganho" ? CONTAS_GANHO : CONTAS_CUSTO;
   const [data, setData] = useState<Date>(defaultDate ?? nowInTZ());
@@ -61,12 +70,19 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
 
   useEffect(() => {
     if (open) {
-      setData(defaultDate ?? nowInTZ());
-      setConta(contas[0]);
-      setDescricao("");
-      setValor("");
+      if (editing) {
+        setData(new Date(editing.data + "T12:00:00"));
+        setConta(editing.conta);
+        setDescricao(editing.descricao || "");
+        setValor(String(editing.valor).replace(".", ","));
+      } else {
+        setData(defaultDate ?? nowInTZ());
+        setConta(contas[0]);
+        setDescricao("");
+        setValor("");
+      }
     }
-  }, [open, tipo, defaultDate]);
+  }, [open, tipo, defaultDate, editing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,26 +97,28 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("lancamentos" as any).insert({
-      user_id: user.id,
+    const payload = {
       tipo,
       conta,
       descricao: descricao.trim() || null,
       valor: v,
       data: format(data, "yyyy-MM-dd"),
-    });
+    };
+    const { error } = editing
+      ? await supabase.from("lancamentos" as any).update(payload).eq("id", editing.id).eq("user_id", user.id)
+      : await supabase.from("lancamentos" as any).insert({ ...payload, user_id: user.id });
     setSaving(false);
     if (error) {
       console.error("[LancamentoModal]", error);
       toast.error(`Erro ao salvar: ${error.message}`);
       return;
     }
-    toast.success(tipo === "ganho" ? "✅ Ganho lançado" : "✅ Custo lançado");
+    toast.success(editing ? "✅ Lançamento atualizado" : tipo === "ganho" ? "✅ Ganho lançado" : "✅ Custo lançado");
     onSaved?.();
     onOpenChange(false);
   };
 
-  const titulo = tipo === "ganho" ? "Lançar Ganho" : "Lançar Custo";
+  const titulo = editing ? "Editar Lançamento" : tipo === "ganho" ? "Lançar Ganho" : "Lançar Custo";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
