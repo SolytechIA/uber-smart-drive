@@ -3,7 +3,7 @@ import {
   startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   format, parseISO,
 } from "date-fns";
-import { CalendarIcon, Plus, Trophy } from "lucide-react";
+import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,17 +13,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtBRL, nowInTZ, resolveGoals, type Goals, type Vehicle } from "@/lib/financeiro";
 import { PlataformaDot, plataformaColor } from "@/lib/plataformas";
-import { LancamentoModal, type LancamentoTipo } from "@/components/dashboard/LancamentoModal";
+import { LancamentoModal, type LancamentoTipo, type LancamentoEditData } from "@/components/dashboard/LancamentoModal";
 
 type Periodo = "hoje" | "semana" | "mes" | "acumulado" | "personalizado";
 
@@ -103,6 +108,11 @@ export default function DashboardFinanceiro() {
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [lancamentoTipo, setLancamentoTipo] = useState<LancamentoTipo | null>(null);
+  const [editingLanc, setEditingLanc] = useState<LancamentoEditData | null>(null);
+  const [viewLanc, setViewLanc] = useState<{
+    tipo: string; conta: string; descricao: string; valor: number; data: string; plataforma?: string | null;
+  } | null>(null);
+  const [deleteLancId, setDeleteLancId] = useState<string | null>(null);
   const [drillConta, setDrillConta] = useState<{ conta: string; tipo: "ganho" | "custo" } | null>(null);
 
   const refresh = async () => {
@@ -191,6 +201,7 @@ export default function DashboardFinanceiro() {
       valor: number;
       cor: "verde" | "vermelho";
       plataforma?: string | null;
+      lanc?: Lancamento;
     };
     const linhas: Linha[] = [];
     for (const r of ridesNoPeriodo) {
@@ -215,11 +226,29 @@ export default function DashboardFinanceiro() {
         descricao: l.descricao || "—",
         valor: Number(l.valor || 0),
         cor: l.tipo === "ganho" ? "verde" : "vermelho",
+        lanc: l,
       });
     }
     linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
     return linhas;
   }, [ridesNoPeriodo, lancsNoPeriodo]);
+
+  const handleEditLanc = (l: Lancamento) => {
+    setEditingLanc({ id: l.id, conta: l.conta, descricao: l.descricao, valor: Number(l.valor), data: l.data });
+    setLancamentoTipo(l.tipo);
+  };
+
+  const handleDeleteLanc = async () => {
+    if (!deleteLancId || !user) return;
+    const { error } = await supabase.from("lancamentos" as any).delete().eq("id", deleteLancId).eq("user_id", user.id);
+    setDeleteLancId(null);
+    if (error) {
+      toast.error(`Erro ao excluir: ${error.message}`);
+      return;
+    }
+    toast.success("✅ Lançamento excluído");
+    refresh();
+  };
 
   const totalPages = Math.max(1, Math.ceil(extrato.length / PAGE_SIZE));
   const pageRows = extrato.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -348,11 +377,12 @@ export default function DashboardFinanceiro() {
                           <TableHead>Conta</TableHead>
                           <TableHead>Descrição</TableHead>
                           <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-right w-[120px]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {pageRows.map((row) => (
-                          <TableRow key={row.key}>
+                          <TableRow key={row.key} className="group">
                             <TableCell className="whitespace-nowrap text-xs">
                               {fmtData(row.data)}
                               {row.data > hoje && (
@@ -374,6 +404,48 @@ export default function DashboardFinanceiro() {
                               row.cor === "verde" ? "text-emerald-500" : "text-rose-500",
                             )}>
                               {row.cor === "vermelho" ? "-" : ""}{fmtBRL(row.valor)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  title="Visualizar"
+                                  onClick={() => setViewLanc({
+                                    tipo: row.tipo,
+                                    conta: row.conta,
+                                    descricao: row.descricao,
+                                    valor: row.valor,
+                                    data: row.data,
+                                    plataforma: row.plataforma,
+                                  })}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                                {row.lanc && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      title="Editar"
+                                      onClick={() => handleEditLanc(row.lanc!)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-rose-500 hover:text-rose-500"
+                                      title="Excluir"
+                                      onClick={() => setDeleteLancId(row.lanc!.id)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -400,10 +472,56 @@ export default function DashboardFinanceiro() {
         <LancamentoModal
           open
           tipo={lancamentoTipo}
-          onOpenChange={(o) => !o && setLancamentoTipo(null)}
+          editing={editingLanc}
+          onOpenChange={(o) => {
+            if (!o) {
+              setLancamentoTipo(null);
+              setEditingLanc(null);
+            }
+          }}
           onSaved={refresh}
         />
       )}
+
+      {/* Visualizar (somente leitura) */}
+      <Dialog open={!!viewLanc} onOpenChange={(o) => !o && setViewLanc(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Visualizar Lançamento</DialogTitle>
+            <DialogDescription>Detalhes completos do registro.</DialogDescription>
+          </DialogHeader>
+          {viewLanc && (
+            <div className="space-y-3 text-sm">
+              <Field label="Data" value={fmtData(viewLanc.data)} />
+              <Field label="Tipo" value={viewLanc.tipo} />
+              <Field label={viewLanc.tipo === "Corrida" ? "Plataforma" : "Conta"} value={viewLanc.conta} />
+              <Field label="Descrição" value={viewLanc.descricao || "—"} />
+              <Field
+                label="Valor"
+                value={fmtBRL(viewLanc.valor)}
+                valueClass={cn(viewLanc.tipo === "Custo" ? "text-rose-500" : "text-emerald-500", "font-bold")}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewLanc(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de exclusão */}
+      <AlertDialog open={!!deleteLancId} onOpenChange={(o) => !o && setDeleteLancId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este lançamento?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteLanc} className="bg-rose-500 hover:bg-rose-600">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!drillConta} onOpenChange={(o) => !o && setDrillConta(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -438,6 +556,15 @@ export default function DashboardFinanceiro() {
         </DialogContent>
       </Dialog>
     </AppLayout>
+  );
+}
+
+function Field({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-border/40 pb-2">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className={cn("text-right", valueClass)}>{value}</span>
+    </div>
   );
 }
 

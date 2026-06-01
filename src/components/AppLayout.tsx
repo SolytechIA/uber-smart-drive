@@ -2,14 +2,17 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
+  BarChart3,
   Brain,
   ChevronLeft,
   DollarSign,
-  FileText,
+  Gauge,
+  LayoutGrid,
   LogOut,
   Menu,
   Settings,
   Shield,
+  TrendingUp,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -27,10 +30,12 @@ interface NavItem {
   icon: typeof Activity;
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { to: "/dashboard/operacional", label: "Operacional", icon: Activity },
   { to: "/dashboard/financeiro", label: "Financeiro", icon: DollarSign },
-  { to: "/relatorios", label: "Cards e Relatórios", icon: FileText },
+  { to: "/dashboard/graficos-financeiros", label: "Gráficos Financeiros", icon: TrendingUp },
+  { to: "/dashboard/painel-de-cards", label: "Painel de Cards", icon: LayoutGrid },
+  { to: "/dashboard/graficos-performance", label: "Gráficos de Performance", icon: Gauge },
   { to: "/analise-ia", label: "Análise IA", icon: Brain },
   { to: "/configuracoes", label: "Config.", icon: Settings },
 ];
@@ -44,6 +49,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const isActive = (to: string) =>
     location.pathname === to || location.pathname.startsWith(to + "/");
+
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Shield } as NavItem] : []),
+  ];
 
   const handleSignOut = async () => {
     await signOut();
@@ -126,14 +136,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </Link>
                 )}
               </div>
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <Shield className="h-3.5 w-3.5" /> Admin
-                </Link>
-              )}
+              {/* Admin agora aparece como item de menu (visível só para admin) */}
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <Button
@@ -148,13 +151,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              {isAdmin && (
-                <Link to="/admin" title="Admin">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Shield className="h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
               <ThemeToggle />
               <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
@@ -187,7 +183,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-center justify-around border-t border-border/60 bg-card/95 backdrop-blur md:hidden">
-        {[...navItems, ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Shield } as NavItem] : [])].map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.to);
           return (

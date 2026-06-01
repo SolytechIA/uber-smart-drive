@@ -3,6 +3,7 @@ import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, end
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,13 +33,21 @@ function KpiCard({ label, value, hint }: { label: string; value: string; hint?: 
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="mt-1 text-2xl font-bold">{value}</p>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
+        {hint && <p className="mt-1 text-[10px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
   );
 }
+
+const LABELS: Record<Periodo, string> = {
+  hoje: "Hoje",
+  semana: "Semana",
+  mes: "Mês",
+  acumulado: "Acumulado",
+  personalizado: "Personalizado",
+};
 
 export function RelatorioKpiPanel({ rides, vehicle, jornadas, passes }: Props) {
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
@@ -97,26 +106,26 @@ export function RelatorioKpiPanel({ rides, vehicle, jornadas, passes }: Props) {
     return (boas / ridesInRange.length) * 100;
   }, [ridesInRange]);
 
-  const opts: { value: Periodo; label: string }[] = [
-    { value: "hoje", label: "Hoje" },
-    { value: "semana", label: "Semana" },
-    { value: "mes", label: "Mês" },
-    { value: "acumulado", label: "Acumulado" },
-    { value: "personalizado", label: "Personalizado" },
-  ];
+  const opts: Periodo[] = ["hoje", "semana", "mes", "acumulado", "personalizado"];
+
+  const badgeText =
+    periodo === "personalizado"
+      ? `${format(custom.from, "dd/MM", { locale: ptBR })} – ${format(custom.to, "dd/MM", { locale: ptBR })}`
+      : LABELS[periodo];
 
   return (
     <section className="space-y-4">
+      {/* Filtro único */}
       <div className="flex flex-wrap items-center gap-2">
         {opts.map((o) => (
           <Button
-            key={o.value}
+            key={o}
             size="sm"
-            variant={periodo === o.value ? "default" : "outline"}
-            onClick={() => setPeriodo(o.value)}
-            className={cn(periodo === o.value && "gradient-bg")}
+            variant={periodo === o ? "default" : "outline"}
+            onClick={() => setPeriodo(o)}
+            className={cn(periodo === o && "gradient-bg")}
           >
-            {o.label}
+            {LABELS[o]}
           </Button>
         ))}
         {periodo === "personalizado" && (
@@ -133,21 +142,52 @@ export function RelatorioKpiPanel({ rides, vehicle, jornadas, passes }: Props) {
                 selected={{ from: custom.from, to: custom.to }}
                 onSelect={(r) => r?.from && r?.to && setCustom({ from: r.from, to: r.to })}
                 numberOfMonths={2}
+                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
         )}
       </div>
 
+      {/* Badge de período ativo */}
+      <Badge variant="outline" className="text-xs">
+        📅 Exibindo: {badgeText}
+      </Badge>
+
+      {/* Linha 1 — métricas financeiras */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard label="Bruto do período" value={fmtBRL(m.ganhoBruto)} />
-        <KpiCard label="R$/km médio" value={fmtBRL(rPorKm)} />
-        <KpiCard label="R$/hora médio" value={fmtBRL(rPorHora)} />
+        <KpiCard label="Ganho real" value={fmtBRL(m.ganhoReal)} hint="Após custos" />
+        <KpiCard label="R$/km" value={fmtBRL(rPorKm)} />
+        <KpiCard label="R$/hora" value={fmtBRL(rPorHora)} />
+      </div>
+
+      {/* Linha 2 — métricas operacionais */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard label="Ticket médio" value={fmtBRL(ticketMedio)} />
-        <KpiCard label="Corridas realizadas" value={String(m.numCorridas)} />
+        <KpiCard label="Corridas" value={String(m.numCorridas)} />
         <KpiCard label="Km rodados" value={`${fmtNumber(m.kmTotal, 1)} km`} />
         <KpiCard label="Horas no volante" value={formatHorasHHMM(m.horasTrabalhadas)} />
-        <KpiCard label="% corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
+      </div>
+
+      {/* Linha 3 — métricas de qualidade */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard label="% Corridas boas" value={`${fmtNumber(pctBoas, 0)}%`} />
+        <KpiCard
+          label="Custo / corrida"
+          value={m.numCorridas > 0 ? fmtBRL(m.custoPorCorrida) : "—"}
+          hint="Combustível + fixo + passe"
+        />
+        <KpiCard label="Custo combustível" value={fmtBRL(m.custoCombustivel)} />
+        <KpiCard label="Custo fixo diário" value={fmtBRL(m.custoFixoDiario)} />
+      </div>
+
+      {/* Linha 4 — comparativos */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard label="Custo total" value={fmtBRL(m.custoTotal)} />
+        <KpiCard label="Custo fixo no período" value={fmtBRL(m.custoFixoProporcional)} />
+        <KpiCard label="Ponto de equilíbrio /dia" value={fmtBRL(m.pontoEquilibrioDiario)} />
+        <KpiCard label="Dias no período" value={String(m.diasNoPeriodo)} />
       </div>
     </section>
   );
