@@ -472,10 +472,56 @@ export default function DashboardFinanceiro() {
         <LancamentoModal
           open
           tipo={lancamentoTipo}
-          onOpenChange={(o) => !o && setLancamentoTipo(null)}
+          editing={editingLanc}
+          onOpenChange={(o) => {
+            if (!o) {
+              setLancamentoTipo(null);
+              setEditingLanc(null);
+            }
+          }}
           onSaved={refresh}
         />
       )}
+
+      {/* Visualizar (somente leitura) */}
+      <Dialog open={!!viewLanc} onOpenChange={(o) => !o && setViewLanc(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Visualizar Lançamento</DialogTitle>
+            <DialogDescription>Detalhes completos do registro.</DialogDescription>
+          </DialogHeader>
+          {viewLanc && (
+            <div className="space-y-3 text-sm">
+              <Field label="Data" value={fmtData(viewLanc.data)} />
+              <Field label="Tipo" value={viewLanc.tipo} />
+              <Field label={viewLanc.tipo === "Corrida" ? "Plataforma" : "Conta"} value={viewLanc.conta} />
+              <Field label="Descrição" value={viewLanc.descricao || "—"} />
+              <Field
+                label="Valor"
+                value={fmtBRL(viewLanc.valor)}
+                valueClass={cn(viewLanc.tipo === "Custo" ? "text-rose-500" : "text-emerald-500", "font-bold")}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewLanc(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de exclusão */}
+      <AlertDialog open={!!deleteLancId} onOpenChange={(o) => !o && setDeleteLancId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este lançamento?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteLanc} className="bg-rose-500 hover:bg-rose-600">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!drillConta} onOpenChange={(o) => !o && setDrillConta(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
