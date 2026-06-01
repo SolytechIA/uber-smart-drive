@@ -1,13 +1,6 @@
 import { useMemo, useState } from "react";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import {
   Ride,
   Vehicle,
@@ -19,8 +12,7 @@ import {
   nowInTZ,
 } from "@/lib/financeiro";
 import { formatHorasHHMM } from "@/lib/formatters";
-
-type Periodo = "hoje" | "semana" | "mes" | "acumulado" | "personalizado";
+import { PeriodFilter, getPeriodRange, type Periodo } from "@/components/PeriodFilter";
 
 interface Props {
   rides: Ride[];
@@ -41,45 +33,25 @@ function KpiCard({ label, value, hint }: { label: string; value: string; hint?: 
   );
 }
 
-const LABELS: Record<Periodo, string> = {
-  hoje: "Hoje",
-  semana: "Semana",
-  mes: "Mês",
-  acumulado: "Acumulado",
-  personalizado: "Personalizado",
-};
-
 export function RelatorioKpiPanel({ rides, vehicle, jornadas, passes }: Props) {
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
-  const [custom, setCustom] = useState<{ from: Date; to: Date }>(() => {
-    const n = nowInTZ();
-    return { from: startOfDay(n), to: endOfDay(n) };
-  });
+  const [custom, setCustom] = useState<{ from: Date; to: Date } | undefined>();
 
   const { from, to } = useMemo(() => {
-    const n = nowInTZ();
-    switch (periodo) {
-      case "hoje":
-        return { from: startOfDay(n), to: endOfDay(n) };
-      case "semana":
-        return { from: startOfWeek(n, { weekStartsOn: 1 }), to: endOfWeek(n, { weekStartsOn: 1 }) };
-      case "mes":
-        return { from: startOfMonth(n), to: endOfMonth(n) };
-      case "acumulado": {
-        let min: Date | null = null;
-        for (const r of rides) {
-          const ref = r.data_corrida
-            ? new Date(r.data_corrida + "T12:00:00")
-            : r.horario_inicio
-              ? new Date(r.horario_inicio)
-              : null;
-          if (ref && (!min || ref < min)) min = ref;
-        }
-        return { from: min ? startOfDay(min) : startOfMonth(n), to: endOfDay(n) };
+    if (periodo === "acumulado") {
+      // Para acumulado, encontra a primeira corrida real
+      let min: Date | null = null;
+      for (const r of rides) {
+        const ref = r.data_corrida
+          ? new Date(r.data_corrida + "T12:00:00")
+          : r.horario_inicio
+            ? new Date(r.horario_inicio)
+            : null;
+        if (ref && (!min || ref < min)) min = ref;
       }
-      case "personalizado":
-        return { from: startOfDay(custom.from), to: endOfDay(custom.to) };
+      return { from: min ? startOfDay(min) : startOfDay(nowInTZ()), to: endOfDay(nowInTZ()) };
     }
+    return getPeriodRange(periodo, custom);
   }, [periodo, custom, rides]);
 
   const m = useMemo(
@@ -106,53 +78,10 @@ export function RelatorioKpiPanel({ rides, vehicle, jornadas, passes }: Props) {
     return (boas / ridesInRange.length) * 100;
   }, [ridesInRange]);
 
-  const opts: Periodo[] = ["hoje", "semana", "mes", "acumulado", "personalizado"];
-
-  const badgeText =
-    periodo === "personalizado"
-      ? `${format(custom.from, "dd/MM", { locale: ptBR })} – ${format(custom.to, "dd/MM", { locale: ptBR })}`
-      : LABELS[periodo];
-
   return (
     <section className="space-y-4">
-      {/* Filtro único */}
-      <div className="flex flex-wrap items-center gap-2">
-        {opts.map((o) => (
-          <Button
-            key={o}
-            size="sm"
-            variant={periodo === o ? "default" : "outline"}
-            onClick={() => setPeriodo(o)}
-            className={cn(periodo === o && "gradient-bg")}
-          >
-            {LABELS[o]}
-          </Button>
-        ))}
-        {periodo === "personalizado" && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(custom.from, "dd/MM/yyyy", { locale: ptBR })} – {format(custom.to, "dd/MM/yyyy", { locale: ptBR })}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="range"
-                selected={{ from: custom.from, to: custom.to }}
-                onSelect={(r) => r?.from && r?.to && setCustom({ from: r.from, to: r.to })}
-                numberOfMonths={2}
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
+      <PeriodFilter periodo={periodo} custom={custom} onChange={(p, c) => { setPeriodo(p); setCustom(c); }} />
 
-      {/* Badge de período ativo */}
-      <Badge variant="outline" className="text-xs">
-        📅 Exibindo: {badgeText}
-      </Badge>
 
       {/* Linha 1 — métricas financeiras */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
