@@ -377,11 +377,12 @@ export default function DashboardFinanceiro() {
                           <TableHead>Conta</TableHead>
                           <TableHead>Descrição</TableHead>
                           <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-right w-[120px]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {pageRows.map((row) => (
-                          <TableRow key={row.key}>
+                          <TableRow key={row.key} className="group">
                             <TableCell className="whitespace-nowrap text-xs">
                               {fmtData(row.data)}
                               {row.data > hoje && (
@@ -403,6 +404,48 @@ export default function DashboardFinanceiro() {
                               row.cor === "verde" ? "text-emerald-500" : "text-rose-500",
                             )}>
                               {row.cor === "vermelho" ? "-" : ""}{fmtBRL(row.valor)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  title="Visualizar"
+                                  onClick={() => setViewLanc({
+                                    tipo: row.tipo,
+                                    conta: row.conta,
+                                    descricao: row.descricao,
+                                    valor: row.valor,
+                                    data: row.data,
+                                    plataforma: row.plataforma,
+                                  })}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                                {row.lanc && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      title="Editar"
+                                      onClick={() => handleEditLanc(row.lanc!)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-rose-500 hover:text-rose-500"
+                                      title="Excluir"
+                                      onClick={() => setDeleteLancId(row.lanc!.id)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
