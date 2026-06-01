@@ -559,6 +559,15 @@ export default function DashboardFinanceiro() {
   );
 }
 
+function Field({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-border/40 pb-2">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className={cn("text-right", valueClass)}>{value}</span>
+    </div>
+  );
+}
+
 function calcGanhoBrutoSimples(rides: RideRow[], lancs: Lancamento[], r: { from: Date; to: Date }): number {
   let total = 0;
   for (const ride of rides) {
