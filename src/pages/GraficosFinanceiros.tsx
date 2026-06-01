@@ -233,7 +233,7 @@ export default function GraficosFinanceiros() {
           <p className="text-muted-foreground text-sm mt-1">Visualizações analíticas de ganhos, custos e lucro líquido.</p>
         </div>
 
-        <PeriodFilter periodo={periodo} custom={custom} onChange={(p, c) => { setPeriodo(p); if (c) setCustom(c); }} />
+        <PeriodFilter periodo={periodo} custom={custom} onChange={(p, c) => { setPeriodo(p); setCustom(c); }} />
 
         {loading ? (
           <Card><CardContent className="py-12 text-center text-muted-foreground">Carregando…</CardContent></Card>
