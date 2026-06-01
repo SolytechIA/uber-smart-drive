@@ -136,14 +136,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </Link>
                 )}
               </div>
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <Shield className="h-3.5 w-3.5" /> Admin
-                </Link>
-              )}
+              {/* Admin agora aparece como item de menu (visível só para admin) */}
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <Button
