@@ -108,6 +108,11 @@ export default function DashboardFinanceiro() {
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [lancamentoTipo, setLancamentoTipo] = useState<LancamentoTipo | null>(null);
+  const [editingLanc, setEditingLanc] = useState<LancamentoEditData | null>(null);
+  const [viewLanc, setViewLanc] = useState<{
+    tipo: string; conta: string; descricao: string; valor: number; data: string; plataforma?: string | null;
+  } | null>(null);
+  const [deleteLancId, setDeleteLancId] = useState<string | null>(null);
   const [drillConta, setDrillConta] = useState<{ conta: string; tipo: "ganho" | "custo" } | null>(null);
 
   const refresh = async () => {
