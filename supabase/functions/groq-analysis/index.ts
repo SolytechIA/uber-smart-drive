@@ -10,13 +10,43 @@ const corsHeaders = {
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 // ─── PROMPT INJECTION SANITIZATION ────────────────────────────────────────────
+// Padrões comuns de tentativa de injeção. Tratados case-insensitive.
+const INJECTION_PATTERNS: RegExp[] = [
+  /ignore (all |any |previous |above |prior )?(instructions?|prompts?|rules?)/gi,
+  /disregard (all |any |previous |above |prior )?(instructions?|prompts?|rules?)/gi,
+  /forget (all |any |previous |above |prior )?(instructions?|prompts?|rules?)/gi,
+  /system\s*prompt/gi,
+  /system\s*:/gi,
+  /assistant\s*:/gi,
+  /user\s*:/gi,
+  /developer\s*:/gi,
+  /role\s*:/gi,
+  /you are (now |a |an )/gi,
+  /act as/gi,
+  /pretend (to be|you are)/gi,
+  /override/gi,
+  /jailbreak/gi,
+  /\bDAN\b/g,
+  /new instructions?/gi,
+  /###+/g,
+  /```+/g,
+  /<\|.*?\|>/g,
+  /\[INST\]/gi,
+  /\[\/INST\]/gi,
+  /<\/?(system|assistant|user|instruction|prompt)>/gi,
+];
+
 function sanitize(input: unknown, maxLen = 100): string {
-  return String(input ?? "")
-    .slice(0, maxLen)
-    .replace(/[<>{}\[\]|\\`]/g, "")
-    .replace(/ignore previous instructions/gi, "")
-    .replace(/you are now/gi, "")
-    .replace(/act as/gi, "");
+  let s = String(input ?? "").slice(0, maxLen);
+  // Remove caracteres estruturais perigosos
+  s = s.replace(/[<>{}\[\]|\\`]/g, "");
+  // Neutraliza quebras de linha (impede injeção multi-linha no prompt)
+  s = s.replace(/[\r\n\t]+/g, " ");
+  // Remove padrões de injeção conhecidos
+  for (const pat of INJECTION_PATTERNS) s = s.replace(pat, "[removido]");
+  // Colapsa espaços
+  s = s.replace(/\s{2,}/g, " ").trim();
+  return s;
 }
 
 function sanitizeRideRef(r: any) {
@@ -42,6 +72,12 @@ function sanitizePayload(p: any) {
   if (c.pior_dia && typeof c.pior_dia === "object") {
     c.pior_dia = { ...c.pior_dia, rotulo: sanitize(c.pior_dia.rotulo, 30) };
   }
+  if (c.melhor_dia_semana !== undefined) c.melhor_dia_semana = sanitize(c.melhor_dia_semana, 30);
+  if (Array.isArray(c.top3_dias)) {
+    c.top3_dias = c.top3_dias.slice(0, 3).map((t: any) =>
+      t && typeof t === "object" ? { ...t, rotulo: sanitize(t.rotulo, 30) } : t
+    );
+  }
   if (c.analise_personalizada && typeof c.analise_personalizada === "object") {
     const ap = c.analise_personalizada;
     const cb = (b: any) => b && typeof b === "object"
@@ -49,10 +85,25 @@ function sanitizePayload(p: any) {
       : b;
     c.analise_personalizada = { eliminar: cb(ap.eliminar), manter: cb(ap.manter), melhorar: cb(ap.melhorar) };
   }
-  if (Array.isArray(c.historico_analises)) c.historico_analises = c.historico_analises.slice(-3);
-  if (Array.isArray(c.historico_semanal)) c.historico_semanal = c.historico_semanal.slice(-3);
+  if (Array.isArray(c.historico_analises)) {
+    c.historico_analises = c.historico_analises.slice(-3).map((h: any) => ({
+      data: sanitize(h?.data, 20),
+      corridas: Number(h?.corridas) || 0,
+      ganho_real: Number(h?.ganho_real) || 0,
+      resumo: sanitize(h?.resumo, 300),
+    }));
+  }
+  if (Array.isArray(c.historico_semanal)) {
+    c.historico_semanal = c.historico_semanal.slice(-3).map((h: any) => ({
+      data: sanitize(h?.data, 20),
+      corridas: Number(h?.corridas) || 0,
+      ganho_real: Number(h?.ganho_real) || 0,
+      r_por_hora: Number(h?.r_por_hora) || 0,
+    }));
+  }
   return c;
 }
+
 
 // ─── INTERFACES ───────────────────────────────────────────────────────────────
 
