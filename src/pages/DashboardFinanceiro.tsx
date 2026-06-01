@@ -201,6 +201,7 @@ export default function DashboardFinanceiro() {
       valor: number;
       cor: "verde" | "vermelho";
       plataforma?: string | null;
+      lanc?: Lancamento;
     };
     const linhas: Linha[] = [];
     for (const r of ridesNoPeriodo) {
@@ -225,11 +226,29 @@ export default function DashboardFinanceiro() {
         descricao: l.descricao || "—",
         valor: Number(l.valor || 0),
         cor: l.tipo === "ganho" ? "verde" : "vermelho",
+        lanc: l,
       });
     }
     linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
     return linhas;
   }, [ridesNoPeriodo, lancsNoPeriodo]);
+
+  const handleEditLanc = (l: Lancamento) => {
+    setEditingLanc({ id: l.id, conta: l.conta, descricao: l.descricao, valor: Number(l.valor), data: l.data });
+    setLancamentoTipo(l.tipo);
+  };
+
+  const handleDeleteLanc = async () => {
+    if (!deleteLancId || !user) return;
+    const { error } = await supabase.from("lancamentos" as any).delete().eq("id", deleteLancId).eq("user_id", user.id);
+    setDeleteLancId(null);
+    if (error) {
+      toast.error(`Erro ao excluir: ${error.message}`);
+      return;
+    }
+    toast.success("✅ Lançamento excluído");
+    refresh();
+  };
 
   const totalPages = Math.max(1, Math.ceil(extrato.length / PAGE_SIZE));
   const pageRows = extrato.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
