@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,8 @@ import DashboardOperacional from "./pages/DashboardOperacional";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Relatorios from "./pages/Relatorios";
+import GraficosFinanceiros from "./pages/GraficosFinanceiros";
+import GraficosPerformance from "./pages/GraficosPerformance";
 import AnaliseIA from "./pages/AnaliseIA";
 import Admin from "./pages/Admin";
 import Planos from "./pages/Planos";
