@@ -50,6 +50,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isActive = (to: string) =>
     location.pathname === to || location.pathname.startsWith(to + "/");
 
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Shield } as NavItem] : []),
+  ];
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/login", { replace: true });
