@@ -6,6 +6,7 @@ import {
   ResponsiveContainer,
   LineChart, Line,
   BarChart, Bar,
+  AreaChart, Area,
   PieChart, Pie, Cell, Legend,
   XAxis, YAxis, CartesianGrid,
   Tooltip as RTooltip,
@@ -13,6 +14,7 @@ import {
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PeriodFilter, getPeriodRange, type Periodo } from "@/components/PeriodFilter";
+import { ChartTooltip } from "@/components/ChartTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtBRL } from "@/lib/financeiro";
