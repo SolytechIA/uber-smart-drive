@@ -108,10 +108,9 @@ export default function GraficosFinanceiros() {
     [lancs, fromStr, toStr],
   );
 
-  // Series por dia
+  // Series por dia + cumulativo (com forward-fill em dias sem movimento)
   const daySeries = useMemo(() => {
-    const realFrom = range.from < new Date(2010, 0, 1) ? (ridesIn[0] ? parseISO(rideDateKey(ridesIn[0])!) : range.from) : range.from;
-    let actualFrom = realFrom;
+    let actualFrom = range.from;
     let actualTo = range.to;
     if (periodo === "acumulado") {
       const dates = [...ridesIn.map(r => rideDateKey(r)!), ...lancsIn.map(l => l.data)].filter(Boolean).sort();
@@ -123,40 +122,49 @@ export default function GraficosFinanceiros() {
       }
     }
     const days = eachDayOfInterval({ start: actualFrom, end: actualTo });
-    if (days.length > 90) {
-      // Aggregate by week for large ranges
-      const buckets: Record<string, { label: string; bruto: number; custo: number; liquido: number }> = {};
-      const addToBucket = (dateStr: string, bruto: number, custo: number) => {
-        const wk = dateStr.slice(0, 7); // YYYY-MM
-        if (!buckets[wk]) buckets[wk] = { label: wk, bruto: 0, custo: 0, liquido: 0 };
-        buckets[wk].bruto += bruto;
-        buckets[wk].custo += custo;
-      };
-      for (const r of ridesIn) {
-        const d = rideDateKey(r); if (!d) continue;
-        addToBucket(d, Number(r.valor_bruto || 0), 0);
+    const aggregateByMonth = days.length > 90;
+    const bucketKey = (dateStr: string) => aggregateByMonth ? dateStr.slice(0, 7) : dateStr;
+    const bucketLabel = (key: string) =>
+      aggregateByMonth ? key : format(parseISO(key), "dd/MM", { locale: ptBR });
+
+    const map: Record<string, { key: string; label: string; bruto: number; custo: number; liquido: number }> = {};
+    if (aggregateByMonth) {
+      for (const d of days) {
+        const k = format(d, "yyyy-MM");
+        if (!map[k]) map[k] = { key: k, label: k, bruto: 0, custo: 0, liquido: 0 };
       }
-      for (const l of lancsIn) {
-        if (l.tipo === "ganho") addToBucket(l.data, Number(l.valor), 0);
-        else addToBucket(l.data, 0, Number(l.valor));
+    } else {
+      for (const d of days) {
+        const k = format(d, "yyyy-MM-dd");
+        map[k] = { key: k, label: format(d, "dd/MM", { locale: ptBR }), bruto: 0, custo: 0, liquido: 0 };
       }
-      return Object.values(buckets).sort((a,b) => a.label.localeCompare(b.label)).map(b => ({ ...b, liquido: b.bruto - b.custo }));
-    }
-    const map: Record<string, { label: string; bruto: number; custo: number; liquido: number }> = {};
-    for (const d of days) {
-      const k = format(d, "yyyy-MM-dd");
-      map[k] = { label: format(d, "dd/MM", { locale: ptBR }), bruto: 0, custo: 0, liquido: 0 };
     }
     for (const r of ridesIn) {
-      const d = rideDateKey(r); if (!d || !map[d]) continue;
-      map[d].bruto += Number(r.valor_bruto || 0);
+      const d = rideDateKey(r); if (!d) continue;
+      const k = bucketKey(d);
+      if (!map[k]) map[k] = { key: k, label: bucketLabel(k), bruto: 0, custo: 0, liquido: 0 };
+      map[k].bruto += Number(r.valor_bruto || 0);
     }
     for (const l of lancsIn) {
-      if (!map[l.data]) continue;
-      if (l.tipo === "ganho") map[l.data].bruto += Number(l.valor);
-      else map[l.data].custo += Number(l.valor);
+      const k = bucketKey(l.data);
+      if (!map[k]) map[k] = { key: k, label: bucketLabel(k), bruto: 0, custo: 0, liquido: 0 };
+      if (l.tipo === "ganho") map[k].bruto += Number(l.valor);
+      else map[k].custo += Number(l.valor);
     }
-    return Object.entries(map).sort((a,b) => a[0].localeCompare(b[0])).map(([_, v]) => ({ ...v, liquido: v.bruto - v.custo }));
+    const sorted = Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
+    // cumulative + forward fill
+    let cBruto = 0, cCusto = 0;
+    return sorted.map((v) => {
+      cBruto += v.bruto;
+      cCusto += v.custo;
+      return {
+        ...v,
+        liquido: v.bruto - v.custo,
+        brutoAcum: cBruto,
+        custoAcum: cCusto,
+        liquidoAcum: cBruto - cCusto,
+      };
+    });
   }, [range, ridesIn, lancsIn, periodo]);
 
   // Ganhos por plataforma
