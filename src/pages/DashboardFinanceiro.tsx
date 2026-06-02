@@ -3,6 +3,7 @@ import {
   startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   format, parseISO,
 } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
