@@ -237,15 +237,44 @@ export default function GraficosPerformance() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="hora" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${Math.round(v)}`} />
-                      <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
-                      <Bar dataKey="rPorHora" radius={[4,4,0,0]}>
+                      <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
+                      <Bar name="R$/hora" dataKey="rPorHora" radius={[4,4,0,0]}>
                         {rPorHoraFaixa.map((e, i) => (
-                          <Cell key={i} fill={e.color} stroke={e.isMax ? "#fff" : undefined} strokeWidth={e.isMax ? 2 : 0} />
+                          <Cell key={i} fill={e.color} stroke={e.isMax ? "hsl(var(--foreground))" : undefined} strokeWidth={e.isMax ? 2 : 0} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {diasComCorridas > 1
+                    ? "Média da receita bruta por hora ao longo dos dias do período."
+                    : "Soma da receita bruta por hora no dia selecionado."}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">🚗 Corridas/hora por faixa horária do dia</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-72 w-full">
+                  <ResponsiveContainer>
+                    <BarChart data={corridasPorHoraFaixa}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="hora" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                      <RTooltip content={<ChartTooltip formatter={(v) => (Number(v).toFixed(diasComCorridas > 1 ? 1 : 0))} />} />
+                      <Bar name="Corridas" dataKey="corridas" radius={[4,4,0,0]}>
+                        {corridasPorHoraFaixa.map((e, i) => (
+                          <Cell key={i} fill={e.color} stroke={e.isMax ? "hsl(var(--foreground))" : undefined} strokeWidth={e.isMax ? 2 : 0} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Mostra os horários em que você mais realiza corridas no período selecionado.
+                </p>
               </CardContent>
             </Card>
 
@@ -258,8 +287,8 @@ export default function GraficosPerformance() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v.toFixed(1)}`} />
-                      <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
-                      <Bar dataKey="rPorKm" radius={[4,4,0,0]}>
+                      <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
+                      <Bar name="R$/km" dataKey="rPorKm" radius={[4,4,0,0]}>
                         {rPorKmSemana.map((e, i) => (
                           <Cell key={i} fill={e.isMax ? "#10b981" : "#3b82f6"} />
                         ))}
