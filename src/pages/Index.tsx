@@ -9,6 +9,7 @@ import {
   Sparkles,
   Check,
   ArrowRight,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
