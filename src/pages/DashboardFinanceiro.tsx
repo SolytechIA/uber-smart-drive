@@ -56,15 +56,20 @@ interface Lancamento {
 
 const ORDEM_GANHOS = [
   "Ganhos Uber", "Ganhos 99", "Ganhos InDrive",
-  "Transfers", "Gorjetas", "Particular", "Outros Ganhos",
+  "Bonificações de Plataforma",
+  "Transfers", "Gorjetas", "Particular",
+  "Reembolsos", "Outras Receitas Diversas",
 ];
 
 const ORDEM_CUSTOS = [
   "Taxa/Passe Uber", "Taxa/Passe 99", "Taxa/Passe InDrive",
   "Financiamento de Veículo", "Aluguel de Veículo",
   "Combustível", "Estacionamentos", "Pedágio", "IPVA",
-  "Manutenção Veículo", "Seguro Veículo", "Lavagem/Higienização",
-  "Plano Celular", "Despesas com Alimentação", "Outros Custos Diversos",
+  "Multas de Trânsito",
+  "Manutenção Veículo", "Pneus e Borracharia",
+  "Seguro Veículo", "Lavagem/Higienização",
+  "Despesas com Alimentação", "Plano Celular",
+  "Outras Despesas Diversas",
 ];
 
 const PLAT_TO_CONTA: Record<string, string> = {
