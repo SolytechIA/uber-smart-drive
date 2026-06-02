@@ -201,7 +201,7 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
             </Button>
             <Button type="submit" variant="gradient" disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tipo === "ganho" ? "Salvar ganho" : "Salvar custo"}
+              {tipo === "ganho" ? "Salvar receita" : "Salvar despesa"}
             </Button>
           </DialogFooter>
         </form>
