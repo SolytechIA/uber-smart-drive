@@ -21,9 +21,11 @@ const CONTAS_GANHO = [
   "Ganhos Uber",
   "Ganhos 99",
   "Ganhos InDrive",
+  "Bonificações de Plataforma",
   "Gorjetas",
   "Particular",
-  "Outros Ganhos",
+  "Reembolsos",
+  "Outras Receitas Diversas",
 ];
 
 const CONTAS_CUSTO = [
@@ -36,12 +38,14 @@ const CONTAS_CUSTO = [
   "Estacionamentos",
   "Pedágio",
   "IPVA",
+  "Multas de Trânsito",
   "Manutenção Veículo",
+  "Pneus e Borracharia",
   "Seguro Veículo",
   "Lavagem/Higienização",
-  "Plano Celular",
   "Despesas com Alimentação",
-  "Outros Custos Diversos",
+  "Plano Celular",
+  "Outras Despesas Diversas",
 ];
 
 export interface LancamentoEditData {

@@ -56,15 +56,20 @@ interface Lancamento {
 
 const ORDEM_GANHOS = [
   "Ganhos Uber", "Ganhos 99", "Ganhos InDrive",
-  "Transfers", "Gorjetas", "Particular", "Outros Ganhos",
+  "Bonificações de Plataforma",
+  "Transfers", "Gorjetas", "Particular",
+  "Reembolsos", "Outras Receitas Diversas",
 ];
 
 const ORDEM_CUSTOS = [
   "Taxa/Passe Uber", "Taxa/Passe 99", "Taxa/Passe InDrive",
   "Financiamento de Veículo", "Aluguel de Veículo",
   "Combustível", "Estacionamentos", "Pedágio", "IPVA",
-  "Manutenção Veículo", "Seguro Veículo", "Lavagem/Higienização",
-  "Plano Celular", "Despesas com Alimentação", "Outros Custos Diversos",
+  "Multas de Trânsito",
+  "Manutenção Veículo", "Pneus e Borracharia",
+  "Seguro Veículo", "Lavagem/Higienização",
+  "Despesas com Alimentação", "Plano Celular",
+  "Outras Despesas Diversas",
 ];
 
 const PLAT_TO_CONTA: Record<string, string> = {
@@ -161,7 +166,7 @@ export default function DashboardFinanceiro() {
   const ganhosPorConta = useMemo(() => {
     const map: Record<string, number> = {};
     for (const r of ridesNoPeriodo) {
-      const conta = PLAT_TO_CONTA[r.plataforma || "Uber"] || "Outros Ganhos";
+      const conta = PLAT_TO_CONTA[r.plataforma || "Uber"] || "Outras Receitas Diversas";
       map[conta] = (map[conta] || 0) + Number(r.valor_bruto || 0);
     }
     for (const l of lancsNoPeriodo.filter((x) => x.tipo === "ganho")) {
@@ -686,8 +691,8 @@ function LancarDropdown({ onPick }: { onPick: (t: LancamentoTipo) => void }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => onPick("ganho")}>💰 Lançar ganho</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onPick("custo")}>💸 Lançar custo</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("ganho")}>💰 Lançar Receita</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("custo")}>💸 Lançar Despesa</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

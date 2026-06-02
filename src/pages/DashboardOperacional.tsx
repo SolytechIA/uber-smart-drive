@@ -526,10 +526,10 @@ function ActionMenu({
           🚗 Registrar corrida
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onLancarGanho}>
-          💰 Lançar ganho
+          💰 Lançar Receita
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onLancarCusto}>
-          💸 Lançar custo
+          💸 Lançar Despesa
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

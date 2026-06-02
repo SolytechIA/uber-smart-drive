@@ -45,7 +45,7 @@ const CONTA_TO_PLAT: Record<string, string> = {
   "Ganhos InDrive": "InDrive",
   "Particular": "Particular",
   "Gorjetas": "Outras",
-  "Outros Ganhos": "Outras",
+  "Outras Receitas Diversas": "Outras",
   "Transfers": "Outras",
 };
 
