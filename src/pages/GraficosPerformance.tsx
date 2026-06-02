@@ -100,41 +100,49 @@ export default function GraficosPerformance() {
     return s.size;
   }, [ridesIn]);
 
-  // R$/hora por faixa horária (soma se 1 dia, média entre dias se >1 dia)
-  const rPorHoraFaixa = useMemo(() => {
-    const buckets: Record<number, number> = {};
-    for (let h = 0; h < 24; h++) buckets[h] = 0;
+  // Agrupar por faixa horária: divide pelo nº de dias com movimento NAQUELA faixa
+  const faixaHoraria = useMemo(() => {
+    const totalValor: Record<number, number> = {};
+    const totalCorridas: Record<number, number> = {};
+    const diasPorFaixa: Record<number, Set<string>> = {};
+    for (let h = 0; h < 24; h++) {
+      totalValor[h] = 0;
+      totalCorridas[h] = 0;
+      diasPorFaixa[h] = new Set<string>();
+    }
     for (const r of ridesIn) {
       if (!r.horario_inicio) continue;
       const h = new Date(r.horario_inicio).getHours();
-      buckets[h] += Number(r.valor_bruto || 0);
+      const d = rideDateKey(r);
+      totalValor[h] += Number(r.valor_bruto || 0);
+      totalCorridas[h] += 1;
+      if (d) diasPorFaixa[h].add(d);
     }
-    const divisor = Math.max(1, diasComCorridas);
-    const arr = Object.entries(buckets).map(([h, total]) => ({
-      hora: `${h.padStart(2, "0")}h`,
-      rPorHora: diasComCorridas > 1 ? total / divisor : total,
-    }));
-    const max = Math.max(...arr.map(a => a.rPorHora), 0.0001);
-    return arr.map(a => ({ ...a, color: colorForRatio(a.rPorHora / max), isMax: a.rPorHora === max && max > 0 }));
+    const umDia = diasComCorridas <= 1;
+    const out: { h: number; rPorHora: number; corridas: number }[] = [];
+    for (let h = 0; h < 24; h++) {
+      const diasFaixa = diasPorFaixa[h].size;
+      const divisor = umDia ? 1 : Math.max(1, diasFaixa);
+      out.push({
+        h,
+        rPorHora: umDia ? totalValor[h] : totalValor[h] / divisor,
+        corridas: umDia ? totalCorridas[h] : totalCorridas[h] / divisor,
+      });
+    }
+    return out;
   }, [ridesIn, diasComCorridas]);
 
-  // Corridas/hora por faixa horária (mesma lógica temporal)
+  const rPorHoraFaixa = useMemo(() => {
+    const arr = faixaHoraria.map(x => ({ hora: `${String(x.h).padStart(2, "0")}h`, rPorHora: x.rPorHora }));
+    const max = Math.max(...arr.map(a => a.rPorHora), 0.0001);
+    return arr.map(a => ({ ...a, color: colorForRatio(a.rPorHora / max), isMax: a.rPorHora === max && max > 0 }));
+  }, [faixaHoraria]);
+
   const corridasPorHoraFaixa = useMemo(() => {
-    const buckets: Record<number, number> = {};
-    for (let h = 0; h < 24; h++) buckets[h] = 0;
-    for (const r of ridesIn) {
-      if (!r.horario_inicio) continue;
-      const h = new Date(r.horario_inicio).getHours();
-      buckets[h] += 1;
-    }
-    const divisor = Math.max(1, diasComCorridas);
-    const arr = Object.entries(buckets).map(([h, total]) => ({
-      hora: `${h.padStart(2, "0")}h`,
-      corridas: diasComCorridas > 1 ? total / divisor : total,
-    }));
+    const arr = faixaHoraria.map(x => ({ hora: `${String(x.h).padStart(2, "0")}h`, corridas: x.corridas }));
     const max = Math.max(...arr.map(a => a.corridas), 0.0001);
     return arr.map(a => ({ ...a, color: colorForRatio(a.corridas / max), isMax: a.corridas === max && max > 0 }));
-  }, [ridesIn, diasComCorridas]);
+  }, [faixaHoraria]);
 
   // R$/km por dia da semana
   const rPorKmSemana = useMemo(() => {
