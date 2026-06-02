@@ -282,45 +282,30 @@ export default function DashboardFinanceiro() {
     return linhas;
   }, [drillConta, ridesNoPeriodo, lancsNoPeriodo]);
 
+  const mesVigenteLabel = format(nowInTZ(), "MMMM/yyyy", { locale: ptBR });
+
   return (
     <AppLayout>
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-display font-bold">Financeiro</h1>
-            <p className="text-muted-foreground text-sm mt-1">Demonstrativo financeiro completo com ganhos, custos e lucro líquido real.</p>
+            <p className="text-muted-foreground text-sm mt-1">Demonstrativo financeiro completo com receitas, despesas e resultado líquido.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
-              <TabsList>
-                <TabsTrigger value="hoje">Hoje</TabsTrigger>
-                <TabsTrigger value="semana">Semana</TabsTrigger>
-                <TabsTrigger value="mes">Mês</TabsTrigger>
-                <TabsTrigger value="acumulado">Acumulado</TabsTrigger>
-                <TabsTrigger value="personalizado">Personalizado</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {periodo === "personalizado" && (
-              <CustomRangePicker custom={custom} onApply={setCustom} />
-            )}
-            <LancarDropdown onPick={setLancamentoTipo} />
-          </div>
-        </div>
-
-        {loading ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">Carregando…</CardContent></Card>
-        ) : (
-          <>
+...
             {/* 3 CARDS PRINCIPAIS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <BigCard title="💰 Ganho Bruto" value={ganhoBruto} positive />
-              <BigCard title="💸 Custo Total" value={custoTotal} negative />
-              <BigCard title="✅ Ganho Líquido" value={ganhoLiquido} positive={ganhoLiquido >= 0} negative={ganhoLiquido < 0} />
+              <BigCard title="💰 Receita Bruta" value={ganhoBruto} positive />
+              <BigCard title="💸 Despesa Total" value={custoTotal} negative />
+              <BigCard title="✅ Resultado Líquido" value={ganhoLiquido} positive={ganhoLiquido >= 0} negative={ganhoLiquido < 0} />
             </div>
 
             {/* METAS */}
             <div>
-              <h2 className="text-lg font-semibold mb-3">Metas (base: ganho bruto)</h2>
+              <h2 className="text-lg font-semibold">Metas do período vigente</h2>
+              <p className="text-xs text-muted-foreground mb-3 capitalize">
+                Metas válidas para o período em andamento — {mesVigenteLabel}
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <MetaCard titulo="Meta diária" atual={ganhoBrutoHoje} meta={metas.diaria} />
                 <MetaCard titulo="Meta semanal" atual={ganhoBrutoSem} meta={metas.semanal} />
@@ -335,7 +320,7 @@ export default function DashboardFinanceiro() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <DRESecao
-                  titulo="GANHO TOTAL NO PERÍODO"
+                  titulo="RECEITA TOTAL NO PERÍODO"
                   total={ganhoBruto}
                   ordem={ORDEM_GANHOS}
                   valores={ganhosPorConta}
@@ -343,7 +328,7 @@ export default function DashboardFinanceiro() {
                   onClickConta={(c) => setDrillConta({ conta: c, tipo: "ganho" })}
                 />
                 <DRESecao
-                  titulo="CUSTO TOTAL NO PERÍODO"
+                  titulo="DESPESA TOTAL NO PERÍODO"
                   total={custoTotal}
                   ordem={ORDEM_CUSTOS}
                   valores={custosPorConta}
@@ -351,7 +336,7 @@ export default function DashboardFinanceiro() {
                   onClickConta={(c) => setDrillConta({ conta: c, tipo: "custo" })}
                 />
                 <div className="flex items-center justify-between border-t border-border/60 pt-4">
-                  <span className="font-display font-bold uppercase tracking-wide">GANHO LÍQUIDO TOTAL</span>
+                  <span className="font-display font-bold uppercase tracking-wide">RESULTADO LÍQUIDO TOTAL</span>
                   <span className={cn("font-display font-bold text-xl tabular-nums", ganhoLiquido >= 0 ? "text-emerald-500" : "text-destructive")}>
                     {fmtBRL(ganhoLiquido)}
                   </span>
