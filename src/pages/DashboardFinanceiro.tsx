@@ -425,7 +425,34 @@ export default function DashboardFinanceiro() {
             {/* EXTRATO ANALÍTICO */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">📋 Extrato de Lançamentos</CardTitle>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <CardTitle className="text-base">📋 Extrato de Lançamentos</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as any)}>
+                      <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os tipos</SelectItem>
+                        <SelectItem value="receita">Receita</SelectItem>
+                        <SelectItem value="despesa">Despesa</SelectItem>
+                        <SelectItem value="corrida">Corrida</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={filtroConta} onValueChange={setFiltroConta}>
+                      <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Conta" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todas">Todas as contas</SelectItem>
+                        {contasDisponiveis.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {filtrosAtivos && (
+                      <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" onClick={limparFiltros}>
+                        <X className="h-3 w-3" /> Limpar
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {extrato.length === 0 ? (
@@ -435,11 +462,27 @@ export default function DashboardFinanceiro() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Conta</TableHead>
+                          <TableHead aria-sort={ariaSort("data")}>
+                            <button type="button" onClick={() => toggleSort("data")} className="inline-flex items-center gap-1 hover:text-foreground">
+                              Data {sortIcon("data")}
+                            </button>
+                          </TableHead>
+                          <TableHead aria-sort={ariaSort("tipo")}>
+                            <button type="button" onClick={() => toggleSort("tipo")} className="inline-flex items-center gap-1 hover:text-foreground">
+                              Tipo {sortIcon("tipo")}
+                            </button>
+                          </TableHead>
+                          <TableHead aria-sort={ariaSort("conta")}>
+                            <button type="button" onClick={() => toggleSort("conta")} className="inline-flex items-center gap-1 hover:text-foreground">
+                              Conta {sortIcon("conta")}
+                            </button>
+                          </TableHead>
                           <TableHead>Descrição</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-right" aria-sort={ariaSort("valor")}>
+                            <button type="button" onClick={() => toggleSort("valor")} className="inline-flex items-center gap-1 hover:text-foreground ml-auto">
+                              Valor {sortIcon("valor")}
+                            </button>
+                          </TableHead>
                           <TableHead className="text-right w-[120px]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -452,7 +495,8 @@ export default function DashboardFinanceiro() {
                                 <Badge variant="outline" className="ml-2 text-[9px]">📅 Previsto</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs">{row.tipo}</TableCell>
+                            <TableCell className="text-xs">{tipoLabel(row.tipo)}</TableCell>
+
                             <TableCell className="text-xs">
                               {row.tipo === "Corrida" ? (
                                 <span className="inline-flex items-center gap-1.5">
