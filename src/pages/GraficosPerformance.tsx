@@ -13,6 +13,7 @@ import {
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PeriodFilter, getPeriodRange, type Periodo } from "@/components/PeriodFilter";
+import { ChartTooltip } from "@/components/ChartTooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { fmtBRL } from "@/lib/financeiro";
@@ -90,24 +91,50 @@ export default function GraficosPerformance() {
     [rides, fromStr, toStr],
   );
 
-  // R$/hora por faixa horária
+  // Quantos dias únicos com qualquer corrida no período filtrado (para média multi-dia)
+  const diasComCorridas = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of ridesIn) {
+      const d = rideDateKey(r); if (d) s.add(d);
+    }
+    return s.size;
+  }, [ridesIn]);
+
+  // R$/hora por faixa horária (soma se 1 dia, média entre dias se >1 dia)
   const rPorHoraFaixa = useMemo(() => {
-    const buckets: Record<number, { valor: number; minutos: number }> = {};
-    for (let h = 6; h <= 23; h++) buckets[h] = { valor: 0, minutos: 0 };
+    const buckets: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) buckets[h] = 0;
     for (const r of ridesIn) {
       if (!r.horario_inicio) continue;
       const h = new Date(r.horario_inicio).getHours();
-      if (buckets[h] === undefined) continue;
-      buckets[h].valor += Number(r.valor_bruto || 0);
-      buckets[h].minutos += Number(r.duracao_minutos || 0);
+      buckets[h] += Number(r.valor_bruto || 0);
     }
-    const arr = Object.entries(buckets).map(([h, v]) => ({
+    const divisor = Math.max(1, diasComCorridas);
+    const arr = Object.entries(buckets).map(([h, total]) => ({
       hora: `${h.padStart(2, "0")}h`,
-      rPorHora: v.minutos > 0 ? (v.valor / (v.minutos / 60)) : 0,
+      rPorHora: diasComCorridas > 1 ? total / divisor : total,
     }));
     const max = Math.max(...arr.map(a => a.rPorHora), 0.0001);
     return arr.map(a => ({ ...a, color: colorForRatio(a.rPorHora / max), isMax: a.rPorHora === max && max > 0 }));
-  }, [ridesIn]);
+  }, [ridesIn, diasComCorridas]);
+
+  // Corridas/hora por faixa horária (mesma lógica temporal)
+  const corridasPorHoraFaixa = useMemo(() => {
+    const buckets: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) buckets[h] = 0;
+    for (const r of ridesIn) {
+      if (!r.horario_inicio) continue;
+      const h = new Date(r.horario_inicio).getHours();
+      buckets[h] += 1;
+    }
+    const divisor = Math.max(1, diasComCorridas);
+    const arr = Object.entries(buckets).map(([h, total]) => ({
+      hora: `${h.padStart(2, "0")}h`,
+      corridas: diasComCorridas > 1 ? total / divisor : total,
+    }));
+    const max = Math.max(...arr.map(a => a.corridas), 0.0001);
+    return arr.map(a => ({ ...a, color: colorForRatio(a.corridas / max), isMax: a.corridas === max && max > 0 }));
+  }, [ridesIn, diasComCorridas]);
 
   // R$/km por dia da semana
   const rPorKmSemana = useMemo(() => {
@@ -210,15 +237,44 @@ export default function GraficosPerformance() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="hora" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${Math.round(v)}`} />
-                      <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
-                      <Bar dataKey="rPorHora" radius={[4,4,0,0]}>
+                      <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
+                      <Bar name="R$/hora" dataKey="rPorHora" radius={[4,4,0,0]}>
                         {rPorHoraFaixa.map((e, i) => (
-                          <Cell key={i} fill={e.color} stroke={e.isMax ? "#fff" : undefined} strokeWidth={e.isMax ? 2 : 0} />
+                          <Cell key={i} fill={e.color} stroke={e.isMax ? "hsl(var(--foreground))" : undefined} strokeWidth={e.isMax ? 2 : 0} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {diasComCorridas > 1
+                    ? "Média da receita bruta por hora ao longo dos dias do período."
+                    : "Soma da receita bruta por hora no dia selecionado."}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">🚗 Corridas/hora por faixa horária do dia</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-72 w-full">
+                  <ResponsiveContainer>
+                    <BarChart data={corridasPorHoraFaixa}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="hora" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                      <RTooltip content={<ChartTooltip formatter={(v) => (Number(v).toFixed(diasComCorridas > 1 ? 1 : 0))} />} />
+                      <Bar name="Corridas" dataKey="corridas" radius={[4,4,0,0]}>
+                        {corridasPorHoraFaixa.map((e, i) => (
+                          <Cell key={i} fill={e.color} stroke={e.isMax ? "hsl(var(--foreground))" : undefined} strokeWidth={e.isMax ? 2 : 0} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Mostra os horários em que você mais realiza corridas no período selecionado.
+                </p>
               </CardContent>
             </Card>
 
@@ -231,8 +287,8 @@ export default function GraficosPerformance() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v.toFixed(1)}`} />
-                      <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
-                      <Bar dataKey="rPorKm" radius={[4,4,0,0]}>
+                      <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
+                      <Bar name="R$/km" dataKey="rPorKm" radius={[4,4,0,0]}>
                         {rPorKmSemana.map((e, i) => (
                           <Cell key={i} fill={e.isMax ? "#10b981" : "#3b82f6"} />
                         ))}
@@ -253,7 +309,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                        <RTooltip contentStyle={tooltipStyle} />
+                        <RTooltip content={<ChartTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Bar name="BOA" dataKey="BOA" stackId="a" fill="#10b981" />
                         <Bar name="MÉDIA" dataKey="MEDIA" stackId="a" fill="#f59e0b" />
@@ -275,7 +331,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `${v}km`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(1)} km`} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => `${Number(v).toFixed(1)} km`} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Bar name="Km Total" dataKey="total" fill="#94a3b8" radius={[4,4,0,0]} />
                         <Bar name="Km Passageiro" dataKey="passageiro" fill="#10b981" radius={[4,4,0,0]} />
@@ -296,7 +352,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis type="category" dataKey="bairro" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={110} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v} corridas`} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => `${v} corridas`} />} />
                         <Bar dataKey="qtd" fill="#8b5cf6" radius={[0,4,4,0]} label={{ position: "right", fill: "hsl(var(--foreground))", fontSize: 11 }} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -315,7 +371,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `${v}%`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(1)}%`} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />} />
                         <ReferenceLine y={70} stroke="#10b981" strokeDasharray="6 4" label={{ value: "Meta 70%", fill: "#10b981", fontSize: 10, position: "right" }} />
                         <Line type="monotone" dataKey="pct" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
                       </LineChart>
