@@ -24,30 +24,30 @@ import {
 import { MP_SUBSCRIBE_URL } from "@/hooks/usePlanStatus";
 
 const features = [
-  { icon: FileText, title: "📊 Cards e Relatórios", desc: "Acompanhe ganhos, custos, metas e comparativos com gráficos claros por dia, semana, mês ou período." },
-  { icon: Activity, title: "🚗 Dashboard Operacional", desc: "Registre corridas de qualquer plataforma com classificação automática BOA/MÉDIA/RUIM." },
-  { icon: BarChart3, title: "💰 Demonstrativo Financeiro", desc: "DRE simplificado com ganhos e custos por conta, extrato analítico e visão do seu lucro líquido real." },
-  { icon: Brain, title: "🤖 Análise por IA", desc: "Relatório personalizado gerado por IA com recomendações práticas e ação imediata para o dia." },
-  { icon: Target, title: "🎯 Metas e Indicadores", desc: "Defina metas e monitore R$/hora, R$/km e ticket médio com base no ganho bruto em tempo real." },
-  { icon: Wallet, title: "📋 Lançamentos Financeiros", desc: "Registre ganhos extras, custos avulsos e provisões futuras. Tudo integrado ao demonstrativo." },
+  { icon: FileText, title: "Painel de Cards", desc: "Acompanhe receitas, despesas, metas e comparativos com leitura rápida por período." },
+  { icon: Activity, title: "Dashboard Operacional", desc: "Registre corridas de qualquer plataforma com classificação automática Boa, Média ou Ruim." },
+  { icon: BarChart3, title: "Demonstrativo Financeiro", desc: "Veja suas receitas, despesas e resultado líquido real com extrato analítico detalhado." },
+  { icon: Brain, title: "Análise por IA", desc: "Receba um relatório personalizado com recomendações práticas e leitura estratégica do seu dia." },
+  { icon: Target, title: "Metas e Indicadores", desc: "Defina metas e acompanhe R$/hora, R$/km e ticket médio com base no resultado bruto." },
+  { icon: Wallet, title: "Lançamentos Financeiros", desc: "Registre receitas extras, despesas avulsas e provisões futuras, tudo integrado ao financeiro." },
 ];
 
 const steps = [
-  { n: "1", title: "⚙️ Configure seu veículo e custos", desc: "Informe seus custos fixos, metas e dados do veículo. O Drive IA calcula o que você realmente gasta para trabalhar." },
-  { n: "2", title: "🚗 Registre suas corridas e lançamentos", desc: "Adicione cada corrida rapidamente — Uber, 99, InDrive ou qualquer plataforma. Lance ganhos extras e custos avulsos com poucos toques, mesmo em movimento." },
-  { n: "3", title: "📊 Receba análises e demonstrativo financeiro", desc: "Nossa IA analisa seu histórico e entrega recomendações personalizadas. Acompanhe seu demonstrativo financeiro completo com ganhos, custos e lucro líquido real." },
+  { n: "1", title: "Configure seu veículo e parâmetros de custo", desc: "Informe seus custos fixos, metas e dados do veículo. O Drive IA calcula projeções de custo para apoiar sua operação." },
+  { n: "2", title: "Registre suas corridas e lançamentos", desc: "Adicione corridas rapidamente de qualquer plataforma, lance receitas extras e despesas avulsas com poucos toques, mesmo em movimento." },
+  { n: "3", title: "Receba análises e acompanhe seu resultado", desc: "Nossa IA analisa seu histórico e entrega recomendações personalizadas. Acompanhe seu demonstrativo financeiro completo com receitas, despesas e resultado líquido real." },
 ];
 
 const faqs: { q: string; a: string }[] = [
   { q: "O período gratuito exige cartão de crédito?", a: "Não. O trial de 7 dias é 100% gratuito e não requer nenhum dado de pagamento. Basta criar sua conta e começar a usar imediatamente." },
   { q: "Como funciona o pagamento do Plano Pro?", a: "O pagamento é recorrente mensal via Pix ou cartão de crédito, processado com segurança pelo Mercado Pago. Você pode cancelar a qualquer momento, sem multa." },
   { q: "Meus dados ficam seguros?", a: "Sim. Todos os seus dados são armazenados com criptografia e nunca são compartilhados com terceiros. Você pode solicitar a exclusão dos seus dados a qualquer momento pelo e-mail contato.solytech@gmail.com." },
-  { q: "O Drive IA funciona para outros aplicativos além da Uber?", a: "Sim! O Drive IA foi desenvolvido para qualquer motorista de aplicativo ou táxi. Funciona com Uber, 99, InDrive, Particular e qualquer outra plataforma. Ao registrar uma corrida, você seleciona qual plataforma utilizou, e o sistema organiza seus ganhos por plataforma automaticamente no demonstrativo financeiro." },
-  { q: "Como registro minhas corridas no Drive IA?", a: "De forma simples e rápida, pelo botão 'Adicionar' na tela principal. Informe a plataforma, horários, valor, km e bairro de origem/destino. Leva menos de 30 segundos. Você também pode registrar ganhos extras e custos avulsos pelo mesmo botão." },
-  { q: "Posso lançar custos como combustível, manutenção e passe da plataforma?", a: "Sim. No Drive IA você lança qualquer custo avulso: combustível, estacionamento, pedágio, passe da Uber ou 99, manutenção e muito mais. Todos os custos aparecem no seu demonstrativo financeiro e são deduzidos para calcular seu ganho líquido real." },
-  { q: "O que é o Demonstrativo Financeiro?", a: "É um resumo completo dos seus ganhos e custos no período, similar a um DRE. Você vê quanto ganhou em cada plataforma, quanto gastou em cada tipo de custo e qual foi seu lucro líquido real. Ao clicar em qualquer conta, você vê todos os lançamentos detalhados." },
-  { q: "Posso planejar lançamentos futuros?", a: "Sim. Ao lançar um ganho ou custo, você pode informar uma data futura. Esses registros aparecem como 'Previstos' no extrato e são considerados na projeção do período filtrado, ajudando no planejamento financeiro." },
-  { q: "O que é a Análise por IA?", a: "É um relatório personalizado gerado por inteligência artificial com base no seu histórico do dia. Inclui resumo do desempenho, recomendações para amanhã, projeção do mês e uma dica estratégica. Pode ser gerado uma vez por hora." },
+  { q: "O Drive IA funciona para outros aplicativos além da Uber?", a: "Sim. O Drive IA foi desenvolvido para motoristas de aplicativo em geral. Funciona com Uber, 99, InDrive, corridas particulares e qualquer outra plataforma. Ao registrar a corrida, você escolhe a plataforma usada e o sistema organiza seus resultados automaticamente." },
+  { q: "Como registro minhas corridas no Drive IA?", a: "De forma simples e rápida, pelo botão de adicionar na tela principal. Informe a plataforma, horário, valor, km e origem/destino. Leva menos de 30 segundos." },
+  { q: "Posso lançar outras receitas além de corridas?", a: "Sim. Você pode lançar gorjetas, corridas particulares, transferências e outras receitas diretamente no demonstrativo financeiro." },
+  { q: "Como funciona o controle de despesas?", a: "Você pode acompanhar parâmetros de custo na configuração e lançar despesas efetivas no financeiro, como combustível, estacionamento, pedágio, manutenção, passe da plataforma e outros gastos do dia a dia." },
+  { q: "O que é o Demonstrativo Financeiro?", a: "É um resumo completo das suas receitas e despesas no período, com visão analítica por conta e extrato detalhado de todos os lançamentos." },
+  { q: "Posso lançar provisões futuras?", a: "Sim. O sistema permite lançar receitas e despesas futuras para facilitar o planejamento e a projeção do período." },
   { q: "Posso cancelar quando quiser?", a: "Sim. Você pode cancelar sua assinatura a qualquer momento diretamente pelo Mercado Pago, sem burocracia e sem multa. O acesso continua ativo até o fim do período pago." },
   { q: "Como entro em contato com o suporte?", a: "O suporte é realizado exclusivamente por e-mail através do endereço contato.solytech@gmail.com. Respondemos em até 1 dia útil." },
 ];
@@ -79,18 +79,21 @@ export default function Index() {
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div className="flex flex-col justify-center">
             <Badge variant="outline" className="mb-4 w-fit border-primary/30 bg-primary/5 text-primary">
-              🚗 Uber • 99 • InDrive • Qualquer plataforma
+              Uber · 99 · InDrive · Qualquer plataforma
             </Badge>
             <h1 className="font-display text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
-              Transforme cada corrida em <span className="gradient-text">lucro real</span>
+              Transforme cada corrida em <span className="gradient-text">resultado real</span>
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
-              Painel inteligente para motoristas de aplicativo. Funciona com Uber, 99, InDrive e qualquer plataforma. Controle seus ganhos reais, reduza custos e tome decisões com inteligência artificial.
+              Painel inteligente para motoristas de aplicativo. Funciona com Uber, 99, InDrive e qualquer plataforma. Controle suas receitas, acompanhe suas despesas, visualize seu resultado e tome decisões com inteligência artificial.
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Cadastre-se, registre corridas, receitas e despesas, e acompanhe sua operação financeira com clareza.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link to="/cadastro">
                 <Button size="lg" className="w-full gradient-bg sm:w-auto">
-                  Começar grátis por 7 dias <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <a href="#como-funciona">
@@ -99,6 +102,9 @@ export default function Index() {
                 </Button>
               </a>
             </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Veja suas receitas, despesas, gráficos e análise da IA em um só lugar.
+            </p>
           </div>
 
           {/* Mock visual */}
@@ -179,6 +185,32 @@ export default function Index() {
                 </Card>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* BENEFICIOS */}
+      <section className="border-t border-border/40 py-20">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-center font-display text-3xl font-bold md:text-4xl">
+            Benefícios
+          </h2>
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              "Controle suas receitas e despesas com clareza.",
+              "Lance corridas, receitas e despesas em poucos segundos.",
+              "Visualize seu desempenho por período, por plataforma e por categoria.",
+              "Veja seu demonstrativo financeiro com extrato analítico detalhado.",
+              "Tome decisões melhores com apoio da inteligência artificial.",
+              "Planeje seu dia com base em metas, gráficos e projeções.",
+            ].map((b, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Check className="h-4 w-4" />
+                </div>
+                <p className="text-muted-foreground">{b}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
