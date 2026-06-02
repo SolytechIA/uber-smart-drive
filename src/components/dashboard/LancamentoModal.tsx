@@ -157,7 +157,7 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
           </div>
 
           <div className="space-y-1.5">
-            <Label>{tipo === "ganho" ? "Conta de ganho" : "Conta de custo"}</Label>
+            <Label>{tipo === "ganho" ? "Conta de receita" : "Conta de despesa"}</Label>
             <Select value={conta} onValueChange={setConta}>
               <SelectTrigger>
                 <SelectValue />
