@@ -389,7 +389,7 @@ export default function GraficosFinanceiros() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v}`} />
                         <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={80} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                         <Bar dataKey="ticket" radius={[0,4,4,0]} label={{ position: "right", formatter: (v: number) => fmtBRL(v), fill: "hsl(var(--foreground))", fontSize: 11 }}>
                           {ticketPorPlat.map((e, i) => <Cell key={i} fill={e.color} />)}
                         </Bar>
@@ -401,7 +401,7 @@ export default function GraficosFinanceiros() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">⛽ Custo de Combustível vs Ganho Bruto</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">⛽ Custo de Combustível vs Receita Bruta</CardTitle></CardHeader>
               <CardContent>
                 {combVsBrutoData.length === 0 ? <EmptyState /> : (
                   <div className="h-72 w-full">
@@ -410,10 +410,10 @@ export default function GraficosFinanceiros() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v}`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Line name="Combustível" type="monotone" dataKey="combustivel" stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                        <Line name="Ganho Bruto" type="monotone" dataKey="bruto" stroke="#10b981" strokeWidth={2} dot={false} />
+                        <Line name="Receita Bruta" type="monotone" dataKey="bruto" stroke="#10b981" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
