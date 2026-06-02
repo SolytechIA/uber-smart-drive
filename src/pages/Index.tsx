@@ -9,6 +9,7 @@ import {
   Sparkles,
   Check,
   ArrowRight,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,12 +25,12 @@ import {
 import { MP_SUBSCRIBE_URL } from "@/hooks/usePlanStatus";
 
 const features = [
-  { icon: FileText, title: "Painel de Cards", desc: "Acompanhe receitas, despesas, metas e comparativos com leitura rápida por período." },
-  { icon: Activity, title: "Dashboard Operacional", desc: "Registre corridas de qualquer plataforma com classificação automática Boa, Média ou Ruim." },
-  { icon: BarChart3, title: "Demonstrativo Financeiro", desc: "Veja suas receitas, despesas e resultado líquido real com extrato analítico detalhado." },
-  { icon: Brain, title: "Análise por IA", desc: "Receba um relatório personalizado com recomendações práticas e leitura estratégica do seu dia." },
-  { icon: Target, title: "Metas e Indicadores", desc: "Defina metas e acompanhe R$/hora, R$/km e ticket médio com base no resultado bruto." },
-  { icon: Wallet, title: "Lançamentos Financeiros", desc: "Registre receitas extras, despesas avulsas e provisões futuras, tudo integrado ao financeiro." },
+  { icon: Wallet, title: "Dashboard Financeiro", desc: "Acompanhe receitas, despesas, resultado líquido e extrato analítico em um só lugar." },
+  { icon: Activity, title: "Dashboard Operacional", desc: "Registre corridas de qualquer plataforma e acompanhe sua operação diária." },
+  { icon: Target, title: "Painel de Cards", desc: "Veja indicadores financeiros e operacionais que ajudam a medir performance e identificar melhorias." },
+  { icon: BarChart3, title: "Gráficos Financeiros", desc: "Analise evolução do resultado, composição de receitas e custos e ticket médio por plataforma." },
+  { icon: TrendingUp, title: "Gráficos de Performance", desc: "Compare R$/hora, R$/km, qualidade das corridas e eficiência operacional por período." },
+  { icon: Brain, title: "Análise por IA", desc: "Receba recomendações práticas, projeções e sinais ocultos para agir com mais inteligência." },
 ];
 
 const steps = [
@@ -228,14 +229,20 @@ export default function Index() {
               <h3 className="mt-4 text-2xl font-bold">Free Trial</h3>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-4xl font-bold">R$ 0</span>
-                <span className="text-muted-foreground">7 dias grátis</span>
+                <span className="text-muted-foreground">por 7 dias</span>
               </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Comece sem cartão de crédito e teste o Drive IA completo.
+              </p>
               <ul className="mt-6 space-y-2 text-sm">
                 {[
                   "Dashboard Financeiro e Operacional",
-                  "Relatórios Diário, Semanal, Mensal e Acumulado",
-                  "Análise por IA (1 análise/hora)",
-                  "Cadastro de veículo e custos",
+                  "Painel de Cards com indicadores de performance",
+                  "Gráficos Financeiros",
+                  "Gráficos de Performance",
+                  "Análise por IA (1 análise por hora)",
+                  "Cadastro de veículo e parâmetros de custo",
+                  "Lançamento de Receitas e Despesas",
                   "Metas personalizadas",
                   "Suporte por e-mail",
                 ].map((b) => (
@@ -250,7 +257,7 @@ export default function Index() {
                   <Button className="w-full" size="lg">Começar grátis agora</Button>
                 </Link>
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                  Sem necessidade de cartão de crédito
+                  Sem necessidade de cartão de crédito.
                 </p>
               </div>
             </Card>
@@ -266,13 +273,18 @@ export default function Index() {
                   <span className="text-4xl font-bold gradient-text">R$ 37,00</span>
                   <span className="text-muted-foreground">/mês</span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Pix ou cartão de crédito recorrente</p>
+                <p className="mt-1 text-xs text-muted-foreground">Pix ou cartão de crédito recorrente.</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Tudo do período gratuito, com uso contínuo e histórico completo.
+                </p>
                 <ul className="mt-6 space-y-2 text-sm">
                   {[
-                    "Tudo do período gratuito",
+                    "Tudo do plano gratuito",
                     "Acesso ilimitado após os 7 dias",
                     "Histórico completo sem limite",
-                    "Análise IA ilimitada (1/hora)",
+                    "Análises por IA ilimitadas, com 1 por hora",
+                    "Gráficos Financeiros e de Performance completos",
+                    "Painel de Cards com visão consolidada",
                     "Novos recursos em primeira mão",
                     "Suporte prioritário por e-mail",
                   ].map((b) => (
@@ -288,7 +300,7 @@ export default function Index() {
                       Assinar agora — R$ 37,00/mês
                     </Button>
                   </a>
-                  <p className="mt-2 text-center text-xs text-muted-foreground">Cancele quando quiser</p>
+                  <p className="mt-2 text-center text-xs text-muted-foreground">Cancele quando quiser.</p>
                 </div>
               </Card>
             </div>
