@@ -42,6 +42,9 @@ const steps = [
 const faqs: { q: string; a: string }[] = [
   { q: "O período gratuito exige cartão de crédito?", a: "Não. O trial de 7 dias é 100% gratuito e não requer nenhum dado de pagamento. Basta criar sua conta e começar a usar imediatamente." },
   { q: "Como funciona o pagamento do Plano Pro?", a: "O pagamento é recorrente mensal via Pix ou cartão de crédito, processado com segurança pelo Mercado Pago. Você pode cancelar a qualquer momento, sem multa." },
+  { q: "O que muda quando o período gratuito terminar?", a: "Ao final dos 7 dias, o acesso ao Drive IA é pausado até você assinar o Plano Pro. Seus dados ficam salvos e ficam disponíveis integralmente assim que você ativar a assinatura." },
+  { q: "O que acontece com meus dados se eu cancelar?", a: "Seus dados ficam armazenados com segurança por 30 dias após o cancelamento. Durante esse período você pode reativar sua conta e retomar exatamente de onde parou." },
+  { q: "Por que a análise por IA tem limite de 1 por hora?", a: "A análise é gerada por inteligência artificial com base em todos os seus dados do período e requer processamento computacional. O intervalo de 1 hora garante qualidade na resposta e disponibilidade para todos os usuários." },
   { q: "Meus dados ficam seguros?", a: "Sim. Todos os seus dados são armazenados com criptografia e nunca são compartilhados com terceiros. Você pode solicitar a exclusão dos seus dados a qualquer momento pelo e-mail contato.solytech@gmail.com." },
   { q: "O Drive IA funciona para outros aplicativos além da Uber?", a: "Sim. O Drive IA foi desenvolvido para motoristas de aplicativo em geral. Funciona com Uber, 99, InDrive, corridas particulares e qualquer outra plataforma. Ao registrar a corrida, você escolhe a plataforma usada e o sistema organiza seus resultados automaticamente." },
   { q: "Como registro minhas corridas no Drive IA?", a: "De forma simples e rápida, pelo botão de adicionar na tela principal. Informe a plataforma, horário, valor, km e origem/destino. Leva menos de 30 segundos." },
@@ -119,7 +122,7 @@ export default function Index() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Card className="p-3">
-                    <p className="text-xs text-muted-foreground">Ganho real</p>
+                    <p className="text-xs text-muted-foreground">Receita bruta</p>
                     <p className="text-2xl font-bold gradient-text">R$ 312,40</p>
                   </Card>
                   <Card className="p-3">
@@ -140,7 +143,8 @@ export default function Index() {
                     <Brain className="h-4 w-4" /> Análise IA
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Você bateu 87% da meta diária. Recomendo focar no centro entre 18h e 21h.
+                    Você bateu 87% da meta diária. Concentre-se entre 18h e 21h
+                    para maximizar seu R$/hora.
                   </p>
                 </div>
               </div>
@@ -353,7 +357,7 @@ export default function Index() {
           <div className="flex items-center gap-4">
             <Link to="/privacidade" className="hover:text-foreground">Política de Privacidade</Link>
             <a href="mailto:contato.solytech@gmail.com" className="hover:text-foreground">
-              Suporte: contato.solytech@gmail.com
+              contato.solytech@gmail.com
             </a>
           </div>
         </div>
