@@ -520,7 +520,7 @@ export default function DashboardFinanceiro() {
                                   className="h-7 w-7"
                                   title="Visualizar"
                                   onClick={() => setViewLanc({
-                                    tipo: row.tipo,
+                                    tipo: tipoLabel(row.tipo),
                                     conta: row.conta,
                                     descricao: row.descricao,
                                     valor: row.valor,
