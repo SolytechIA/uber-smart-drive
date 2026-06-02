@@ -179,9 +179,12 @@ export default function GraficosFinanceiros() {
       map[p] = (map[p] || 0) + Number(l.valor);
     }
     const total = Object.values(map).reduce((a,b) => a+b, 0);
-    return Object.entries(map).filter(([_,v]) => v > 0).map(([name, value]) => ({
-      name, value, pct: total > 0 ? (value/total)*100 : 0, color: plataformaColor(name),
-    }));
+    return Object.entries(map)
+      .filter(([_,v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({
+        name, value, pct: total > 0 ? (value/total)*100 : 0, color: plataformaColor(name),
+      }));
   }, [ridesIn, lancsIn]);
 
   // Custos por conta
@@ -191,9 +194,12 @@ export default function GraficosFinanceiros() {
       map[l.conta] = (map[l.conta] || 0) + Number(l.valor);
     }
     const total = Object.values(map).reduce((a,b) => a+b, 0);
-    return Object.entries(map).filter(([_,v]) => v > 0).map(([name, value], i) => ({
-      name, value, pct: total > 0 ? (value/total)*100 : 0, color: COST_PALETTE[i % COST_PALETTE.length],
-    }));
+    return Object.entries(map)
+      .filter(([_,v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value], i) => ({
+        name, value, pct: total > 0 ? (value/total)*100 : 0, color: COST_PALETTE[i % COST_PALETTE.length],
+      }));
   }, [lancsIn]);
 
   // Ticket médio por plataforma
