@@ -30,6 +30,8 @@ const CONTAS_CUSTO = [
   "Taxa/Passe Uber",
   "Taxa/Passe 99",
   "Taxa/Passe InDrive",
+  "Financiamento de Veículo",
+  "Aluguel de Veículo",
   "Combustível",
   "Estacionamentos",
   "Pedágio",
