@@ -129,8 +129,8 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
           <DialogTitle className="font-display text-xl">{titulo}</DialogTitle>
           <DialogDescription>
             {tipo === "ganho"
-              ? "Registre um ganho avulso (gorjeta, particular, etc.)."
-              : "Registre um custo avulso (combustível, taxa, manutenção, etc.)."}
+              ? "Registre uma receita avulsa (gorjeta, particular, etc.)."
+              : "Registre uma despesa avulsa (combustível, taxa, manutenção, etc.)."}
           </DialogDescription>
         </DialogHeader>
 
