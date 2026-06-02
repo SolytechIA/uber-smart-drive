@@ -309,7 +309,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                        <RTooltip contentStyle={tooltipStyle} />
+                        <RTooltip content={<ChartTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Bar name="BOA" dataKey="BOA" stackId="a" fill="#10b981" />
                         <Bar name="MÉDIA" dataKey="MEDIA" stackId="a" fill="#f59e0b" />
@@ -331,7 +331,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `${v}km`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(1)} km`} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => `${Number(v).toFixed(1)} km`} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Bar name="Km Total" dataKey="total" fill="#94a3b8" radius={[4,4,0,0]} />
                         <Bar name="Km Passageiro" dataKey="passageiro" fill="#10b981" radius={[4,4,0,0]} />
@@ -352,7 +352,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis type="category" dataKey="bairro" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={110} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v} corridas`} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => `${v} corridas`} />} />
                         <Bar dataKey="qtd" fill="#8b5cf6" radius={[0,4,4,0]} label={{ position: "right", fill: "hsl(var(--foreground))", fontSize: 11 }} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -371,7 +371,7 @@ export default function GraficosPerformance() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `${v}%`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(1)}%`} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />} />
                         <ReferenceLine y={70} stroke="#10b981" strokeDasharray="6 4" label={{ value: "Meta 70%", fill: "#10b981", fontSize: 10, position: "right" }} />
                         <Line type="monotone" dataKey="pct" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
                       </LineChart>
