@@ -292,7 +292,27 @@ export default function DashboardFinanceiro() {
             <h1 className="text-2xl md:text-3xl font-display font-bold">Financeiro</h1>
             <p className="text-muted-foreground text-sm mt-1">Demonstrativo financeiro completo com receitas, despesas e resultado líquido.</p>
           </div>
-...
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
+              <TabsList>
+                <TabsTrigger value="hoje">Hoje</TabsTrigger>
+                <TabsTrigger value="semana">Semana</TabsTrigger>
+                <TabsTrigger value="mes">Mês</TabsTrigger>
+                <TabsTrigger value="acumulado">Acumulado</TabsTrigger>
+                <TabsTrigger value="personalizado">Personalizado</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {periodo === "personalizado" && (
+              <CustomRangePicker custom={custom} onApply={setCustom} />
+            )}
+            <LancarDropdown onPick={setLancamentoTipo} />
+          </div>
+        </div>
+
+        {loading ? (
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Carregando…</CardContent></Card>
+        ) : (
+          <>
             {/* 3 CARDS PRINCIPAIS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <BigCard title="💰 Receita Bruta" value={ganhoBruto} positive />
