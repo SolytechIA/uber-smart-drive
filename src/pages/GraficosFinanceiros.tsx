@@ -263,14 +263,20 @@ export default function GraficosFinanceiros() {
                 {daySeries.length === 0 ? <EmptyState /> : (
                   <div className="h-72 w-full">
                     <ResponsiveContainer>
-                      <LineChart data={daySeries}>
+                      <AreaChart data={daySeries}>
+                        <defs>
+                          <linearGradient id="gradBruto" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v}`} />
                         <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
-                        <Line type="monotone" name="Receita Bruta" dataKey="brutoAcum" stroke="#10b981" strokeWidth={2} dot={false} />
-                      </LineChart>
+                        <Area type="monotone" name="Receita Bruta" dataKey="brutoAcum" stroke="#10b981" strokeWidth={2} fill="url(#gradBruto)" />
+                      </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 )}
