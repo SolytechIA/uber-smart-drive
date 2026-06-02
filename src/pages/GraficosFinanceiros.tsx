@@ -258,7 +258,7 @@ export default function GraficosFinanceiros() {
         ) : (
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="text-base">📈 Evolução do Resultado Financeiro</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">📈 Evolução do Resultado Financeiro (acumulado)</CardTitle></CardHeader>
               <CardContent>
                 {daySeries.length === 0 ? <EmptyState /> : (
                   <div className="h-72 w-full">
@@ -267,21 +267,22 @@ export default function GraficosFinanceiros() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v}`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
-                        <Line type="monotone" name="Ganho Bruto" dataKey="bruto" stroke="#10b981" strokeWidth={2} dot={false} />
-                        <Line type="monotone" name="Custo Total" dataKey="custo" stroke="#ef4444" strokeWidth={2} dot={false} />
-                        <Line type="monotone" name="Ganho Líquido" dataKey="liquido" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                        <Line type="monotone" name="Receita Bruta" dataKey="brutoAcum" stroke="#10b981" strokeWidth={2} dot={false} />
+                        <Line type="monotone" name="Despesa Total" dataKey="custoAcum" stroke="#ef4444" strokeWidth={2} dot={false} />
+                        <Line type="monotone" name="Resultado Líquido" dataKey="liquidoAcum" stroke="#3b82f6" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 )}
+                <p className="text-xs text-muted-foreground mt-2">Valores acumulados ao longo do período — dias sem movimentação mantêm o último valor.</p>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardHeader><CardTitle className="text-base">🍩 Composição de Ganhos por Plataforma</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">🍩 Composição de Receita por Plataforma</CardTitle></CardHeader>
                 <CardContent>
                   {ganhosPorPlat.length === 0 ? <EmptyState /> : (
                     <>
@@ -291,7 +292,7 @@ export default function GraficosFinanceiros() {
                             <Pie data={ganhosPorPlat} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
                               {ganhosPorPlat.map((e, i) => <Cell key={i} fill={e.color} />)}
                             </Pie>
-                            <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                            <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -311,7 +312,7 @@ export default function GraficosFinanceiros() {
               </Card>
 
               <Card>
-                <CardHeader><CardTitle className="text-base">🍩 Composição de Custos por Conta</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">🍩 Composição de Despesas por Conta</CardTitle></CardHeader>
                 <CardContent>
                   {custosPorConta.length === 0 ? <EmptyState /> : (
                     <>
@@ -321,7 +322,7 @@ export default function GraficosFinanceiros() {
                             <Pie data={custosPorConta} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
                               {custosPorConta.map((e, i) => <Cell key={i} fill={e.color} />)}
                             </Pie>
-                            <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                            <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -342,24 +343,39 @@ export default function GraficosFinanceiros() {
             </div>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">📊 Ganho Bruto vs Custo vs Líquido por Período</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">📊 Receita vs Despesa vs Resultado Líquido (acumulado)</CardTitle></CardHeader>
               <CardContent>
                 {daySeries.length === 0 ? <EmptyState /> : (
                   <div className="h-72 w-full">
                     <ResponsiveContainer>
-                      <BarChart data={daySeries}>
+                      <AreaChart data={daySeries}>
+                        <defs>
+                          <linearGradient id="gradBruto" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gradCusto" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gradLiq" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                         <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `R$${v}`} />
-                        <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                        <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
-                        <Bar name="Bruto" dataKey="bruto" fill="#10b981" radius={[4,4,0,0]} />
-                        <Bar name="Custo" dataKey="custo" fill="#ef4444" radius={[4,4,0,0]} />
-                        <Bar name="Líquido" dataKey="liquido" fill="#3b82f6" radius={[4,4,0,0]} />
-                      </BarChart>
+                        <Area type="monotone" name="Receita Bruta" dataKey="brutoAcum" stroke="#10b981" strokeWidth={2} fill="url(#gradBruto)" />
+                        <Area type="monotone" name="Despesa Total" dataKey="custoAcum" stroke="#ef4444" strokeWidth={2} fill="url(#gradCusto)" />
+                        <Area type="monotone" name="Resultado Líquido" dataKey="liquidoAcum" stroke="#3b82f6" strokeWidth={2} fill="url(#gradLiq)" />
+                      </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 )}
+                <p className="text-xs text-muted-foreground mt-2">Visão acumulada otimizada para leitura no celular.</p>
               </CardContent>
             </Card>
 
