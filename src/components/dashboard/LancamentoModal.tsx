@@ -30,6 +30,8 @@ const CONTAS_CUSTO = [
   "Taxa/Passe Uber",
   "Taxa/Passe 99",
   "Taxa/Passe InDrive",
+  "Financiamento de Veículo",
+  "Aluguel de Veículo",
   "Combustível",
   "Estacionamentos",
   "Pedágio",
@@ -113,12 +115,12 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
       toast.error(`Erro ao salvar: ${error.message}`);
       return;
     }
-    toast.success(editing ? "✅ Lançamento atualizado" : tipo === "ganho" ? "✅ Ganho lançado" : "✅ Custo lançado");
+    toast.success(editing ? "✅ Lançamento atualizado" : tipo === "ganho" ? "✅ Receita lançada" : "✅ Despesa lançada");
     onSaved?.();
     onOpenChange(false);
   };
 
-  const titulo = editing ? "Editar Lançamento" : tipo === "ganho" ? "Lançar Ganho" : "Lançar Custo";
+  const titulo = editing ? "Editar Lançamento" : tipo === "ganho" ? "Lançar Receita" : "Lançar Despesa";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,8 +129,8 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
           <DialogTitle className="font-display text-xl">{titulo}</DialogTitle>
           <DialogDescription>
             {tipo === "ganho"
-              ? "Registre um ganho avulso (gorjeta, particular, etc.)."
-              : "Registre um custo avulso (combustível, taxa, manutenção, etc.)."}
+              ? "Registre uma receita avulsa (gorjeta, particular, etc.)."
+              : "Registre uma despesa avulsa (combustível, taxa, manutenção, etc.)."}
           </DialogDescription>
         </DialogHeader>
 
@@ -155,7 +157,7 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
           </div>
 
           <div className="space-y-1.5">
-            <Label>{tipo === "ganho" ? "Conta de ganho" : "Conta de custo"}</Label>
+            <Label>{tipo === "ganho" ? "Conta de receita" : "Conta de despesa"}</Label>
             <Select value={conta} onValueChange={setConta}>
               <SelectTrigger>
                 <SelectValue />
@@ -199,7 +201,7 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
             </Button>
             <Button type="submit" variant="gradient" disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tipo === "ganho" ? "Salvar ganho" : "Salvar custo"}
+              {tipo === "ganho" ? "Salvar receita" : "Salvar despesa"}
             </Button>
           </DialogFooter>
         </form>
