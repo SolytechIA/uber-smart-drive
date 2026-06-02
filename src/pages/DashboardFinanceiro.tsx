@@ -691,8 +691,8 @@ function LancarDropdown({ onPick }: { onPick: (t: LancamentoTipo) => void }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => onPick("ganho")}>💰 Lançar ganho</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onPick("custo")}>💸 Lançar custo</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("ganho")}>💰 Lançar Receita</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("custo")}>💸 Lançar Despesa</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
