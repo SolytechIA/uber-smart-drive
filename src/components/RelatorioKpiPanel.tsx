@@ -21,17 +21,37 @@ interface Props {
   passes: UberPasse[];
 }
 
-function KpiCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+type Tone = "green" | "yellow" | "red" | "neutral";
+const toneClass: Record<Tone, string> = {
+  green: "text-emerald-500",
+  yellow: "text-amber-500",
+  red: "text-rose-500",
+  neutral: "",
+};
+
+function tier(value: number, goodAtOrAbove: number, midAtOrAbove: number): Tone {
+  if (value >= goodAtOrAbove) return "green";
+  if (value >= midAtOrAbove) return "yellow";
+  return "red";
+}
+function tierInverse(value: number, goodAtOrBelow: number, midAtOrBelow: number): Tone {
+  if (value <= goodAtOrBelow) return "green";
+  if (value <= midAtOrBelow) return "yellow";
+  return "red";
+}
+
+function KpiCard({ label, value, hint, tone = "neutral" }: { label: string; value: string; hint?: string; tone?: Tone }) {
   return (
     <Card>
       <CardContent className="p-4">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
+        <p className={`mt-1 text-2xl font-bold tabular-nums ${toneClass[tone]}`}>{value}</p>
         {hint && <p className="mt-1 text-[10px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
   );
 }
+
 
 export function RelatorioKpiPanel({ rides, vehicle, jornadas, passes }: Props) {
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
