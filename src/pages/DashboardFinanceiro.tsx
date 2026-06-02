@@ -166,7 +166,7 @@ export default function DashboardFinanceiro() {
   const ganhosPorConta = useMemo(() => {
     const map: Record<string, number> = {};
     for (const r of ridesNoPeriodo) {
-      const conta = PLAT_TO_CONTA[r.plataforma || "Uber"] || "Outros Ganhos";
+      const conta = PLAT_TO_CONTA[r.plataforma || "Uber"] || "Outras Receitas Diversas";
       map[conta] = (map[conta] || 0) + Number(r.valor_bruto || 0);
     }
     for (const l of lancsNoPeriodo.filter((x) => x.tipo === "ganho")) {
