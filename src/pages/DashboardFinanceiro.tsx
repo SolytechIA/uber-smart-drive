@@ -195,10 +195,18 @@ export default function DashboardFinanceiro() {
 
   // Extrato unificado (corridas + lançamentos)
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [periodo, custom]);
+  const [sortBy, setSortBy] = useState<"data" | "tipo" | "conta" | "valor">("data");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "receita" | "despesa" | "corrida">("todos");
+  const [filtroConta, setFiltroConta] = useState<string>("todas");
+  useEffect(() => { setPage(1); }, [periodo, custom, sortBy, sortDir, filtroTipo, filtroConta]);
+  useEffect(() => { setFiltroConta("todas"); }, [periodo, custom]);
   const PAGE_SIZE = 20;
 
-  const extrato = useMemo(() => {
+  const tipoLabel = (t: "Corrida" | "Ganho" | "Custo") =>
+    t === "Ganho" ? "Receita" : t === "Custo" ? "Despesa" : "Corrida";
+
+  const extratoFull = useMemo(() => {
     type Linha = {
       key: string;
       data: string;
@@ -236,9 +244,49 @@ export default function DashboardFinanceiro() {
         lanc: l,
       });
     }
-    linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
     return linhas;
   }, [ridesNoPeriodo, lancsNoPeriodo]);
+
+  const contasDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of extratoFull) set.add(l.conta);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [extratoFull]);
+
+  const extrato = useMemo(() => {
+    const filtered = extratoFull.filter((l) => {
+      if (filtroTipo === "receita" && l.tipo !== "Ganho") return false;
+      if (filtroTipo === "despesa" && l.tipo !== "Custo") return false;
+      if (filtroTipo === "corrida" && l.tipo !== "Corrida") return false;
+      if (filtroConta !== "todas" && l.conta !== filtroConta) return false;
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    filtered.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === "data") cmp = a.data < b.data ? -1 : a.data > b.data ? 1 : 0;
+      else if (sortBy === "tipo") cmp = tipoLabel(a.tipo).localeCompare(tipoLabel(b.tipo));
+      else if (sortBy === "conta") cmp = a.conta.localeCompare(b.conta);
+      else if (sortBy === "valor") cmp = a.valor - b.valor;
+      return cmp * dir;
+    });
+    return filtered;
+  }, [extratoFull, filtroTipo, filtroConta, sortBy, sortDir]);
+
+  const toggleSort = (col: "data" | "tipo" | "conta" | "valor") => {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+  };
+  const sortIcon = (col: "data" | "tipo" | "conta" | "valor") => {
+    if (sortBy !== col) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+  const ariaSort = (col: "data" | "tipo" | "conta" | "valor") =>
+    sortBy === col ? (sortDir === "asc" ? "ascending" : "descending") : "none";
 
   const handleEditLanc = (l: Lancamento) => {
     setEditingLanc({ id: l.id, conta: l.conta, descricao: l.descricao, valor: Number(l.valor), data: l.data });
@@ -260,6 +308,9 @@ export default function DashboardFinanceiro() {
   const totalPages = Math.max(1, Math.ceil(extrato.length / PAGE_SIZE));
   const pageRows = extrato.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hoje = format(nowInTZ(), "yyyy-MM-dd");
+  const filtrosAtivos = filtroTipo !== "todos" || filtroConta !== "todas";
+  const limparFiltros = () => { setFiltroTipo("todos"); setFiltroConta("todas"); };
+
 
   // Lançamentos que compõem uma conta no drill
   const drillRows = useMemo(() => {
