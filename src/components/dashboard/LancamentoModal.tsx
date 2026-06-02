@@ -120,7 +120,7 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
     onOpenChange(false);
   };
 
-  const titulo = editing ? "Editar Lançamento" : tipo === "ganho" ? "Lançar Ganho" : "Lançar Custo";
+  const titulo = editing ? "Editar Lançamento" : tipo === "ganho" ? "Lançar Receita" : "Lançar Despesa";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
