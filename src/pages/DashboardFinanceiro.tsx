@@ -606,7 +606,7 @@ export default function DashboardFinanceiro() {
               <Field
                 label="Valor"
                 value={fmtBRL(viewLanc.valor)}
-                valueClass={cn(viewLanc.tipo === "Custo" ? "text-rose-500" : "text-emerald-500", "font-bold")}
+                valueClass={cn(viewLanc.tipo === "Despesa" ? "text-rose-500" : "text-emerald-500", "font-bold")}
               />
             </div>
           )}
