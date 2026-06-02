@@ -4,7 +4,8 @@ import {
   format, parseISO,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -194,10 +195,18 @@ export default function DashboardFinanceiro() {
 
   // Extrato unificado (corridas + lançamentos)
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [periodo, custom]);
+  const [sortBy, setSortBy] = useState<"data" | "tipo" | "conta" | "valor">("data");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "receita" | "despesa" | "corrida">("todos");
+  const [filtroConta, setFiltroConta] = useState<string>("todas");
+  useEffect(() => { setPage(1); }, [periodo, custom, sortBy, sortDir, filtroTipo, filtroConta]);
+  useEffect(() => { setFiltroConta("todas"); }, [periodo, custom]);
   const PAGE_SIZE = 20;
 
-  const extrato = useMemo(() => {
+  const tipoLabel = (t: "Corrida" | "Ganho" | "Custo") =>
+    t === "Ganho" ? "Receita" : t === "Custo" ? "Despesa" : "Corrida";
+
+  const extratoFull = useMemo(() => {
     type Linha = {
       key: string;
       data: string;
@@ -235,9 +244,49 @@ export default function DashboardFinanceiro() {
         lanc: l,
       });
     }
-    linhas.sort((a, b) => (a.data < b.data ? 1 : -1));
     return linhas;
   }, [ridesNoPeriodo, lancsNoPeriodo]);
+
+  const contasDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of extratoFull) set.add(l.conta);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [extratoFull]);
+
+  const extrato = useMemo(() => {
+    const filtered = extratoFull.filter((l) => {
+      if (filtroTipo === "receita" && l.tipo !== "Ganho") return false;
+      if (filtroTipo === "despesa" && l.tipo !== "Custo") return false;
+      if (filtroTipo === "corrida" && l.tipo !== "Corrida") return false;
+      if (filtroConta !== "todas" && l.conta !== filtroConta) return false;
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    filtered.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === "data") cmp = a.data < b.data ? -1 : a.data > b.data ? 1 : 0;
+      else if (sortBy === "tipo") cmp = tipoLabel(a.tipo).localeCompare(tipoLabel(b.tipo));
+      else if (sortBy === "conta") cmp = a.conta.localeCompare(b.conta);
+      else if (sortBy === "valor") cmp = a.valor - b.valor;
+      return cmp * dir;
+    });
+    return filtered;
+  }, [extratoFull, filtroTipo, filtroConta, sortBy, sortDir]);
+
+  const toggleSort = (col: "data" | "tipo" | "conta" | "valor") => {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+  };
+  const sortIcon = (col: "data" | "tipo" | "conta" | "valor") => {
+    if (sortBy !== col) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+  const ariaSort = (col: "data" | "tipo" | "conta" | "valor") =>
+    sortBy === col ? (sortDir === "asc" ? "ascending" : "descending") : "none";
 
   const handleEditLanc = (l: Lancamento) => {
     setEditingLanc({ id: l.id, conta: l.conta, descricao: l.descricao, valor: Number(l.valor), data: l.data });
@@ -259,6 +308,9 @@ export default function DashboardFinanceiro() {
   const totalPages = Math.max(1, Math.ceil(extrato.length / PAGE_SIZE));
   const pageRows = extrato.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hoje = format(nowInTZ(), "yyyy-MM-dd");
+  const filtrosAtivos = filtroTipo !== "todos" || filtroConta !== "todas";
+  const limparFiltros = () => { setFiltroTipo("todos"); setFiltroConta("todas"); };
+
 
   // Lançamentos que compõem uma conta no drill
   const drillRows = useMemo(() => {
@@ -373,7 +425,34 @@ export default function DashboardFinanceiro() {
             {/* EXTRATO ANALÍTICO */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">📋 Extrato de Lançamentos</CardTitle>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <CardTitle className="text-base">📋 Extrato de Lançamentos</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as any)}>
+                      <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os tipos</SelectItem>
+                        <SelectItem value="receita">Receita</SelectItem>
+                        <SelectItem value="despesa">Despesa</SelectItem>
+                        <SelectItem value="corrida">Corrida</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={filtroConta} onValueChange={setFiltroConta}>
+                      <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Conta" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todas">Todas as contas</SelectItem>
+                        {contasDisponiveis.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {filtrosAtivos && (
+                      <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" onClick={limparFiltros}>
+                        <X className="h-3 w-3" /> Limpar
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {extrato.length === 0 ? (
@@ -383,11 +462,27 @@ export default function DashboardFinanceiro() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Conta</TableHead>
+                          <TableHead aria-sort={ariaSort("data")}>
+                            <button type="button" onClick={() => toggleSort("data")} className="inline-flex items-center gap-1 hover:text-foreground">
+                              Data {sortIcon("data")}
+                            </button>
+                          </TableHead>
+                          <TableHead aria-sort={ariaSort("tipo")}>
+                            <button type="button" onClick={() => toggleSort("tipo")} className="inline-flex items-center gap-1 hover:text-foreground">
+                              Tipo {sortIcon("tipo")}
+                            </button>
+                          </TableHead>
+                          <TableHead aria-sort={ariaSort("conta")}>
+                            <button type="button" onClick={() => toggleSort("conta")} className="inline-flex items-center gap-1 hover:text-foreground">
+                              Conta {sortIcon("conta")}
+                            </button>
+                          </TableHead>
                           <TableHead>Descrição</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-right" aria-sort={ariaSort("valor")}>
+                            <button type="button" onClick={() => toggleSort("valor")} className="inline-flex items-center gap-1 hover:text-foreground ml-auto">
+                              Valor {sortIcon("valor")}
+                            </button>
+                          </TableHead>
                           <TableHead className="text-right w-[120px]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -400,7 +495,8 @@ export default function DashboardFinanceiro() {
                                 <Badge variant="outline" className="ml-2 text-[9px]">📅 Previsto</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs">{row.tipo}</TableCell>
+                            <TableCell className="text-xs">{tipoLabel(row.tipo)}</TableCell>
+
                             <TableCell className="text-xs">
                               {row.tipo === "Corrida" ? (
                                 <span className="inline-flex items-center gap-1.5">
@@ -424,7 +520,7 @@ export default function DashboardFinanceiro() {
                                   className="h-7 w-7"
                                   title="Visualizar"
                                   onClick={() => setViewLanc({
-                                    tipo: row.tipo,
+                                    tipo: tipoLabel(row.tipo),
                                     conta: row.conta,
                                     descricao: row.descricao,
                                     valor: row.valor,
@@ -510,7 +606,7 @@ export default function DashboardFinanceiro() {
               <Field
                 label="Valor"
                 value={fmtBRL(viewLanc.valor)}
-                valueClass={cn(viewLanc.tipo === "Custo" ? "text-rose-500" : "text-emerald-500", "font-bold")}
+                valueClass={cn(viewLanc.tipo === "Despesa" ? "text-rose-500" : "text-emerald-500", "font-bold")}
               />
             </div>
           )}

@@ -258,7 +258,7 @@ export default function GraficosFinanceiros() {
         ) : (
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="text-base">📈 Evolução do Resultado Financeiro (acumulado)</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">📈 Evolução da Receita Bruta (acumulada)</CardTitle></CardHeader>
               <CardContent>
                 {daySeries.length === 0 ? <EmptyState /> : (
                   <div className="h-72 w-full">
@@ -270,15 +270,14 @@ export default function GraficosFinanceiros() {
                         <RTooltip content={<ChartTooltip formatter={(v) => fmtBRL(v)} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Line type="monotone" name="Receita Bruta" dataKey="brutoAcum" stroke="#10b981" strokeWidth={2} dot={false} />
-                        <Line type="monotone" name="Despesa Total" dataKey="custoAcum" stroke="#ef4444" strokeWidth={2} dot={false} />
-                        <Line type="monotone" name="Resultado Líquido" dataKey="liquidoAcum" stroke="#3b82f6" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground mt-2">Valores acumulados ao longo do período — dias sem movimentação mantêm o último valor.</p>
+                <p className="text-xs text-muted-foreground mt-2">Receita bruta acumulada ao longo do período — dias sem movimentação mantêm o último valor.</p>
               </CardContent>
             </Card>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
