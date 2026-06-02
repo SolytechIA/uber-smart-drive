@@ -4,7 +4,8 @@ import {
   format, parseISO,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trophy, Eye, Pencil, Trash2, ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
