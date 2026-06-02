@@ -115,7 +115,7 @@ export function LancamentoModal({ open, tipo, onOpenChange, onSaved, defaultDate
       toast.error(`Erro ao salvar: ${error.message}`);
       return;
     }
-    toast.success(editing ? "✅ Lançamento atualizado" : tipo === "ganho" ? "✅ Ganho lançado" : "✅ Custo lançado");
+    toast.success(editing ? "✅ Lançamento atualizado" : tipo === "ganho" ? "✅ Receita lançada" : "✅ Despesa lançada");
     onSaved?.();
     onOpenChange(false);
   };
