@@ -816,9 +816,11 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+  const windowMs = isPro ? COOLDOWN_PRO_MS : COOLDOWN_FREE_MS;
   const lastTs = generatedAt?.getTime() || 0;
-  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
-  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+  const rateLimited = lastTs > 0 && now - lastTs < windowMs;
+  const msLeft = rateLimited ? windowMs - (now - lastTs) : 0;
+  const cooldownLabel = rateLimited ? formatCooldown(msLeft) : "";
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
