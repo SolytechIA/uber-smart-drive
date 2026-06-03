@@ -380,6 +380,7 @@ function PainelDia({
   selectedDay: Date;
 }) {
   const cacheKey = `dia_${format(selectedDay, "yyyy-MM-dd")}`;
+  const { isPro } = usePlanStatus();
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
