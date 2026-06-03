@@ -240,15 +240,15 @@ export default function Index() {
               </p>
               <ul className="mt-6 space-y-2 text-sm">
                 {[
-                  "Dashboard Financeiro e Operacional",
-                  "Painel de Cards com indicadores de performance",
-                  "Gráficos Financeiros",
-                  "Gráficos de Performance",
-                  "Análise por IA (1 análise por hora)",
-                  "Cadastro de veículo e parâmetros de custo",
-                  "Lançamento de Receitas e Despesas",
-                  "Metas personalizadas",
-                  "Suporte por e-mail",
+                  "Dashboard Financeiro e Operacional.",
+                  "Painel de Cards com indicadores de performance.",
+                  "Gráficos Financeiros.",
+                  "Gráficos de Performance.",
+                  "Análise por IA: 1 análise por dia.",
+                  "Cadastro de veículo e parâmetros de custo.",
+                  "Lançamento de Receitas e Despesas.",
+                  "Metas personalizadas.",
+                  "Suporte por e-mail.",
                 ].map((b) => (
                   <li key={b} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
