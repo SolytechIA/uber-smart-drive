@@ -1672,7 +1672,7 @@ function AnaliseResultado({
           </>
         )}
         {rateLimited ? (
-          <span>⏳ Disponível em {minutesLeft} min</span>
+          <span>⏳ Disponível em {cooldownLabel}</span>
         ) : (
           <button
             type="button"
