@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlanStatus } from "@/hooks/usePlanStatus";
 import { cn } from "@/lib/utils";
 import {
   calcPeriodMetrics,
