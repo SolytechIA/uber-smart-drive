@@ -765,7 +765,8 @@ function PainelDia({
         errorMsg={errorMsg}
         onGenerate={handleGenerate}
         rateLimited={rateLimited}
-        minutesLeft={minutesLeft}
+        cooldownLabel={cooldownLabel}
+        isPro={isPro}
         generatedAt={generatedAt}
         ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
         emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
