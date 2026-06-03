@@ -929,30 +929,28 @@ Deno.serve(async (req) => {
     const normalized = normalizeAnalysis(content);
 
     // ── 4) Record rate-limit usage server-side (service role) ──────────────
-    // Persist BOTH a per-period row (legacy/history) and a GLOBAL row used
-    // by the global cooldown check (any analysis resets the global window).
+    // Persist UM registro por período. O cooldown global lê o max(ultima_analise)
+    // entre TODOS os registros do usuário, então uma linha basta para travar
+    // Free (24h) e Pro (1h). NÃO inserir periodo='global': o CHECK constraint
+    // só aceita 'dia' | 'semana' | 'mes' e um insert inválido faz a operação
+    // inteira ser revertida — esse era o bug que liberava o Pro após refresh
+    // (a ultima_analise nunca era atualizada na 2ª geração em diante).
     const nowIso = new Date().toISOString();
-    await admin
+    const { error: rlUpsertErr } = await admin
       .from("analise_rate_limit")
       .upsert(
-        [
-          {
-            user_id: userId,
-            periodo,
-            periodo_referencia: periodoRef,
-            ultima_analise: nowIso,
-            updated_at: nowIso,
-          },
-          {
-            user_id: userId,
-            periodo: "global",
-            periodo_referencia: "global",
-            ultima_analise: nowIso,
-            updated_at: nowIso,
-          },
-        ],
+        {
+          user_id: userId,
+          periodo,
+          periodo_referencia: periodoRef,
+          ultima_analise: nowIso,
+          updated_at: nowIso,
+        },
         { onConflict: "user_id,periodo,periodo_referencia" },
       );
+    if (rlUpsertErr) {
+      console.error("[groq-analysis] rate-limit upsert error:", rlUpsertErr);
+    }
 
     // SEMPRE devolver objeto estruturado com as 4 chaves. Nunca quebrar.
     return new Response(JSON.stringify(normalized), {
