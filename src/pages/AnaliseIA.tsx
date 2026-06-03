@@ -186,15 +186,16 @@ async function saveAnalise(params: {
 }
 
 async function fetchRateLimit(userId: string, periodo: "dia" | "semana" | "mes", refKey: string): Promise<Date | null> {
+  // Mantido por compat — agora consulta a ÚLTIMA análise GLOBAL do usuário,
+  // independentemente do período/tipo, refletindo a regra de cooldown unificada.
   try {
     const { data } = await supabase
       .from("analise_rate_limit" as any)
       .select("ultima_analise")
       .eq("user_id", userId)
-      .eq("periodo", periodo)
-      .eq("periodo_referencia", refKey)
-      .maybeSingle();
-    const ts = (data as any)?.ultima_analise;
+      .order("ultima_analise", { ascending: false })
+      .limit(1);
+    const ts = (data as any)?.[0]?.ultima_analise;
     return ts ? new Date(ts) : null;
   } catch {
     return null;
