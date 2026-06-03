@@ -964,6 +964,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
 /* ======================== Painel MES ======================== */
 function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
   const cacheKey = `mes_${mesYYYYMM}`;
+  const { isPro } = usePlanStatus();
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
