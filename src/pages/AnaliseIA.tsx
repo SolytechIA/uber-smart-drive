@@ -788,6 +788,7 @@ function PainelDia({
 /* ======================== Painel SEMANA ======================== */
 function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string }) {
   const cacheKey = `semana_${weekStartISO}`;
+  const { isPro } = usePlanStatus();
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
