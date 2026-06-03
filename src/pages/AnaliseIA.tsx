@@ -91,7 +91,18 @@ function normalizeAnalysis(raw: any): Analysis {
   };
 }
 
-const RATE_LIMIT_MS = 60 * 60 * 1000;
+// Janelas de cooldown GLOBAL por usuário, independentes do período analisado.
+const COOLDOWN_PRO_MS = 60 * 60 * 1000; // 1h
+const COOLDOWN_FREE_MS = 24 * 60 * 60 * 1000; // 24h
+
+function formatCooldown(msRemaining: number): string {
+  if (msRemaining <= 0) return "alguns instantes";
+  const totalMin = Math.ceil(msRemaining / 60_000);
+  if (totalMin < 60) return `${totalMin} min`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
 
 type Periodo = "hoje" | "semana" | "mes";
 
