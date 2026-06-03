@@ -929,16 +929,28 @@ Deno.serve(async (req) => {
     const normalized = normalizeAnalysis(content);
 
     // ── 4) Record rate-limit usage server-side (service role) ──────────────
+    // Persist BOTH a per-period row (legacy/history) and a GLOBAL row used
+    // by the global cooldown check (any analysis resets the global window).
+    const nowIso = new Date().toISOString();
     await admin
       .from("analise_rate_limit")
       .upsert(
-        {
-          user_id: userId,
-          periodo,
-          periodo_referencia: periodoRef,
-          ultima_analise: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
+        [
+          {
+            user_id: userId,
+            periodo,
+            periodo_referencia: periodoRef,
+            ultima_analise: nowIso,
+            updated_at: nowIso,
+          },
+          {
+            user_id: userId,
+            periodo: "global",
+            periodo_referencia: "global",
+            ultima_analise: nowIso,
+            updated_at: nowIso,
+          },
+        ],
         { onConflict: "user_id,periodo,periodo_referencia" },
       );
 
