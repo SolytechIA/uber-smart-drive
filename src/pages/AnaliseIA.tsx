@@ -1226,7 +1226,8 @@ function ResultadoLayout(props: {
   errorMsg: string;
   onGenerate: () => void;
   rateLimited: boolean;
-  minutesLeft: number;
+  cooldownLabel: string;
+  isPro: boolean;
   generatedAt: Date | null;
   ctaLabel: string;
   emptyText: string;
@@ -1243,7 +1244,8 @@ function ResultadoLayout(props: {
     errorMsg,
     onGenerate,
     rateLimited,
-    minutesLeft,
+    cooldownLabel,
+    isPro,
     generatedAt,
     ctaLabel,
     emptyText,
@@ -1254,6 +1256,7 @@ function ResultadoLayout(props: {
     titleRecs,
     footerProgress,
   } = props;
+  const navigate = useNavigate();
   return (
     <div className="space-y-5">
       {status !== "ok" && (
@@ -1274,8 +1277,33 @@ function ResultadoLayout(props: {
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
             <Sparkles className="mr-2 h-5 w-5" />
-            {status === "loading" ? "Analisando..." : rateLimited ? `Disponível em ${minutesLeft} min` : ctaLabel}
+            {status === "loading"
+              ? "Analisando..."
+              : rateLimited
+                ? `Disponível em ${cooldownLabel}`
+                : ctaLabel}
           </Button>
+          {rateLimited && (
+            <div className="max-w-md rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-center">
+              <p className="text-sm text-foreground/90">
+                Você já gerou uma análise recente. A próxima ficará disponível em{" "}
+                <span className="font-semibold">{cooldownLabel}</span>.
+              </p>
+              {!isPro && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No plano Free é 1 análise a cada 24 horas.{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/planos")}
+                    className="font-semibold text-primary underline-offset-2 hover:underline"
+                  >
+                    Faça upgrade para o Pro
+                  </button>{" "}
+                  e gere 1 análise por hora.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1323,7 +1351,7 @@ function ResultadoLayout(props: {
           generatedAt={generatedAt}
           onGenerate={onGenerate}
           rateLimited={rateLimited}
-          minutesLeft={minutesLeft}
+          cooldownLabel={cooldownLabel}
           titleResumo={titleResumo}
           titleRecs={titleRecs}
           titleProj={titleProj}
