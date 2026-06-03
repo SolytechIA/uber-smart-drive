@@ -1178,7 +1178,8 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         errorMsg={errorMsg}
         onGenerate={handleGenerate}
         rateLimited={rateLimited}
-        minutesLeft={minutesLeft}
+        cooldownLabel={cooldownLabel}
+        isPro={isPro}
         generatedAt={generatedAt}
         ctaLabel="Gerar Análise do Mês"
         emptyText="Sem corridas neste mês. Selecione outro mês ou registre corridas."
