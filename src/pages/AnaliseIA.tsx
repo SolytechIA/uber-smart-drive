@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlanStatus } from "@/hooks/usePlanStatus";
 import { cn } from "@/lib/utils";
 import {
   calcPeriodMetrics,
@@ -90,7 +91,18 @@ function normalizeAnalysis(raw: any): Analysis {
   };
 }
 
-const RATE_LIMIT_MS = 60 * 60 * 1000;
+// Janelas de cooldown GLOBAL por usuário, independentes do período analisado.
+const COOLDOWN_PRO_MS = 60 * 60 * 1000; // 1h
+const COOLDOWN_FREE_MS = 24 * 60 * 60 * 1000; // 24h
+
+function formatCooldown(msRemaining: number): string {
+  if (msRemaining <= 0) return "alguns instantes";
+  const totalMin = Math.ceil(msRemaining / 60_000);
+  if (totalMin < 60) return `${totalMin} min`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
 
 type Periodo = "hoje" | "semana" | "mes";
 
@@ -174,15 +186,16 @@ async function saveAnalise(params: {
 }
 
 async function fetchRateLimit(userId: string, periodo: "dia" | "semana" | "mes", refKey: string): Promise<Date | null> {
+  // Mantido por compat — agora consulta a ÚLTIMA análise GLOBAL do usuário,
+  // independentemente do período/tipo, refletindo a regra de cooldown unificada.
   try {
     const { data } = await supabase
       .from("analise_rate_limit" as any)
       .select("ultima_analise")
       .eq("user_id", userId)
-      .eq("periodo", periodo)
-      .eq("periodo_referencia", refKey)
-      .maybeSingle();
-    const ts = (data as any)?.ultima_analise;
+      .order("ultima_analise", { ascending: false })
+      .limit(1);
+    const ts = (data as any)?.[0]?.ultima_analise;
     return ts ? new Date(ts) : null;
   } catch {
     return null;
@@ -367,6 +380,7 @@ function PainelDia({
   selectedDay: Date;
 }) {
   const cacheKey = `dia_${format(selectedDay, "yyyy-MM-dd")}`;
+  const { isPro } = usePlanStatus();
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -517,9 +531,11 @@ function PainelDia({
     return () => clearInterval(id);
   }, []);
 
+  const windowMs = isPro ? COOLDOWN_PRO_MS : COOLDOWN_FREE_MS;
   const lastTs = generatedAt?.getTime() || 0;
-  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
-  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+  const rateLimited = lastTs > 0 && now - lastTs < windowMs;
+  const msLeft = rateLimited ? windowMs - (now - lastTs) : 0;
+  const cooldownLabel = rateLimited ? formatCooldown(msLeft) : "";
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
@@ -749,7 +765,8 @@ function PainelDia({
         errorMsg={errorMsg}
         onGenerate={handleGenerate}
         rateLimited={rateLimited}
-        minutesLeft={minutesLeft}
+        cooldownLabel={cooldownLabel}
+        isPro={isPro}
         generatedAt={generatedAt}
         ctaLabel={isHojeReal ? "Gerar Análise do Dia" : `Gerar Análise de ${format(selectedDay, "dd/MM")}`}
         emptyAction={isHojeReal ? () => navigate("/dashboard/operacional") : undefined}
@@ -771,6 +788,7 @@ function PainelDia({
 /* ======================== Painel SEMANA ======================== */
 function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string }) {
   const cacheKey = `semana_${weekStartISO}`;
+  const { isPro } = usePlanStatus();
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -798,9 +816,11 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+  const windowMs = isPro ? COOLDOWN_PRO_MS : COOLDOWN_FREE_MS;
   const lastTs = generatedAt?.getTime() || 0;
-  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
-  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+  const rateLimited = lastTs > 0 && now - lastTs < windowMs;
+  const msLeft = rateLimited ? windowMs - (now - lastTs) : 0;
+  const cooldownLabel = rateLimited ? formatCooldown(msLeft) : "";
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
@@ -927,7 +947,8 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         errorMsg={errorMsg}
         onGenerate={handleGenerate}
         rateLimited={rateLimited}
-        minutesLeft={minutesLeft}
+        cooldownLabel={cooldownLabel}
+        isPro={isPro}
         generatedAt={generatedAt}
         ctaLabel="Gerar Análise da Semana"
         emptyText="Sem corridas nesta semana ainda. Registre algumas corridas para liberar a análise."
@@ -943,6 +964,7 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
 /* ======================== Painel MES ======================== */
 function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
   const cacheKey = `mes_${mesYYYYMM}`;
+  const { isPro } = usePlanStatus();
   const [status, setStatus] = useState<Status>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -970,9 +992,11 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+  const windowMs = isPro ? COOLDOWN_PRO_MS : COOLDOWN_FREE_MS;
   const lastTs = generatedAt?.getTime() || 0;
-  const rateLimited = lastTs > 0 && now - lastTs < RATE_LIMIT_MS;
-  const minutesLeft = rateLimited ? Math.ceil((RATE_LIMIT_MS - (now - lastTs)) / 60_000) : 0;
+  const rateLimited = lastTs > 0 && now - lastTs < windowMs;
+  const msLeft = rateLimited ? windowMs - (now - lastTs) : 0;
+  const cooldownLabel = rateLimited ? formatCooldown(msLeft) : "";
 
   const handleGenerate = async () => {
     if (!user || rateLimited) return;
@@ -1154,7 +1178,8 @@ function PainelMes({ user, mesYYYYMM }: { user: any; mesYYYYMM: string }) {
         errorMsg={errorMsg}
         onGenerate={handleGenerate}
         rateLimited={rateLimited}
-        minutesLeft={minutesLeft}
+        cooldownLabel={cooldownLabel}
+        isPro={isPro}
         generatedAt={generatedAt}
         ctaLabel="Gerar Análise do Mês"
         emptyText="Sem corridas neste mês. Selecione outro mês ou registre corridas."
@@ -1201,7 +1226,8 @@ function ResultadoLayout(props: {
   errorMsg: string;
   onGenerate: () => void;
   rateLimited: boolean;
-  minutesLeft: number;
+  cooldownLabel: string;
+  isPro: boolean;
   generatedAt: Date | null;
   ctaLabel: string;
   emptyText: string;
@@ -1218,7 +1244,8 @@ function ResultadoLayout(props: {
     errorMsg,
     onGenerate,
     rateLimited,
-    minutesLeft,
+    cooldownLabel,
+    isPro,
     generatedAt,
     ctaLabel,
     emptyText,
@@ -1229,6 +1256,7 @@ function ResultadoLayout(props: {
     titleRecs,
     footerProgress,
   } = props;
+  const navigate = useNavigate();
   return (
     <div className="space-y-5">
       {status !== "ok" && (
@@ -1249,8 +1277,33 @@ function ResultadoLayout(props: {
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
             <Sparkles className="mr-2 h-5 w-5" />
-            {status === "loading" ? "Analisando..." : rateLimited ? `Disponível em ${minutesLeft} min` : ctaLabel}
+            {status === "loading"
+              ? "Analisando..."
+              : rateLimited
+                ? `Disponível em ${cooldownLabel}`
+                : ctaLabel}
           </Button>
+          {rateLimited && (
+            <div className="max-w-md rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-center">
+              <p className="text-sm text-foreground/90">
+                Você já gerou uma análise recente. A próxima ficará disponível em{" "}
+                <span className="font-semibold">{cooldownLabel}</span>.
+              </p>
+              {!isPro && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No plano Free é 1 análise a cada 24 horas.{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/planos")}
+                    className="font-semibold text-primary underline-offset-2 hover:underline"
+                  >
+                    Faça upgrade para o Pro
+                  </button>{" "}
+                  e gere 1 análise por hora.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1298,7 +1351,7 @@ function ResultadoLayout(props: {
           generatedAt={generatedAt}
           onGenerate={onGenerate}
           rateLimited={rateLimited}
-          minutesLeft={minutesLeft}
+          cooldownLabel={cooldownLabel}
           titleResumo={titleResumo}
           titleRecs={titleRecs}
           titleProj={titleProj}
@@ -1509,7 +1562,7 @@ function AnaliseResultado({
   generatedAt,
   onGenerate,
   rateLimited,
-  minutesLeft,
+  cooldownLabel,
   titleResumo,
   titleRecs,
   titleProj,
@@ -1520,7 +1573,7 @@ function AnaliseResultado({
   generatedAt: Date | null;
   onGenerate: () => void;
   rateLimited: boolean;
-  minutesLeft: number;
+  cooldownLabel: string;
   titleResumo: string;
   titleRecs: string;
   titleProj: string;
@@ -1619,7 +1672,7 @@ function AnaliseResultado({
           </>
         )}
         {rateLimited ? (
-          <span>⏳ Disponível em {minutesLeft} min</span>
+          <span>⏳ Disponível em {cooldownLabel}</span>
         ) : (
           <button
             type="button"

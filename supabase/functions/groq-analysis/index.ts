@@ -6,8 +6,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Server-side rate limit window: 1 analysis per (user, periodo, periodo_referencia) per 60 min.
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+// Server-side rate limit window — GLOBAL per user, independent of period/type:
+// • Free (trial active): 1 analysis per 24h
+// • Pro: 1 analysis per 1h
+const RATE_LIMIT_WINDOW_PRO_MS = 60 * 60 * 1000;
+const RATE_LIMIT_WINDOW_FREE_MS = 24 * 60 * 60 * 1000;
 
 // ─── PROMPT INJECTION SANITIZATION ────────────────────────────────────────────
 // Padrões comuns de tentativa de injeção. Tratados case-insensitive.
@@ -839,28 +842,33 @@ Deno.serve(async (req) => {
     };
     const payload = sanitizePayload(rawPayload);
 
-    // ── 3) SERVER-SIDE RATE LIMIT ──────────────────────────────────────────
+    // ── 3) SERVER-SIDE GLOBAL RATE LIMIT (independent of period/type) ──────
     const periodo = (payload as any).periodo || "dia";
     const periodoRef =
       (payload as any).periodo_referencia ||
       (payload as any).data_hoje ||
       (payload as any).rotulo_periodo ||
       "default";
-    const { data: rl } = await admin
+    const isPro = plano === "pro";
+    const windowMs = isPro ? RATE_LIMIT_WINDOW_PRO_MS : RATE_LIMIT_WINDOW_FREE_MS;
+    const { data: rlRows } = await admin
       .from("analise_rate_limit")
       .select("ultima_analise")
       .eq("user_id", userId)
-      .eq("periodo", periodo)
-      .eq("periodo_referencia", periodoRef)
-      .maybeSingle();
-    if (rl?.ultima_analise) {
-      const elapsed = Date.now() - new Date(rl.ultima_analise).getTime();
-      if (elapsed < RATE_LIMIT_WINDOW_MS) {
-        const retryInMs = RATE_LIMIT_WINDOW_MS - elapsed;
+      .order("ultima_analise", { ascending: false })
+      .limit(1);
+    const lastTs = rlRows && rlRows[0]?.ultima_analise ? new Date(rlRows[0].ultima_analise).getTime() : 0;
+    if (lastTs > 0) {
+      const elapsed = Date.now() - lastTs;
+      if (elapsed < windowMs) {
+        const retryInMs = windowMs - elapsed;
         return new Response(
           JSON.stringify({
             error: "rate_limited",
             retry_in_seconds: Math.ceil(retryInMs / 1000),
+            cooldown_until: new Date(lastTs + windowMs).toISOString(),
+            plan: isPro ? "pro" : "free",
+            window_ms: windowMs,
           }),
           {
             status: 429,
@@ -921,16 +929,28 @@ Deno.serve(async (req) => {
     const normalized = normalizeAnalysis(content);
 
     // ── 4) Record rate-limit usage server-side (service role) ──────────────
+    // Persist BOTH a per-period row (legacy/history) and a GLOBAL row used
+    // by the global cooldown check (any analysis resets the global window).
+    const nowIso = new Date().toISOString();
     await admin
       .from("analise_rate_limit")
       .upsert(
-        {
-          user_id: userId,
-          periodo,
-          periodo_referencia: periodoRef,
-          ultima_analise: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
+        [
+          {
+            user_id: userId,
+            periodo,
+            periodo_referencia: periodoRef,
+            ultima_analise: nowIso,
+            updated_at: nowIso,
+          },
+          {
+            user_id: userId,
+            periodo: "global",
+            periodo_referencia: "global",
+            ultima_analise: nowIso,
+            updated_at: nowIso,
+          },
+        ],
         { onConflict: "user_id,periodo,periodo_referencia" },
       );
 
