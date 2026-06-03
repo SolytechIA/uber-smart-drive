@@ -842,28 +842,33 @@ Deno.serve(async (req) => {
     };
     const payload = sanitizePayload(rawPayload);
 
-    // ── 3) SERVER-SIDE RATE LIMIT ──────────────────────────────────────────
+    // ── 3) SERVER-SIDE GLOBAL RATE LIMIT (independent of period/type) ──────
     const periodo = (payload as any).periodo || "dia";
     const periodoRef =
       (payload as any).periodo_referencia ||
       (payload as any).data_hoje ||
       (payload as any).rotulo_periodo ||
       "default";
-    const { data: rl } = await admin
+    const isPro = plano === "pro";
+    const windowMs = isPro ? RATE_LIMIT_WINDOW_PRO_MS : RATE_LIMIT_WINDOW_FREE_MS;
+    const { data: rlRows } = await admin
       .from("analise_rate_limit")
       .select("ultima_analise")
       .eq("user_id", userId)
-      .eq("periodo", periodo)
-      .eq("periodo_referencia", periodoRef)
-      .maybeSingle();
-    if (rl?.ultima_analise) {
-      const elapsed = Date.now() - new Date(rl.ultima_analise).getTime();
-      if (elapsed < RATE_LIMIT_WINDOW_MS) {
-        const retryInMs = RATE_LIMIT_WINDOW_MS - elapsed;
+      .order("ultima_analise", { ascending: false })
+      .limit(1);
+    const lastTs = rlRows && rlRows[0]?.ultima_analise ? new Date(rlRows[0].ultima_analise).getTime() : 0;
+    if (lastTs > 0) {
+      const elapsed = Date.now() - lastTs;
+      if (elapsed < windowMs) {
+        const retryInMs = windowMs - elapsed;
         return new Response(
           JSON.stringify({
             error: "rate_limited",
             retry_in_seconds: Math.ceil(retryInMs / 1000),
+            cooldown_until: new Date(lastTs + windowMs).toISOString(),
+            plan: isPro ? "pro" : "free",
+            window_ms: windowMs,
           }),
           {
             status: 429,
