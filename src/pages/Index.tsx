@@ -44,7 +44,7 @@ const faqs: { q: string; a: string }[] = [
   { q: "Como funciona o pagamento do Plano Pro?", a: "O pagamento é recorrente mensal via Pix ou cartão de crédito, processado com segurança pelo Mercado Pago. Você pode cancelar a qualquer momento, sem multa." },
   { q: "O que muda quando o período gratuito terminar?", a: "Ao final dos 7 dias, o acesso ao Drive IA é pausado até você assinar o Plano Pro. Seus dados ficam salvos e ficam disponíveis integralmente assim que você ativar a assinatura." },
   { q: "O que acontece com meus dados se eu cancelar?", a: "Seus dados ficam armazenados com segurança por 30 dias após o cancelamento. Durante esse período você pode reativar sua conta e retomar exatamente de onde parou." },
-  { q: "Por que a análise por IA tem limite de 1 por hora?", a: "A análise é gerada por inteligência artificial com base em todos os seus dados do período e requer processamento computacional. O intervalo de 1 hora garante qualidade na resposta e disponibilidade para todos os usuários." },
+  { q: "Por que a análise por IA tem limite de uso?", a: "A análise é gerada por inteligência artificial com base em todos os seus dados do período e requer processamento computacional. No plano Free, você tem 1 análise por dia. No Plano Pro, o limite é de 1 análise por hora, garantindo qualidade na resposta e disponibilidade para todos os usuários." },
   { q: "Meus dados ficam seguros?", a: "Sim. Todos os seus dados são armazenados com criptografia e nunca são compartilhados com terceiros. Você pode solicitar a exclusão dos seus dados a qualquer momento pelo e-mail contato.solytech@gmail.com." },
   { q: "O Drive IA funciona para outros aplicativos além da Uber?", a: "Sim. O Drive IA foi desenvolvido para motoristas de aplicativo em geral. Funciona com Uber, 99, InDrive, corridas particulares e qualquer outra plataforma. Ao registrar a corrida, você escolhe a plataforma usada e o sistema organiza seus resultados automaticamente." },
   { q: "Como registro minhas corridas no Drive IA?", a: "De forma simples e rápida, pelo botão de adicionar na tela principal. Informe a plataforma, horário, valor, km e origem/destino. Leva menos de 30 segundos." },
@@ -240,15 +240,15 @@ export default function Index() {
               </p>
               <ul className="mt-6 space-y-2 text-sm">
                 {[
-                  "Dashboard Financeiro e Operacional",
-                  "Painel de Cards com indicadores de performance",
-                  "Gráficos Financeiros",
-                  "Gráficos de Performance",
-                  "Análise por IA (1 análise por hora)",
-                  "Cadastro de veículo e parâmetros de custo",
-                  "Lançamento de Receitas e Despesas",
-                  "Metas personalizadas",
-                  "Suporte por e-mail",
+                  "Dashboard Financeiro e Operacional.",
+                  "Painel de Cards com indicadores de performance.",
+                  "Gráficos Financeiros.",
+                  "Gráficos de Performance.",
+                  "Análise por IA: 1 análise por dia.",
+                  "Cadastro de veículo e parâmetros de custo.",
+                  "Lançamento de Receitas e Despesas.",
+                  "Metas personalizadas.",
+                  "Suporte por e-mail.",
                 ].map((b) => (
                   <li key={b} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -279,18 +279,21 @@ export default function Index() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">Pix ou cartão de crédito recorrente.</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Tudo do período gratuito, com uso contínuo e histórico completo.
+                  Para quem quer continuar usando o Drive IA com acesso completo, histórico ilimitado e recursos avançados para acompanhar sua operação sem limites.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tudo do Free, com acesso contínuo e sem restrições para uso avançado.
                 </p>
                 <ul className="mt-6 space-y-2 text-sm">
                   {[
-                    "Tudo do plano gratuito",
-                    "Acesso ilimitado após os 7 dias",
-                    "Histórico completo sem limite",
-                    "Análises por IA ilimitadas, com 1 por hora",
-                    "Gráficos Financeiros e de Performance completos",
-                    "Painel de Cards com visão consolidada",
-                    "Novos recursos em primeira mão",
-                    "Suporte prioritário por e-mail",
+                    "Tudo do Free.",
+                    "Acesso ilimitado após os 7 dias.",
+                    "Histórico completo sem limite.",
+                    "Análises por IA ilimitadas, com 1 análise por hora.",
+                    "Gráficos Financeiros e de Performance completos.",
+                    "Painel de Cards com visão consolidada.",
+                    "Novos recursos em primeira mão.",
+                    "Suporte prioritário por e-mail.",
                   ].map((b) => (
                     <li key={b} className="flex items-start gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
