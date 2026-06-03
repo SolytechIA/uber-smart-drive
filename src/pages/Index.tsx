@@ -279,18 +279,21 @@ export default function Index() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">Pix ou cartão de crédito recorrente.</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Tudo do período gratuito, com uso contínuo e histórico completo.
+                  Para quem quer continuar usando o Drive IA com acesso completo, histórico ilimitado e recursos avançados para acompanhar sua operação sem limites.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tudo do Free, com acesso contínuo e sem restrições para uso avançado.
                 </p>
                 <ul className="mt-6 space-y-2 text-sm">
                   {[
-                    "Tudo do plano gratuito",
-                    "Acesso ilimitado após os 7 dias",
-                    "Histórico completo sem limite",
-                    "Análises por IA ilimitadas, com 1 por hora",
-                    "Gráficos Financeiros e de Performance completos",
-                    "Painel de Cards com visão consolidada",
-                    "Novos recursos em primeira mão",
-                    "Suporte prioritário por e-mail",
+                    "Tudo do Free.",
+                    "Acesso ilimitado após os 7 dias.",
+                    "Histórico completo sem limite.",
+                    "Análises por IA ilimitadas, com 1 análise por hora.",
+                    "Gráficos Financeiros e de Performance completos.",
+                    "Painel de Cards com visão consolidada.",
+                    "Novos recursos em primeira mão.",
+                    "Suporte prioritário por e-mail.",
                   ].map((b) => (
                     <li key={b} className="flex items-start gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
