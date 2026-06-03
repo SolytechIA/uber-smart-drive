@@ -6,8 +6,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Server-side rate limit window: 1 analysis per (user, periodo, periodo_referencia) per 60 min.
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+// Server-side rate limit window — GLOBAL per user, independent of period/type:
+// • Free (trial active): 1 analysis per 24h
+// • Pro: 1 analysis per 1h
+const RATE_LIMIT_WINDOW_PRO_MS = 60 * 60 * 1000;
+const RATE_LIMIT_WINDOW_FREE_MS = 24 * 60 * 60 * 1000;
 
 // ─── PROMPT INJECTION SANITIZATION ────────────────────────────────────────────
 // Padrões comuns de tentativa de injeção. Tratados case-insensitive.
