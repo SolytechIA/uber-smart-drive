@@ -44,7 +44,7 @@ const faqs: { q: string; a: string }[] = [
   { q: "Como funciona o pagamento do Plano Pro?", a: "O pagamento é recorrente mensal via Pix ou cartão de crédito, processado com segurança pelo Mercado Pago. Você pode cancelar a qualquer momento, sem multa." },
   { q: "O que muda quando o período gratuito terminar?", a: "Ao final dos 7 dias, o acesso ao Drive IA é pausado até você assinar o Plano Pro. Seus dados ficam salvos e ficam disponíveis integralmente assim que você ativar a assinatura." },
   { q: "O que acontece com meus dados se eu cancelar?", a: "Seus dados ficam armazenados com segurança por 30 dias após o cancelamento. Durante esse período você pode reativar sua conta e retomar exatamente de onde parou." },
-  { q: "Por que a análise por IA tem limite de uso?", a: "A análise é gerada por inteligência artificial com base em todos os seus dados do período e requer processamento computacional. No plano Free, você tem 1 análise por dia. No Plano Pro, o limite é de 1 análise por hora, garantindo qualidade na resposta e disponibilidade para todos os usuários." },
+  { q: "Por que a análise por IA tem limite de uso?", a: "A análise é gerada por inteligência artificial com base em todos os seus dados do período e requer processamento computacional. No plano Free, você tem 1 análise a cada 24 horas. No Plano Pro, o limite é de 1 análise por hora, garantindo qualidade na resposta e disponibilidade para todos os usuários." },
   { q: "Meus dados ficam seguros?", a: "Sim. Todos os seus dados são armazenados com criptografia e nunca são compartilhados com terceiros. Você pode solicitar a exclusão dos seus dados a qualquer momento pelo e-mail contato.solytech@gmail.com." },
   { q: "O Drive IA funciona para outros aplicativos além da Uber?", a: "Sim. O Drive IA foi desenvolvido para motoristas de aplicativo em geral. Funciona com Uber, 99, InDrive, corridas particulares e qualquer outra plataforma. Ao registrar a corrida, você escolhe a plataforma usada e o sistema organiza seus resultados automaticamente." },
   { q: "Como registro minhas corridas no Drive IA?", a: "De forma simples e rápida, pelo botão de adicionar na tela principal. Informe a plataforma, horário, valor, km e origem/destino. Leva menos de 30 segundos." },
@@ -244,7 +244,7 @@ export default function Index() {
                   "Painel de Cards com indicadores de performance.",
                   "Gráficos Financeiros.",
                   "Gráficos de Performance.",
-                  "Análise por IA: 1 análise por dia.",
+                  "Análise por IA: 1 análise a cada 24 horas.",
                   "Cadastro de veículo e parâmetros de custo.",
                   "Lançamento de Receitas e Despesas.",
                   "Metas personalizadas.",
@@ -341,7 +341,7 @@ export default function Index() {
               Comece a lucrar mais hoje mesmo
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-base opacity-90">
-              7 dias grátis, sem cartão de crédito. Junte-se aos motoristas que já controlam sua renda com IA.
+              7 dias grátis, sem cartão de crédito. Junte-se a milhares de motoristas que já controlam sua renda com IA.
             </p>
             <Link to="/cadastro">
               <Button size="lg" variant="secondary" className="mt-8">
