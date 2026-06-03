@@ -947,7 +947,8 @@ function PainelSemana({ user, weekStartISO }: { user: any; weekStartISO: string 
         errorMsg={errorMsg}
         onGenerate={handleGenerate}
         rateLimited={rateLimited}
-        minutesLeft={minutesLeft}
+        cooldownLabel={cooldownLabel}
+        isPro={isPro}
         generatedAt={generatedAt}
         ctaLabel="Gerar Análise da Semana"
         emptyText="Sem corridas nesta semana ainda. Registre algumas corridas para liberar a análise."
