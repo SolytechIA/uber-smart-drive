@@ -1562,7 +1562,7 @@ function AnaliseResultado({
   generatedAt,
   onGenerate,
   rateLimited,
-  minutesLeft,
+  cooldownLabel,
   titleResumo,
   titleRecs,
   titleProj,
@@ -1573,7 +1573,7 @@ function AnaliseResultado({
   generatedAt: Date | null;
   onGenerate: () => void;
   rateLimited: boolean;
-  minutesLeft: number;
+  cooldownLabel: string;
   titleResumo: string;
   titleRecs: string;
   titleProj: string;
