@@ -1,0 +1,2 @@
+# Architecture rules
+- Administrative email confirmation runs in a dedicated Edge Function that validates the caller's session and uses the existing protected administrative RPC before accessing the Auth Admin API; privileged credentials must never reach the browser.
