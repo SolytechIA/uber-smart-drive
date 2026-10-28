@@ -41,6 +41,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -158,6 +162,9 @@ export default function Admin() {
   const [trialExpiring, setTrialExpiring] = useState(false);
   const [missingPhone, setMissingPhone] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [emailConfirmationUser, setEmailConfirmationUser] = useState<UserRow | null>(null);
+  const [confirmingEmail, setConfirmingEmail] = useState(false);
+  const [confirmedEmails, setConfirmedEmails] = useState<Set<string>>(new Set());
 
   const load = async () => {
     setLoading(true);
@@ -281,6 +288,32 @@ export default function Admin() {
     toast.success("Plano atualizado");
     if (closeDrawer) setSelectedUser(null);
     load();
+  };
+
+  const confirmEmail = async () => {
+    if (!emailConfirmationUser || confirmingEmail) return;
+    setConfirmingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-confirm-email", {
+        body: { user_id: emailConfirmationUser.id },
+      });
+      if (error || !data?.success) {
+        let message = data?.error || "Não foi possível confirmar o email. Tente novamente.";
+        if (error && "context" in error && error.context instanceof Response) {
+          const details = await error.context.json().catch(() => null);
+          message = details?.error || message;
+        }
+        toast.error(message);
+        return;
+      }
+      setConfirmedEmails((previous) => new Set(previous).add(emailConfirmationUser.id));
+      toast.success("Email confirmado com sucesso. O usuário já pode entrar na conta.");
+      setEmailConfirmationUser(null);
+    } catch {
+      toast.error("Não foi possível confirmar o email. Tente novamente.");
+    } finally {
+      setConfirmingEmail(false);
+    }
   };
 
   const fmtMoney = (n: number) =>
@@ -564,6 +597,15 @@ export default function Admin() {
                               >
                                 Desativar
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEmailConfirmationUser(u)}
+                                disabled={confirmingEmail || confirmedEmails.has(u.id)}
+                              >
+                                <CheckCircle2 className="mr-1 h-4 w-4" />
+                                {confirmedEmails.has(u.id) ? "Email confirmado" : "Confirmar email"}
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -575,6 +617,26 @@ export default function Admin() {
             )}
           </Card>
         </div>
+
+        <AlertDialog open={!!emailConfirmationUser} onOpenChange={(open) => {
+          if (!open && !confirmingEmail) setEmailConfirmationUser(null);
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar email do usuário?</AlertDialogTitle>
+              <AlertDialogDescription>
+                O email {emailConfirmationUser?.email} será confirmado manualmente, sem precisar clicar no link recebido por email.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={confirmingEmail}>Cancelar</AlertDialogCancel>
+              <Button onClick={confirmEmail} disabled={confirmingEmail}>
+                {confirmingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {confirmingEmail ? "Confirmando..." : "Confirmar email"}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* User detail drawer */}
         <Sheet open={!!selectedUser} onOpenChange={(o) => !o && setSelectedUser(null)}>
