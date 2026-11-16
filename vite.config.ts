@@ -21,12 +21,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Bibliotecas grandes em arquivos próprios: carregam em paralelo e ficam em cache entre versões
+        // Base estável em arquivos próprios (cache entre versões). Gráficos e calendário
+        // ficam de fora de propósito: assim só são baixados nas telas que os usam.
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
           supabase: ["@supabase/supabase-js"],
-          charts: ["recharts"],
-          datas: ["date-fns", "react-day-picker"],
         },
       },
     },
