@@ -749,6 +749,28 @@ function splitSections(text: string) {
   return sections;
 }
 
+// ─── REFERÊNCIA PADRONIZADA DO LIMITE DE ANÁLISES ────────────────────────────
+// dia/semana → AAAA-MM-DD · mes → AAAA-MM (o banco rejeita outros formatos).
+const MESES_PT: Record<string, string> = {
+  janeiro: "01", fevereiro: "02", "março": "03", marco: "03", abril: "04",
+  maio: "05", junho: "06", julho: "07", agosto: "08", setembro: "09",
+  outubro: "10", novembro: "11", dezembro: "12",
+};
+
+function normalizePeriodoRef(periodo: string, raw: unknown): string {
+  const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const v = typeof raw === "string" ? raw.trim() : "";
+  let iso = "";
+  let m: RegExpMatchArray | null;
+  if (/^\d{4}-\d{2}(-\d{2})?$/.test(v)) iso = v;
+  else if ((m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/))) iso = `${m[3]}-${m[2]}-${m[1]}`;
+  else if ((m = v.match(/^([A-Za-zçÇ]+)\/(\d{4})$/)) && MESES_PT[m[1].toLowerCase()]) {
+    iso = `${m[2]}-${MESES_PT[m[1].toLowerCase()]}`;
+  } else iso = hoje;
+  if (periodo === "mes") return iso.slice(0, 7);
+  return iso.length === 7 ? `${iso}-01` : iso;
+}
+
 // ─── SERVIDOR ─────────────────────────────────────────────────────────────────
 
 const EMPTY_RESULT: AnaliseFinal = {
@@ -844,11 +866,12 @@ Deno.serve(async (req) => {
 
     // ── 3) SERVER-SIDE GLOBAL RATE LIMIT (independent of period/type) ──────
     const periodo = (payload as any).periodo || "dia";
-    const periodoRef =
+    const periodoRef = normalizePeriodoRef(
+      periodo,
       (payload as any).periodo_referencia ||
-      (payload as any).data_hoje ||
-      (payload as any).rotulo_periodo ||
-      "default";
+        (payload as any).data_hoje ||
+        (payload as any).rotulo_periodo,
+    );
     const isPro = plano === "pro";
     const windowMs = isPro ? RATE_LIMIT_WINDOW_PRO_MS : RATE_LIMIT_WINDOW_FREE_MS;
     const { data: rlRows } = await admin

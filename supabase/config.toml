@@ -1,4 +1,8 @@
-project_id = "vwopgexrjqiocnpbfiws"
+# Preencha com o "Project ID" do seu projeto (Project Settings > General)
+project_id = "SEU_PROJECT_ID"
 
-[functions.mp-webhook]
-verify_jwt = false
+[functions.groq-analysis]
+verify_jwt = true
+
+[functions.admin-confirm-email]
+verify_jwt = true

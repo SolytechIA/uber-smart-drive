@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,24 +8,31 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import Cadastro from "./pages/Cadastro";
-import Login from "./pages/Login";
-import RecuperarSenha from "./pages/RecuperarSenha";
-import RedefinirSenha from "./pages/RedefinirSenha";
-import Onboarding from "./pages/Onboarding";
-import DashboardOperacional from "./pages/DashboardOperacional";
-import DashboardFinanceiro from "./pages/DashboardFinanceiro";
-import Configuracoes from "./pages/Configuracoes";
-import Relatorios from "./pages/Relatorios";
-import GraficosFinanceiros from "./pages/GraficosFinanceiros";
-import GraficosPerformance from "./pages/GraficosPerformance";
-import AnaliseIA from "./pages/AnaliseIA";
-import Admin from "./pages/Admin";
-import Planos from "./pages/Planos";
-import Privacidade from "./pages/Privacidade";
-import NotFound from "./pages/NotFound";
+const Cadastro = lazy(() => import("./pages/Cadastro"));
+const Login = lazy(() => import("./pages/Login"));
+const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
+const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const DashboardOperacional = lazy(() => import("./pages/DashboardOperacional"));
+const DashboardFinanceiro = lazy(() => import("./pages/DashboardFinanceiro"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const GraficosFinanceiros = lazy(() => import("./pages/GraficosFinanceiros"));
+const GraficosPerformance = lazy(() => import("./pages/GraficosPerformance"));
+const AnaliseIA = lazy(() => import("./pages/AnaliseIA"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Planos = lazy(() => import("./pages/Planos"));
+const Privacidade = lazy(() => import("./pages/Privacidade"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+// Cada tela é baixada só quando o motorista a abre (app inicial bem mais leve no 4G)
+const PageLoader = () => (
+  <div className="flex min-h-screen items-center justify-center">
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Carregando" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,6 +41,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/cadastro" element={<Cadastro />} />
@@ -125,6 +135,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
